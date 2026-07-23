@@ -302,10 +302,9 @@ func (c *Command) writeCode(w *codeWriter) error {
 	}
 	// If there are no subcommands, or if subcommands are optional, we need a run function
 	if len(subCommands) == 0 || c.SubcommandsOptional {
-		w.writeLinef("s.Command.Run = func(c *%v.Command, args []string) {", w.importCobra())
-		w.writeLinef("if err := s.run(cctx, args); err != nil {")
-		w.writeLinef("cctx.Options.Fail(err)")
-		w.writeLinef("}")
+		w.writeLinef("s.Command.RunE = func(c *%v.Command, args []string) error {", w.importCobra())
+		w.writeLinef("cctx.commandRunStarted = true")
+		w.writeLinef("return s.run(cctx, args)")
 		w.writeLinef("}")
 	}
 	// Init

@@ -4,17 +4,16 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/cli/cliext"
-	"golang.org/x/oauth2"
 )
 
 func TestHandleTerminalErrorWritesOneRedactedReportAndRetainsBothErrors(t *testing.T) {
@@ -61,45 +60,35 @@ func TestConnectErrorCarriesSemanticFactsWithoutRenderedStateOrRawArguments(t *t
 		Stages:  []diagStage{{Status: diagFail, Label: "TCP connection refused"}},
 	}
 	err := newConnectError(diagnosis, connectMeta{Address: diagnosis.Address}, cause)
+	diagnosis.Stages[0].Label = "mutated after construction"
 
 	assert.Equal(t, "failed connecting to Temporal server at 127.0.0.1:7233: connection refused", err.Error())
 	assert.ErrorIs(t, err, cause)
 	report := normalizeError(err)
+	assert.Equal(t, "TCP connection refused", report.Checks[0].Message, "connect error must copy diagnosis stages")
 	require.NotNil(t, report.Action)
 	require.Len(t, report.Action.Invocations, 1)
 	assert.Equal(t, []string{"temporal", "server", "start-dev"}, report.Action.Invocations[0].Command)
 	assert.NotContains(t, err.Error(), "\n")
 }
 
-func TestRecorderSeamCapturesFirstLeafFailureWithoutChangingItsIdentity(t *testing.T) {
-	// Seam decision: generated Run callbacks already call Fail as their final
-	// operation. A command-scoped recorder therefore captures every leaf error
-	// without changing generated Run to RunE. RunE was rejected because Cobra
-	// skips post-run cleanup when RunE returns an error.
-	want := errors.New("leaf failure")
-	var recorder commandErrorRecorder
+func TestNormalizeErrorOwnsActivityNotFoundPresentationAndPreservesUnknownActivityErrors(t *testing.T) {
+	notFound := &activityNotFoundError{
+		activityID: "activity-id",
+		cause:      errors.New("server detail"),
+	}
+	report := normalizeError(fmt.Errorf("poll activity: %w", notFound))
 
-	assert.True(t, runRecordedCommand(func() { recorder.Record(want) }))
+	assert.Equal(t, "standalone Activity not found", report.Summary)
+	assert.Empty(t, report.Context)
+	assert.Empty(t, report.Checks)
+	assert.Nil(t, report.Action)
 
-	assert.ErrorIs(t, recorder.Err(), want)
+	unknown := errors.New("activity result unavailable")
+	assert.Equal(t, unknown.Error(), normalizeError(unknown).Summary)
 }
 
-func TestRecorderSeamStopsExecutionAfterFailureAndRunsCleanup(t *testing.T) {
-	var recorder commandErrorRecorder
-	workedAfterFailure := false
-	cleanupRan := false
-	func() {
-		defer func() { cleanupRan = true }()
-		assert.True(t, runRecordedCommand(func() {
-			recorder.Record(errors.New("stop here"))
-			workedAfterFailure = true
-		}))
-	}()
-	assert.False(t, workedAfterFailure)
-	assert.True(t, cleanupRan)
-}
-
-func TestRenderInvocationUsesExplicitShellQuotingAndRejectsControls(t *testing.T) {
+func TestRenderInvocationUsesExplicitShellQuotingAndEscapesControls(t *testing.T) {
 	invocation := displayInvocation{Command: []string{"temporal", "config", "set"}, Args: []string{"--value", "space and 'quote'", "--profile", "-prod"}}
 	posix, ok := renderInvocation(invocation, displayShellPOSIX)
 	require.True(t, ok)
@@ -107,9 +96,43 @@ func TestRenderInvocationUsesExplicitShellQuotingAndRejectsControls(t *testing.T
 	assert.Contains(t, posix, "--profile -prod")
 	powerShell, ok := renderInvocation(invocation, displayShellPowerShell)
 	require.True(t, ok)
+	assert.True(t, strings.HasPrefix(powerShell, "& 'temporal' "))
 	assert.Contains(t, powerShell, `'space and ''quote'''`)
-	_, ok = renderInvocation(displayInvocation{Command: []string{"temporal"}, Args: []string{"unsafe\nvalue"}}, displayShellPOSIX)
-	assert.False(t, ok)
+	assert.Contains(t, powerShell, `'--profile' '-prod'`)
+	escaped, ok := renderInvocation(displayInvocation{Command: []string{"temporal"}, Args: []string{"unsafe\nvalue"}}, displayShellPOSIX)
+	require.True(t, ok)
+	assert.Equal(t, `temporal 'unsafe\nvalue'`, escaped)
+}
+
+func TestRedactReportDeepCopiesEscapesControlsAndUsesLongestSecretFirst(t *testing.T) {
+	report := errorReport{
+		Summary:      "token-long\x1b[31m",
+		Context:      []safeField{{Label: "Target\nName", Value: "token-long"}},
+		CheckHeading: "Check\rHeading",
+		Checks:       []errorCheck{{Outcome: checkFailed, Message: "token\ncheck"}},
+		Action: &displayAction{
+			Label:       "use\ttoken-long",
+			Invocations: []displayInvocation{{Command: []string{"temporal"}, Args: []string{"token-long"}}},
+		},
+	}
+	secrets := []string{"token", "token-long"}
+	got := redactReport(report, secrets)
+
+	assert.Equal(t, `[REDACTED]\u{1b}[31m`, got.Summary)
+	assert.Equal(t, `Target\nName`, got.Context[0].Label)
+	assert.Equal(t, `Check\rHeading`, got.CheckHeading)
+	assert.Equal(t, `[REDACTED]\ncheck`, got.Checks[0].Message)
+	assert.Equal(t, `use\t[REDACTED]`, got.Action.Label)
+	assert.Equal(t, "token-long", report.Context[0].Value, "source context must not be mutated")
+	assert.Equal(t, "token-long", report.Action.Invocations[0].Args[0], "nested source slices must not be mutated")
+	assert.Equal(t, "[REDACTED]", got.Action.Invocations[0].Args[0])
+	assert.Equal(t, []string{"token", "token-long"}, secrets, "sorting must not mutate the caller's secret list")
+}
+
+func TestRenderInvocationPowerShellDoublesSingleQuotesWithinOneQuotedToken(t *testing.T) {
+	got, ok := renderInvocation(displayInvocation{Command: []string{"temporal"}, Args: []string{"it's one token"}}, displayShellPowerShell)
+	require.True(t, ok)
+	assert.Equal(t, "& 'temporal' 'it''s one token'", got)
 }
 
 func TestFinishCommandPreservesOriginalErrorWhilePresentingCancellationCause(t *testing.T) {
@@ -124,14 +147,17 @@ func TestFinishCommandPreservesOriginalErrorWhilePresentingCancellationCause(t *
 	assert.NotContains(t, stderr.String(), original.Error())
 }
 
-func TestRecorderSeamGeneratedLeavesStopAfterRecording(t *testing.T) {
+func TestGeneratedLeavesReturnErrorsThroughRunE(t *testing.T) {
 	source, err := os.ReadFile("commands.gen.go")
 	require.NoError(t, err)
-	allCalls := bytes.Count(source, []byte("cctx.Options.Fail(err)"))
-	terminalCalls := bytes.Count(source, []byte("cctx.Options.Fail(err)\n\t\t}"))
+	runECalls := bytes.Count(source, []byte("s.Command.RunE = func"))
+	returnCalls := bytes.Count(source, []byte("return s.run(cctx, args)"))
+	markerCalls := bytes.Count(source, []byte("cctx.commandRunStarted = true"))
 
-	assert.Greater(t, allCalls, 100, "expected to inspect every generated command leaf")
-	assert.Equal(t, allCalls, terminalCalls, "every generated Fail call must be the final operation in its branch")
+	assert.Greater(t, runECalls, 100, "expected to inspect every generated command leaf")
+	assert.Equal(t, runECalls, returnCalls, "every generated RunE must return its run error")
+	assert.Equal(t, runECalls, markerCalls, "every generated RunE must mark command execution")
+	assert.NotContains(t, string(source), "Options.Fail")
 }
 
 func TestExecuteRestoresColorAcrossFailureSources(t *testing.T) {
@@ -149,7 +175,7 @@ func TestExecuteRestoresColorAcrossFailureSources(t *testing.T) {
 			result := Execute(t.Context(), CommandOptions{
 				Args:                args,
 				IOStreams:           IOStreams{Stdout: &stdout, Stderr: &stderr},
-				DeprecatedEnvConfig: DeprecatedEnvConfig{DisableEnvConfig: true},
+				DeprecatedEnvConfig: DeprecatedEnvConfig{DisableEnvConfig: true, EnvConfigName: "default"},
 			})
 			assert.Error(t, result.CommandErr)
 			assert.True(t, color.NoColor, "global color policy must be restored")
@@ -160,6 +186,61 @@ func TestExecuteRestoresColorAcrossFailureSources(t *testing.T) {
 func TestEarlyJSONPolicyDisablesTerminalColor(t *testing.T) {
 	cctx := &CommandContext{Options: CommandOptions{Args: []string{"workflow", "describe", "--output=jsonl", "--color=always"}}}
 	assert.False(t, cctx.terminalColorEnabled())
+}
+
+func TestEarlyJSONFailuresRenderUsageWithoutANSI(t *testing.T) {
+	old := color.NoColor
+	color.NoColor = false
+	t.Cleanup(func() { color.NoColor = old })
+
+	for name, args := range map[string][]string{
+		"json parse failure":     {"workflow", "describe", "--output", "json", "--color", "always", "--not-a-flag"},
+		"jsonl required failure": {"workflow", "describe", "--output=jsonl", "--color=always"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			result := Execute(t.Context(), CommandOptions{
+				Args:                args,
+				IOStreams:           IOStreams{Stdout: &stdout, Stderr: &stderr},
+				DeprecatedEnvConfig: DeprecatedEnvConfig{DisableEnvConfig: true, EnvConfigName: "default"},
+			})
+
+			assert.Error(t, result.CommandErr)
+			assert.Equal(t, 1, result.ExitStatus)
+			assert.Empty(t, stdout.String())
+			assert.Contains(t, stderr.String(), "Usage:")
+			assert.NotContains(t, stderr.String(), "\x1b[")
+			assert.Equal(t, 1, bytes.Count(stderr.Bytes(), []byte("Error:")))
+		})
+	}
+}
+
+func TestExecuteRuntimeErrorPreservesIdentityWithoutUsageAndRetainsPresentationError(t *testing.T) {
+	configPath := t.TempDir()
+	writeErr := errors.New("stderr unavailable")
+	stderr := &countingErrorWriter{err: writeErr}
+	var stdout bytes.Buffer
+
+	result := Execute(t.Context(), CommandOptions{
+		Args: []string{
+			"config", "get",
+			"--config-file", configPath,
+			"--disable-config-env",
+		},
+		IOStreams:           IOStreams{Stdout: &stdout, Stderr: stderr},
+		DeprecatedEnvConfig: DeprecatedEnvConfig{DisableEnvConfig: true, EnvConfigName: "default"},
+	})
+
+	require.Error(t, result.CommandErr)
+	var pathErr *os.PathError
+	require.ErrorAs(t, result.CommandErr, &pathErr)
+	assert.Equal(t, configPath, pathErr.Path)
+	assert.ErrorIs(t, result.CommandErr, pathErr)
+	assert.ErrorIs(t, result.PresentationErr, writeErr)
+	assert.Equal(t, 1, result.ExitStatus)
+	assert.Equal(t, 1, stderr.writes)
+	assert.NotContains(t, string(stderr.last), "Usage:")
+	assert.Empty(t, stdout.String())
 }
 
 func TestUnknownFlagWithFollowingValueIsNotMisclassifiedAsUnknownCommand(t *testing.T) {
@@ -199,49 +280,6 @@ func TestKnownSecretsIgnoresDisabledConfigEnvironment(t *testing.T) {
 		EnvLookup: testEnvLookup{"TEMPORAL_API_KEY": "disabled-env-secret"},
 	}}
 	assert.NotContains(t, cctx.knownSecrets(), "disabled-env-secret")
-}
-
-func TestCaptureEffectiveConnectionSecretsIncludesProfileValues(t *testing.T) {
-	configPath := filepath.Join(t.TempDir(), "temporal.toml")
-	require.NoError(t, os.WriteFile(configPath, []byte(`[profile.prod]
-api_key = "profile-api-secret"
-codec = { endpoint = "https://codec.example", auth = "profile-codec-secret" }
-grpc_meta = { authorization = "profile-header-secret" }
-tls = { client_cert_data = "profile-cert-secret", client_key_data = "profile-key-secret", server_ca_cert_data = "profile-ca-secret" }
-`), 0o600))
-	cctx := &CommandContext{
-		Options: CommandOptions{EnvLookup: testEnvLookup{}},
-		RootCommand: &TemporalCommand{CommonOptions: cliext.CommonOptions{
-			ConfigFile: configPath, Profile: "prod", DisableConfigEnv: true,
-		}},
-	}
-	captureEffectiveConnectionSecrets(cctx, &cliext.ClientOptions{})
-	for _, secret := range []string{"profile-api-secret", "profile-codec-secret", "profile-header-secret", "profile-cert-secret", "profile-key-secret", "profile-ca-secret"} {
-		assert.Contains(t, cctx.knownSecrets(), secret)
-	}
-	assert.True(t, cctx.hasAPIKey)
-}
-
-func TestCaptureEffectiveConnectionSecretsIncludesOAuthValues(t *testing.T) {
-	configPath := filepath.Join(t.TempDir(), "temporal.toml")
-	require.NoError(t, cliext.StoreClientOAuth(cliext.StoreClientOAuthOptions{
-		ConfigFilePath: configPath,
-		ProfileName:    "prod",
-		OAuth: &cliext.OAuthConfig{
-			ClientConfig: &oauth2.Config{ClientID: "client", ClientSecret: "oauth-client-secret"},
-			Token:        &oauth2.Token{AccessToken: "oauth-access-secret", RefreshToken: "oauth-refresh-secret"},
-		},
-	}))
-	cctx := &CommandContext{
-		Options: CommandOptions{EnvLookup: testEnvLookup{}},
-		RootCommand: &TemporalCommand{CommonOptions: cliext.CommonOptions{
-			ConfigFile: configPath, Profile: "prod", DisableConfigEnv: true,
-		}},
-	}
-	captureEffectiveConnectionSecrets(cctx, &cliext.ClientOptions{})
-	assert.ElementsMatch(t, []string{"oauth-client-secret", "oauth-access-secret", "oauth-refresh-secret"}, cctx.knownSecrets())
-	assert.True(t, cctx.hasOAuth)
-	assert.False(t, cctx.hasAPIKey)
 }
 
 type testEnvLookup map[string]string

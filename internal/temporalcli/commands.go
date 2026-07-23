@@ -59,6 +59,8 @@ type CommandContext struct {
 	// that cobra does not properly exit nonzero if an unknown command/subcommand is given.
 	ActuallyRanCommand bool
 	preRunSucceeded    bool
+	commandRunStarted  bool
+	terminalColor      bool
 
 	// Root/current command only set inside of pre-run
 	RootCommand    *TemporalCommand
@@ -85,10 +87,6 @@ type CommandOptions struct {
 	DeprecatedEnvConfig DeprecatedEnvConfig
 	// If nil, [envconfig.EnvLookupOS] is used.
 	EnvLookup envconfig.EnvLookup
-
-	// Fail is used by generated Run callbacks to hand their final error to the
-	// command runtime. Execute replaces it with a command-scoped recorder.
-	Fail func(error)
 
 	AdditionalClientGRPCDialOptions []grpc.DialOption
 }
@@ -353,19 +351,17 @@ func (c *CommandContext) promptString(message string, expected string, autoConfi
 // exit boundary. Existing success-output broken-pipe exits in printer are a
 // separate compatibility path outside terminal error handling.
 func Execute(ctx context.Context, options CommandOptions) Result {
-	var recorder commandErrorRecorder
-	options.Fail = recorder.Record
 	origNoColor := color.NoColor
 	defer func() { color.NoColor = origNoColor }()
 
 	// Create context and run. We always get a context and cancel func back even
-	// if an error was returned. This is so we can use the context to print an
-	// error message using the appropriate Fail() method, regardless of why the
-	// failure occurred.
+	// if an error was returned. This lets the terminal handler use the resolved
+	// streams and options regardless of why the failure occurred.
 	//
 	// (In most cases, an error here likely means a problem with the user's env
 	// config file, or some other issue in their environment.)
 	cctx, cancel, err := NewCommandContext(ctx, options)
+	cctx.terminalColor = !origNoColor
 	defer cancel()
 	defer func() {
 		if cctx.commandCancel != nil {
@@ -393,20 +389,13 @@ func Execute(ctx context.Context, options CommandOptions) Result {
 			if unknownCommandPath(&cmd.Command, cctx.Options.Args) {
 				return finishCommand(cctx, fmt.Errorf("unknown command"), usageForArgs(&cmd.Command, nil))
 			}
-			var cobraErr error
-			recorded := runRecordedCommand(func() { cobraErr = cmd.Command.ExecuteContext(cctx) })
-			if recorded {
-				return finishCommand(cctx, recorder.Err(), "")
-			}
+			cobraErr := cmd.Command.ExecuteContext(cctx)
 			if cobraErr != nil {
 				usage := ""
-				if !cctx.ActuallyRanCommand || cctx.preRunSucceeded {
+				if !cctx.ActuallyRanCommand || (cctx.preRunSucceeded && !cctx.commandRunStarted) {
 					usage = usageForArgs(&cmd.Command, cctx.Options.Args)
 				}
 				return finishCommand(cctx, cobraErr, usage)
-			}
-			if err = recorder.Err(); err != nil {
-				return finishCommand(cctx, err, "")
 			}
 		}
 	}
@@ -503,7 +492,7 @@ func finishCommand(cctx *CommandContext, err error, usage string) Result {
 
 func (c *CommandContext) terminalColorEnabled() bool {
 	jsonOutput := c.JSONOutput
-	colorEnabled := !color.NoColor
+	colorEnabled := c.terminalColor
 	for i := 0; i < len(c.Options.Args); i++ {
 		name, value, inline := strings.Cut(c.Options.Args[i], "=")
 		if !inline && i+1 < len(c.Options.Args) && (name == "-o" || name == "--output" || name == "--color") {

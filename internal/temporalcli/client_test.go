@@ -125,11 +125,11 @@ func TestConnectDiagnosis_MTLSRequired(t *testing.T) {
 
 	require.Error(t, res.Err)
 	msg := res.Stderr.String()
-	assert.Contains(t, msg, "Connecting to "+addr)
+	assert.Contains(t, msg, "Connection checks for "+addr)
 	assert.Contains(t, msg, "✓ TCP connection established")
 	assert.Contains(t, msg, "✗ TLS handshake failed: server requires mTLS")
-	assert.Contains(t, msg, "tls.client_cert_path --value YourCert.pem")
-	assert.Contains(t, msg, "tls.client_key_path --value YourKey.pem")
+	assert.Contains(t, msg, "--tls-cert-path")
+	assert.Contains(t, msg, "--tls-key-path")
 }
 
 func TestConnectDiagnosis_Refused(t *testing.T) {
@@ -206,6 +206,9 @@ func TestConnectDiagnosis_Disabled(t *testing.T) {
 	msg := res.Stderr.String()
 	assert.Contains(t, msg, "failed connecting to Temporal server at "+addr)
 	assert.NotContains(t, msg, "✗", "diagnosis must be suppressed when disabled")
+	assert.NotContains(t, msg, "Namespace:")
+	assert.NotContains(t, msg, "TLS:")
+	assert.NotContains(t, msg, "Connection checks")
 }
 
 func TestConnectDiagnosis_CertFileMissing(t *testing.T) {
@@ -218,15 +221,17 @@ func TestConnectDiagnosis_CertFileMissing(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
+	var pathErr *os.PathError
+	require.ErrorAs(t, res.Err, &pathErr)
 	msg := res.Stderr.String()
+	assert.Contains(t, msg, "failed preparing Temporal server connection")
+	assert.NotContains(t, msg, "server connection at", "Build returned no authoritative effective address")
 	assert.Contains(t, msg, "cannot read file")
 	assert.Contains(t, msg, "/definitely/does/not/exist")
 	assert.NotContains(t, msg, "✓", "no probe stages expected when the dial never happened")
 }
 
-func TestConnectDiagnosis_ProfileAddressNamed(t *testing.T) {
-	// When the failing address comes from a config profile, the suggestion
-	// should say so and point at `temporal config get`.
+func TestConnectDiagnosis_ProfileAddressUsesEffectiveAddressWithoutGuessingProvenance(t *testing.T) {
 	f, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.Remove(f.Name()) })
@@ -247,8 +252,8 @@ address = "does-not-exist.invalid:7233"
 	require.Error(t, res.Err)
 	msg := res.Stderr.String()
 	assert.Contains(t, msg, "failed connecting to Temporal server at does-not-exist.invalid:7233")
-	assert.Contains(t, msg, `The address comes from config profile "default"`)
-	assert.Contains(t, msg, "temporal config get --prop address --profile default")
+	assert.NotContains(t, msg, "config profile")
+	assert.NotContains(t, msg, "temporal config get")
 }
 
 func TestConnectDiagnosis_CommandTimeoutCauseSurvives(t *testing.T) {

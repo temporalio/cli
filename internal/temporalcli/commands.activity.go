@@ -241,8 +241,8 @@ func getActivityResult(cctx *CommandContext, cl client.Client, namespace, activi
 	}
 }
 
-// activityNotFoundError retains the server's typed NotFound error while
-// carrying the audited display semantics for this command family.
+// activityNotFoundError retains the activity identity and the server's typed
+// NotFound error. Terminal presentation is owned by terminal.go.
 type activityNotFoundError struct {
 	activityID string
 	cause      error
@@ -254,10 +254,6 @@ func (e *activityNotFoundError) Error() string {
 
 func (e *activityNotFoundError) Unwrap() error {
 	return e.cause
-}
-
-func (e *activityNotFoundError) report() errorReport {
-	return errorReport{Summary: "standalone Activity not found"}
 }
 
 // Matches the SDK's pollActivityTimeout in internal_activity_client.go.

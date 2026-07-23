@@ -3,7 +3,6 @@ package temporalcli
 import (
 	"fmt"
 	"net"
-	"strings"
 )
 
 // connectError is returned by dialClient when connecting to the server fails.
@@ -16,21 +15,19 @@ type connectError struct {
 }
 
 func (e *connectError) Error() string {
+	if e.meta.Address == "" {
+		return "failed preparing Temporal server connection: " + connectSummary(&e.diagnosis, e.cause)
+	}
 	return fmt.Sprintf("failed connecting to Temporal server at %s: %s", e.meta.Address, connectSummary(&e.diagnosis, e.cause))
 }
+
 func (e *connectError) Unwrap() error { return e.cause }
 
-// connectMeta contains only allowlisted connection provenance. Raw argv and
-// credential values must never enter this value.
+// connectMeta contains the effective non-secret connection settings returned
+// by the same ClientOptionsBuilder.Build call used for the failed dial.
 type connectMeta struct {
-	// CommandPath is retained only as non-sensitive provenance for callers that
-	// still populate it. Suggestions never replay the current command.
-	CommandPath   []string
 	Address       string
-	AddressSource string // "flag", "profile", or "default"
-	ProfileName   string
-	HasAPIKey     bool
-	HasOAuth      bool
+	Namespace     string
 	TLSConfigured bool
 }
 
@@ -38,23 +35,9 @@ func newConnectError(d *connectDiagnosis, meta connectMeta, origErr error) *conn
 	if meta.Address == "" {
 		meta.Address = d.Address
 	}
-	return &connectError{diagnosis: *d, meta: meta, cause: origErr}
-}
-
-func (e *connectError) report() errorReport {
-	report := errorReport{
-		Summary:      e.Error(),
-		CheckHeading: "Connecting to " + e.meta.Address,
-		Action:       suggestAction(&e.diagnosis, e.meta),
-	}
-	for _, stage := range e.diagnosis.Stages {
-		outcome := checkFailed
-		if stage.Status == diagOK {
-			outcome = checkSucceeded
-		}
-		report.Checks = append(report.Checks, errorCheck{Outcome: outcome, Message: stage.Label})
-	}
-	return report
+	diagnosis := *d
+	diagnosis.Stages = append([]diagStage(nil), d.Stages...)
+	return &connectError{diagnosis: diagnosis, meta: meta, cause: origErr}
 }
 
 // connectSummary is the one-line cause appended to the first error line. For
@@ -80,97 +63,50 @@ func connectSummary(d *connectDiagnosis, origErr error) string {
 		return "server TLS certificate does not match host"
 	case causeCertFileUnreadable:
 		return fmt.Sprintf("cannot read file %q", d.Detail)
-	case causeAuth:
+	case causeUnauthenticated:
 		return "authentication failed"
+	case causePermissionDenied:
+		return "permission denied"
 	default:
 		return shortErr(origErr)
 	}
 }
 
-// suggestAction maps a classified failure to one typed next step. Invocation
-// arguments are known literals plus safe command metadata, never raw argv.
+// suggestAction maps only directly observed failures to a typed next step.
+// It never replays argv or guesses credential kind or configuration provenance.
 func suggestAction(d *connectDiagnosis, meta connectMeta) *displayAction {
 	host, port, _ := net.SplitHostPort(meta.Address)
 	switch d.Cause {
 	case causeCertFileUnreadable:
 		return &displayAction{Label: fmt.Sprintf("Cannot read %q — check that the path exists and is readable.", d.Detail)}
 	case causeClientCertRequired:
-		message := "The server requires client certificates (mTLS). Configure both certificate paths:"
-		if isCloudHost(host) {
-			message = "This looks like a Temporal Cloud endpoint secured with mTLS. Provide client certificates:"
-		}
-		if strings.HasSuffix(host, ".api.temporal.io") {
-			message += " If the namespace uses API-key auth instead, pass --api-key."
-		}
-		return configAction(message, meta,
-			[]string{"--prop", "tls.client_cert_path", "--value", "YourCert.pem"},
-			[]string{"--prop", "tls.client_key_path", "--value", "YourKey.pem"})
-	case causeAuth:
-		if meta.HasAPIKey && meta.HasOAuth {
-			return &displayAction{Label: "The server rejected the configured API key or OAuth credentials. Verify the active credential and namespace gRPC endpoint."}
-		}
-		if meta.HasAPIKey {
-			return &displayAction{Label: "The server rejected the configured API key. Verify it and the namespace gRPC endpoint."}
-		}
-		if meta.HasOAuth {
-			return &displayAction{Label: "The server rejected the configured OAuth credentials. Verify them and the namespace gRPC endpoint."}
-		}
-		return &displayAction{Label: "The server rejected the request as unauthenticated. Configure an API key or mTLS credentials."}
+		return &displayAction{Label: "The server requires client certificates (mTLS). Configure both --tls-cert-path and --tls-key-path."}
+	case causeUnauthenticated, causePermissionDenied:
+		// client.Options keeps credentials opaque, so no credential-specific
+		// action is authoritative here.
+		return nil
 	case causeServerPlaintext:
-		return &displayAction{Label: fmt.Sprintf("The server at %s does not appear to use TLS. Remove TLS settings or check the address.", meta.Address)}
+		return &displayAction{Label: fmt.Sprintf("The server at %s does not appear to use TLS. Remove --tls and related TLS flags, or check the address.", meta.Address)}
 	case causeServerSpeaksTLS:
-		message := "The server requires TLS. Add --tls:"
-		if isCloudHost(host) {
-			message += " Temporal Cloud also requires client credentials."
-		}
-		return configAction(message, meta, []string{"--prop", "tls", "--value", "true"})
+		return &displayAction{Label: "The server requires TLS. Retry with --tls."}
 	case causeDNS:
-		s := fmt.Sprintf("Could not resolve %q — check the server address.", host)
-		if meta.AddressSource == "profile" {
-			profile := meta.ProfileName
-			if profile == "" {
-				profile = "default"
-			}
-			s += fmt.Sprintf(" The address comes from config profile %q.", profile)
-			return &displayAction{Label: s, Invocations: []displayInvocation{{Command: []string{"temporal", "config", "get"}, Args: appendProfile([]string{"--prop", "address"}, profile)}}}
-		}
-		return &displayAction{Label: s}
+		return &displayAction{Label: fmt.Sprintf("Could not resolve %q — check the server address.", host)}
 	case causeTCPRefused:
 		if isLoopbackHost(host) && port == "7233" {
-			return &displayAction{Label: fmt.Sprintf("No Temporal server is running at %s. Start a local dev server:", meta.Address), Invocations: []displayInvocation{{Command: []string{"temporal", "server", "start-dev"}}}}
+			return &displayAction{
+				Label:       fmt.Sprintf("No Temporal server is running at %s. Start a local dev server:", meta.Address),
+				Invocations: []displayInvocation{{Command: []string{"temporal", "server", "start-dev"}}},
+			}
 		}
 		return &displayAction{Label: fmt.Sprintf("Nothing is listening at %s — verify the address and that the server is running.", meta.Address)}
 	case causeCAVerify:
-		return configAction("The server certificate is not trusted. Configure its private CA:", meta, []string{"--prop", "tls.server_ca_cert_path", "--value", "YourServerCA.pem"})
+		return &displayAction{Label: "The server certificate is not trusted. Configure its CA certificate with --tls-ca-path."}
 	case causeHostnameMismatch:
 		return &displayAction{Label: fmt.Sprintf("The server certificate is not valid for %q. Set --tls-server-name to a certificate name.", host)}
-	case causeTCPTimeout, causeTimeout:
-		return &displayAction{Label: fmt.Sprintf("The connection stalled. Verify the address and network path to %s.", meta.Address)}
+	case causeTCPTimeout:
+		return &displayAction{Label: fmt.Sprintf("The TCP check timed out. Verify the address and network path to %s.", meta.Address)}
 	}
 	return nil
-}
-
-func configAction(label string, meta connectMeta, propertyArgs ...[]string) *displayAction {
-	action := &displayAction{Label: label}
-	for _, args := range propertyArgs {
-		action.Invocations = append(action.Invocations, displayInvocation{
-			Command: []string{"temporal", "config", "set"},
-			Args:    appendProfile(args, meta.ProfileName),
-		})
-	}
-	return action
-}
-
-func appendProfile(args []string, profile string) []string {
-	result := append([]string(nil), args...)
-	if profile != "" {
-		result = append(result, "--profile", profile)
-	}
-	return result
-}
-
-func isCloudHost(host string) bool {
-	return strings.HasSuffix(host, ".tmprl.cloud") || strings.HasSuffix(host, ".api.temporal.io")
 }
 
 func isLoopbackHost(host string) bool {
@@ -179,14 +115,4 @@ func isLoopbackHost(host string) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
-}
-
-func indentLines(s, indent string) string {
-	lines := strings.Split(s, "\n")
-	for i, line := range lines {
-		if line != "" {
-			lines[i] = indent + line
-		}
-	}
-	return strings.Join(lines, "\n")
 }

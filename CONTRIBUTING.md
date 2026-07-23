@@ -24,16 +24,10 @@ Example to run a single test case:
 
 ## Adding/updating commands
 
-Follow [Structured Error Handling](docs/structured-error-handling.md) when a command adds or changes terminal failure behavior.
-
 First, update [commands.yaml](internal/temporalcli/commands.yaml) following the rules in that file. Then to regenerate the
 [commands.gen.go](internal/temporalcli/commands.gen.go) file from code, run:
 
     go run ./cmd/gen-commands -input internal/temporalcli/commands.yaml -pkg temporalcli -context "*CommandContext" > internal/temporalcli/commands.gen.go
-
-Generated commands currently inherit the existing `cctx.Options.Fail(err)` adapter. Regeneration may retain those calls until Phase A of [Structured Error Handling](docs/structured-error-handling.md#transition-gates) changes the generator.
-
-Do not add handwritten or direct `Fail` calls. Do not create a new generator pattern that emits them or copy the adapter into new code. Phase A removes generated `Fail` calls entirely.
 
 This will expect every non-parent command to have a `run` method, so for new commands developers will have to implement
 `run` on the new command in a separate file before it will compile.

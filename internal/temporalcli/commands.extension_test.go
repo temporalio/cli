@@ -245,7 +245,7 @@ func TestExtension_FailsOnNonExecutableCommand(t *testing.T) {
 
 func TestExtension_PassesThroughNonZeroExit(t *testing.T) {
 	h := newExtensionHarness(t)
-	h.createExtension("temporal-foo", codeEchoArgs, codeExit(42))
+	h.createExtension("temporal-foo", codeEchoArgs, codeEchoStderr("child error"), codeExit(42))
 
 	res := h.Execute("foo")
 
@@ -253,7 +253,8 @@ func TestExtension_PassesThroughNonZeroExit(t *testing.T) {
 	var extensionErr temporalcli.ExtensionNonZeroExit
 	assert.ErrorAs(t, res.Err, &extensionErr)
 	assert.Equal(t, 42, res.Runtime.ExitStatus)
-	assert.Empty(t, res.Stderr.String(), "extension owns its stderr")
+	assert.Equal(t, "child error\n", res.Stderr.String(), "extension owns its stderr without a parent report")
+	assert.NotContains(t, res.Stderr.String(), "Error:")
 }
 
 func TestExtension_FailsOnCommandTimeout(t *testing.T) {

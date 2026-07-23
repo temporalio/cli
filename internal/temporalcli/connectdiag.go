@@ -34,10 +34,9 @@ const (
 	causeClientCertRequired
 	causeCAVerify
 	causeHostnameMismatch
-	// causeCertFileUnreadable is set by the caller when building client
-	// options fails on a file read; the probe never runs for it.
 	causeCertFileUnreadable
-	causeAuth
+	causeUnauthenticated
+	causePermissionDenied
 	causeTimeout
 )
 
@@ -46,6 +45,8 @@ type diagStatus int
 const (
 	diagOK diagStatus = iota
 	diagFail
+	diagInconclusive
+	diagSkipped
 )
 
 type diagStage struct {
@@ -75,13 +76,23 @@ const (
 // handshake to detect a TLS-only server, which may appear in server logs).
 func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config, origErr error) *connectDiagnosis {
 	d := &connectDiagnosis{Address: address, Cause: causeUnknown}
+	origCause, origDetail := classifyGRPCError(origErr)
+	switch origCause {
+	case causeUnauthenticated:
+		d.Cause, d.Detail = origCause, origDetail
+		d.fail("gRPC request was unauthenticated")
+		return d
+	case causePermissionDenied:
+		d.Cause, d.Detail = origCause, origDetail
+		d.fail("gRPC request was denied")
+		return d
+	}
 	ctx, cancel := context.WithTimeout(ctx, connectDiagnosisBudget)
 	defer cancel()
 
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		// Not a host:port we can probe; fall back to classifying the original
-		// error only.
+		d.inconclusive("Connection checks unavailable: address is not in host:port form")
 		d.Cause, d.Detail = classifyGRPCError(origErr)
 		return d
 	}
@@ -90,8 +101,14 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 	if net.ParseIP(host) == nil {
 		addrs, err := net.DefaultResolver.LookupHost(ctx, host)
 		if err != nil {
+			if d.interrupted(ctx, "DNS") {
+				return d
+			}
 			d.fail(fmt.Sprintf("DNS lookup for %q failed: %v", host, dnsErrShort(err)))
 			d.Cause = causeDNS
+			return d
+		}
+		if d.interrupted(ctx, "DNS") {
 			return d
 		}
 		plural := "es"
@@ -99,11 +116,16 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 			plural = ""
 		}
 		d.ok(fmt.Sprintf("DNS resolved (%d address%s)", len(addrs), plural))
+	} else {
+		d.skipped("DNS lookup skipped: address uses an IP literal")
 	}
 
 	// Stage: TCP
 	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", address)
 	if err != nil {
+		if d.interrupted(ctx, "TCP") {
+			return d
+		}
 		if isConnRefused(err) {
 			d.fail("TCP connection refused: nothing is listening at " + address)
 			d.Cause = causeTCPRefused
@@ -111,8 +133,8 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 			d.fail("TCP connection timed out")
 			d.Cause = causeTCPTimeout
 		} else {
-			d.fail(fmt.Sprintf("TCP connection failed: %v", err))
-			d.Cause = causeTCPTimeout
+			d.inconclusive(fmt.Sprintf("TCP check inconclusive: %v", err))
+			d.Cause = causeUnknown
 		}
 		return d
 	}
@@ -121,6 +143,9 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 
 	if tlsCfg != nil {
 		d.probeTLS(ctx, conn, host, tlsCfg)
+		if ctx.Err() != nil {
+			return d
+		}
 		if d.Cause != causeUnknown {
 			return d
 		}
@@ -128,14 +153,21 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 		d.fail("server expects TLS, but the CLI is connecting without it" + detail)
 		d.Cause = cause
 		return d
+	} else if d.interrupted(ctx, "TLS") {
+		return d
 	}
 
 	// Stage: gRPC — no re-dial; classify the original error.
-	d.Cause, d.Detail = classifyGRPCError(origErr)
-	if d.Cause == causeAuth {
-		d.fail("gRPC authentication failed")
-	} else {
-		d.fail("gRPC connection failed: " + shortErr(origErr))
+	d.Cause, d.Detail = origCause, origDetail
+	switch d.Cause {
+	case causeUnauthenticated:
+		d.fail("gRPC request was unauthenticated")
+	case causePermissionDenied:
+		d.fail("gRPC request was denied")
+	case causeTimeout:
+		d.inconclusive("gRPC failure could not be diagnosed before its deadline")
+	default:
+		d.inconclusive("gRPC failure was not classified: " + shortErr(origErr))
 	}
 	return d
 }
@@ -151,6 +183,9 @@ func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, host str
 	}
 	tlsConn := tls.Client(conn, cfg)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
+		if d.interrupted(ctx, "TLS handshake") {
+			return
+		}
 		d.classifyTLSError(err)
 		return
 	}
@@ -160,6 +195,10 @@ func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, host str
 	defer stopCancel()
 	buf := make([]byte, 1)
 	_, err := tlsConn.Read(buf)
+	if ctx.Err() != nil {
+		d.interrupted(ctx, "TLS post-handshake")
+		return
+	}
 	if err != nil && !isTimeout(err) {
 		if cause := classifyTLSAlert(err); cause != causeUnknown {
 			d.classifyTLSError(err)
@@ -203,19 +242,18 @@ func (d *connectDiagnosis) classifyTLSError(err error) {
 	}
 }
 
-// classifyTLSAlert detects remote TLS alerts that indicate the server wants a
-// (different) client certificate. Go does not export alert types for remote
-// errors, so this matches the alert descriptions crypto/tls emits: alert 116
-// "certificate required" (TLS 1.3), alert 42 "bad certificate", and alert 40
-// "handshake failure" (how TLS 1.2 servers commonly reject missing client
-// certs). Matching is scoped to TLS probe errors only; if these strings drift
-// in a future Go release, unit tests pin them and the diagnosis degrades to
-// showing the raw error without a suggestion.
+// classifyTLSAlert detects remote TLS alerts that explicitly indicate the
+// server required or rejected a client certificate. Go does not export alert
+// types for remote errors, so this matches the alert descriptions crypto/tls
+// emits: alert 116 "certificate required" (TLS 1.3) and alert 42 "bad
+// certificate". Generic alerts such as alert 40 "handshake failure" are not
+// sufficient evidence of mTLS. Matching is scoped to TLS probe errors only;
+// if these strings drift in a future Go release, unit tests pin them and the
+// diagnosis degrades to showing the raw error without a suggestion.
 func classifyTLSAlert(err error) connectCause {
 	msg := err.Error()
 	if strings.Contains(msg, "certificate required") ||
-		strings.Contains(msg, "bad certificate") ||
-		strings.Contains(msg, "handshake failure") {
+		strings.Contains(msg, "bad certificate") {
 		return causeClientCertRequired
 	}
 	return causeUnknown
@@ -242,14 +280,14 @@ func classifyGRPCError(err error) (connectCause, string) {
 	if errors.As(err, &deadlineErr) || errors.Is(err, context.DeadlineExceeded) {
 		return causeTimeout, ""
 	}
-	if unwrapped := errors.Unwrap(err); unwrapped != nil {
-		if st, ok := status.FromError(unwrapped); ok {
-			switch st.Code() {
-			case codes.Unauthenticated, codes.PermissionDenied:
-				return causeAuth, ""
-			case codes.DeadlineExceeded:
-				return causeTimeout, ""
-			}
+	if st, ok := status.FromError(err); ok {
+		switch st.Code() {
+		case codes.Unauthenticated:
+			return causeUnauthenticated, ""
+		case codes.PermissionDenied:
+			return causePermissionDenied, ""
+		case codes.DeadlineExceeded:
+			return causeTimeout, ""
 		}
 	}
 	return causeUnknown, ""
@@ -258,6 +296,26 @@ func classifyGRPCError(err error) (connectCause, string) {
 func (d *connectDiagnosis) ok(label string) { d.Stages = append(d.Stages, diagStage{diagOK, label}) }
 func (d *connectDiagnosis) fail(label string) {
 	d.Stages = append(d.Stages, diagStage{diagFail, label})
+}
+func (d *connectDiagnosis) inconclusive(label string) {
+	d.Stages = append(d.Stages, diagStage{diagInconclusive, label})
+}
+func (d *connectDiagnosis) skipped(label string) {
+	d.Stages = append(d.Stages, diagStage{diagSkipped, label})
+}
+
+func (d *connectDiagnosis) interrupted(ctx context.Context, stage string) bool {
+	if ctx.Err() == nil {
+		return false
+	}
+	d.Cause = causeUnknown
+	d.Detail = ""
+	if errors.Is(ctx.Err(), context.Canceled) {
+		d.skipped(stage + " check skipped: diagnosis canceled")
+	} else {
+		d.inconclusive(stage + " check inconclusive: diagnosis deadline reached")
+	}
+	return true
 }
 
 // isConnRefused reports whether err is a refused TCP connection. errors.Is

@@ -577,10 +577,9 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
 	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -612,10 +611,9 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. For workflow Activities (when --workflow-id is provided), this is the Workflow Run ID. For Standalone Activities, this is the Activity Run ID.")
 	s.Command.Flags().StringVar(&s.Result, "result", "", "Result `JSON` to return. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "result")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -639,10 +637,9 @@ func NewTemporalActivityCountCommand(cctx *CommandContext, parent *TemporalActiv
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Activity Executions to count.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -668,10 +665,9 @@ func NewTemporalActivityDescribeCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
 	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -697,10 +693,9 @@ func NewTemporalActivityExecuteCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Args = cobra.NoArgs
 	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -733,10 +728,9 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. For workflow Activities (when --workflow-id is provided), this is the Workflow Run ID. For Standalone Activities, this is the Activity Run ID.")
 	s.Command.Flags().StringVar(&s.Detail, "detail", "", "Failure detail (JSON). Attached as the failure details payload.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Failure reason. Attached as the failure message.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -764,10 +758,9 @@ func NewTemporalActivityListCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter the Activity Executions to list.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Activity Executions to display.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Maximum number of Activity Executions to fetch at a time from the server.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -797,10 +790,9 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for pausing the Activity.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -837,10 +829,9 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
 	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -864,10 +855,9 @@ func NewTemporalActivityResultCommand(cctx *CommandContext, parent *TemporalActi
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -893,10 +883,9 @@ func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Args = cobra.NoArgs
 	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -922,10 +911,9 @@ func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalA
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name.")
 	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -958,10 +946,9 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will start at random a time within the specified duration. Can only be used with --query.")
 	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1013,10 +1000,9 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().IntVar(&s.RetryMaximumAttempts, "retry-maximum-attempts", 0, "Maximum number of attempts. When exceeded the retries stop even if not expired yet. Setting this value to 1 disables retries. Setting this value to 0 means unlimited attempts(up to the timeouts).")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
 	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1065,10 +1051,9 @@ func NewTemporalBatchDescribeCommand(cctx *CommandContext, parent *TemporalBatch
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.JobId, "job-id", "", "Batch job ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1092,10 +1077,9 @@ func NewTemporalBatchListCommand(cctx *CommandContext, parent *TemporalBatchComm
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of batch jobs to display.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1123,10 +1107,9 @@ func NewTemporalBatchTerminateCommand(cctx *CommandContext, parent *TemporalBatc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "job-id")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for terminating the batch job. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "reason")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1175,10 +1158,9 @@ func NewTemporalConfigDeleteCommand(cctx *CommandContext, parent *TemporalConfig
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Specific property to delete. If unset, deletes entire profile. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "prop")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1200,10 +1182,9 @@ func NewTemporalConfigDeleteProfileCommand(cctx *CommandContext, parent *Tempora
 		s.Command.Long = "Remove a full profile entirely. The `--profile` must be set explicitly.\n\n```\ntemporal config delete-profile \\\n    --profile my-profile\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1227,10 +1208,9 @@ func NewTemporalConfigGetCommand(cctx *CommandContext, parent *TemporalConfigCom
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Specific property to get.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1252,10 +1232,9 @@ func NewTemporalConfigListCommand(cctx *CommandContext, parent *TemporalConfigCo
 		s.Command.Long = "List profile names in the config file.\n\n```\ntemporal config list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1283,10 +1262,9 @@ func NewTemporalConfigSetCommand(cctx *CommandContext, parent *TemporalConfigCom
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "prop")
 	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "Property value. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "value")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1333,10 +1311,9 @@ func NewTemporalEnvDeleteCommand(cctx *CommandContext, parent *TemporalEnvComman
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1360,10 +1337,9 @@ func NewTemporalEnvGetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1383,10 +1359,9 @@ func NewTemporalEnvListCommand(cctx *CommandContext, parent *TemporalEnvCommand)
 	s.Command.Args = cobra.NoArgs
 	s.Command.Annotations = make(map[string]string)
 	s.Command.Annotations["ignoresMissingEnv"] = "true"
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1414,10 +1389,9 @@ func NewTemporalEnvSetCommand(cctx *CommandContext, parent *TemporalEnvCommand) 
 	s.Command.Annotations["ignoresMissingEnv"] = "true"
 	s.Command.Flags().StringVarP(&s.Key, "key", "k", "", "Property name (required).")
 	s.Command.Flags().StringVarP(&s.Value, "value", "v", "", "Property value (required).")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1492,10 +1466,9 @@ func NewTemporalNexusOperationCancelCommand(cctx *CommandContext, parent *Tempor
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
 	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1519,10 +1492,9 @@ func NewTemporalNexusOperationCountCommand(cctx *CommandContext, parent *Tempora
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Nexus Operation Executions to count.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1548,10 +1520,9 @@ func NewTemporalNexusOperationDescribeCommand(cctx *CommandContext, parent *Temp
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
 	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1577,10 +1548,9 @@ func NewTemporalNexusOperationExecuteCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Args = cobra.NoArgs
 	s.NexusOperationStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1608,10 +1578,9 @@ func NewTemporalNexusOperationListCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter the Nexus Operation Executions to list.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Nexus Operation Executions to display.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Maximum number of Nexus Operation Executions to fetch at a time from the server.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1635,10 +1604,9 @@ func NewTemporalNexusOperationResultCommand(cctx *CommandContext, parent *Tempor
 	}
 	s.Command.Args = cobra.NoArgs
 	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1664,10 +1632,9 @@ func NewTemporalNexusOperationStartCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Args = cobra.NoArgs
 	s.NexusOperationStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1693,10 +1660,9 @@ func NewTemporalNexusOperationTerminateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name.")
 	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1770,10 +1736,9 @@ func NewTemporalOperatorClusterDescribeCommand(cctx *CommandContext, parent *Tem
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.Detail, "detail", false, "Show history shard count and Cluster/Service version information.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1795,10 +1760,9 @@ func NewTemporalOperatorClusterHealthCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "View information about the health of a Temporal Service:\n\n```\ntemporal operator cluster health\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1822,10 +1786,9 @@ func NewTemporalOperatorClusterListCommand(cctx *CommandContext, parent *Tempora
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Clusters to display.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1850,10 +1813,9 @@ func NewTemporalOperatorClusterRemoveCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Name, "name", "", "Cluster/Service name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1875,10 +1837,9 @@ func NewTemporalOperatorClusterSystemCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "Show Temporal Server information for Temporal Clusters (Service): Server\nversion, scheduling support, and more. This information helps diagnose\nproblems with the Temporal Server.\n\nThe command defaults to the local Service. Otherwise, use the\n`--frontend-address` option to specify a Cluster (Service) endpoint:\n\n```\ntemporal operator cluster system \\\n    --frontend-address \"YourRemoteEndpoint:YourRemotePort\"\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1907,10 +1868,9 @@ func NewTemporalOperatorClusterUpsertCommand(cctx *CommandContext, parent *Tempo
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "frontend-address")
 	s.Command.Flags().BoolVar(&s.EnableConnection, "enable-connection", false, "Set the connection to \"enabled\".")
 	s.Command.Flags().BoolVar(&s.EnableReplication, "enable-replication", false, "Set the replication to \"enabled\".")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -1981,10 +1941,9 @@ func NewTemporalOperatorNamespaceCreateCommand(cctx *CommandContext, parent *Tem
 	s.VisibilityArchivalState = cliext.NewFlagStringEnum([]string{"disabled", "enabled"}, "disabled")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Archive visibility data to this `URI`. Once enabled, can't be changed.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2008,10 +1967,9 @@ func NewTemporalOperatorNamespaceDeleteCommand(cctx *CommandContext, parent *Tem
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Request confirmation before deletion.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2035,10 +1993,9 @@ func NewTemporalOperatorNamespaceDescribeCommand(cctx *CommandContext, parent *T
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
 	s.Command.Flags().StringVar(&s.NamespaceId, "namespace-id", "", "Namespace ID.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2060,10 +2017,9 @@ func NewTemporalOperatorNamespaceListCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "Display a detailed listing for all Namespaces on the Service:\n\n```\ntemporal operator namespace list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2113,10 +2069,9 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.VisibilityArchivalState = cliext.NewFlagStringEnum([]string{"disabled", "enabled"}, "")
 	s.Command.Flags().Var(&s.VisibilityArchivalState, "visibility-archival-state", "Visibility archival state. Accepted values: disabled, enabled.")
 	s.Command.Flags().StringVar(&s.VisibilityUri, "visibility-uri", "", "Archive visibility data to this `URI`. Once enabled, can't be changed.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2186,10 +2141,9 @@ func NewTemporalOperatorNexusEndpointCreateCommand(cctx *CommandContext, parent 
 	s.Command.Args = cobra.NoArgs
 	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
 	s.NexusEndpointConfigOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2213,10 +2167,9 @@ func NewTemporalOperatorNexusEndpointDeleteCommand(cctx *CommandContext, parent 
 	}
 	s.Command.Args = cobra.NoArgs
 	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2240,10 +2193,9 @@ func NewTemporalOperatorNexusEndpointGetCommand(cctx *CommandContext, parent *Te
 	}
 	s.Command.Args = cobra.NoArgs
 	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2265,10 +2217,9 @@ func NewTemporalOperatorNexusEndpointListCommand(cctx *CommandContext, parent *T
 		s.Command.Long = "List all Nexus Endpoints on the Server.\n\n```\ntemporal operator nexus endpoint list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2296,10 +2247,9 @@ func NewTemporalOperatorNexusEndpointUpdateCommand(cctx *CommandContext, parent 
 	s.Command.Flags().BoolVar(&s.UnsetDescription, "unset-description", false, "Unset the description.")
 	s.NexusEndpointIdentityOptions.BuildFlags(s.Command.Flags())
 	s.NexusEndpointConfigOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2350,10 +2300,9 @@ func NewTemporalOperatorSearchAttributeCreateCommand(cctx *CommandContext, paren
 	s.Type = cliext.NewFlagStringEnumArray([]string{"Text", "Keyword", "Int", "Double", "Bool", "Datetime", "KeywordList"}, []string{})
 	s.Command.Flags().Var(&s.Type, "type", "Search Attribute type. Accepted values: Text, Keyword, Int, Double, Bool, Datetime, KeywordList. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "type")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2375,10 +2324,9 @@ func NewTemporalOperatorSearchAttributeListCommand(cctx *CommandContext, parent 
 		s.Command.Long = "Display a list of active Search Attributes that can be assigned or used with\nWorkflow Queries. You can manage this list and add attributes as needed:\n\n```\ntemporal operator search-attribute list\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2405,10 +2353,9 @@ func NewTemporalOperatorSearchAttributeRemoveCommand(cctx *CommandContext, paren
 	s.Command.Flags().StringArrayVar(&s.Name, "name", nil, "Search Attribute name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "name")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm removal.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2470,10 +2417,9 @@ func NewTemporalScheduleBackfillCommand(cctx *CommandContext, parent *TemporalSc
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
 	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2510,10 +2456,9 @@ func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2537,10 +2482,9 @@ func NewTemporalScheduleDeleteCommand(cctx *CommandContext, parent *TemporalSche
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2564,10 +2508,9 @@ func NewTemporalScheduleDescribeCommand(cctx *CommandContext, parent *TemporalSc
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2595,10 +2538,9 @@ func NewTemporalScheduleListCommand(cctx *CommandContext, parent *TemporalSchedu
 	s.Command.Flags().BoolVarP(&s.Long, "long", "l", false, "Show detailed information.")
 	s.Command.Flags().BoolVar(&s.ReallyLong, "really-long", false, "Show extensive information in non-table form.")
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Filter results using given List Filter.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2628,10 +2570,9 @@ func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *T
 	s.Command.Flags().Var(&s.EndTime, "end-time", "End of time range to list matching times. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2661,10 +2602,9 @@ func NewTemporalScheduleToggleCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Flags().StringVar(&s.Reason, "reason", "(no reason provided)", "Reason for pausing or unpausing the Schedule.")
 	s.Command.Flags().BoolVar(&s.Unpause, "unpause", false, "Unpause the Schedule.")
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2690,10 +2630,9 @@ func NewTemporalScheduleTriggerCommand(cctx *CommandContext, parent *TemporalSch
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2728,10 +2667,9 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2805,10 +2743,9 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Print the server config to stderr.")
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Search attributes to register using `KEY=VALUE` pairs. Keys must be identifiers, and values must be the search attribute type, which is one of the following: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2886,10 +2823,9 @@ func NewTemporalTaskQueueConfigGetCommand(cctx *CommandContext, parent *Temporal
 	s.TaskQueueType = cliext.NewFlagStringEnum([]string{"workflow", "activity", "nexus"}, "")
 	s.Command.Flags().Var(&s.TaskQueueType, "task-queue-type", "Task Queue type. Accepted values: workflow, activity, nexus. Accepted values: workflow, activity, nexus. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue-type")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2932,10 +2868,9 @@ func NewTemporalTaskQueueConfigSetCommand(cctx *CommandContext, parent *Temporal
 	s.Command.Flags().StringVar(&s.FairnessKeyRpsLimitReason, "fairness-key-rps-limit-reason", "", "Reason for fairness key rate limit update.")
 	s.Command.Flags().StringArrayVar(&s.FairnessKeyWeight, "fairness-key-weight", nil, "Set or unset fairness key weight overrides in format key=weight or key=default. Use key=weight to set a positive weight value; use key=default to unset. Can be specified multiple times. Example: --fairness-key-weight HighPriority=2.0 --fairness-key-weight LowPriority=default.")
 	s.Command.Flags().BoolVar(&s.FairnessKeyWeightClearAll, "fairness-key-weight-clear-all", false, "Unset all fairness key weight overrides. Cannot be used with --fairness-key-weight.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -2982,10 +2917,9 @@ func NewTemporalTaskQueueDescribeCommand(cctx *CommandContext, parent *TemporalT
 	s.Command.Flags().IntVar(&s.PartitionsLegacy, "partitions-legacy", 1, "Query partitions 1 through `N`. Experimental/Temporary feature. Legacy mode only.")
 	s.Command.Flags().BoolVar(&s.DisableStats, "disable-stats", false, "Disable task queue statistics.")
 	s.Command.Flags().BoolVar(&s.ReportConfig, "report-config", false, "Include task queue configuration in the response. When enabled, the command will return the current rate limit configuration for the task queue.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3016,10 +2950,9 @@ func NewTemporalTaskQueueGetBuildIdReachabilityCommand(cctx *CommandContext, par
 	s.ReachabilityType = cliext.NewFlagStringEnum([]string{"open", "closed", "existing"}, "existing")
 	s.Command.Flags().Var(&s.ReachabilityType, "reachability-type", "Reachability filter. `open`: reachable by one or more open workflows. `closed`: reachable by one or more closed workflows. `existing`: reachable by either. New Workflow Executions reachable by a Build ID are always reported. Accepted values: open, closed, existing.")
 	s.Command.Flags().StringArrayVarP(&s.TaskQueue, "task-queue", "t", nil, "Search only the specified task queue(s). Can be passed multiple times.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3048,10 +2981,9 @@ func NewTemporalTaskQueueGetBuildIdsCommand(cctx *CommandContext, parent *Tempor
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
 	s.Command.Flags().IntVar(&s.MaxSets, "max-sets", 0, "Max return count. Use 1 for default major version. Use 0 for all sets.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3076,10 +3008,9 @@ func NewTemporalTaskQueueListPartitionCommand(cctx *CommandContext, parent *Temp
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3137,10 +3068,9 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewCompatibleCommand(cctx *CommandCont
 	s.Command.Flags().StringVar(&s.ExistingCompatibleBuildId, "existing-compatible-build-id", "", "Pre-existing Build ID in this Task Queue. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "existing-compatible-build-id")
 	s.Command.Flags().BoolVar(&s.SetAsDefault, "set-as-default", false, "Set the expanded Build ID set as the Task Queue default.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3170,10 +3100,9 @@ func NewTemporalTaskQueueUpdateBuildIdsAddNewDefaultCommand(cctx *CommandContext
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3203,10 +3132,9 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteIdInSetCommand(cctx *CommandContex
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3236,10 +3164,9 @@ func NewTemporalTaskQueueUpdateBuildIdsPromoteSetCommand(cctx *CommandContext, p
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Task Queue name. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "task-queue")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3303,10 +3230,9 @@ func NewTemporalTaskQueueVersioningAddRedirectRuleCommand(cctx *CommandContext, 
 	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "Target build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3337,10 +3263,9 @@ func NewTemporalTaskQueueVersioningCommitBuildIdCommand(cctx *CommandContext, pa
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "build-id")
 	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass recent-poller validation.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3371,10 +3296,9 @@ func NewTemporalTaskQueueVersioningDeleteAssignmentRuleCommand(cctx *CommandCont
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "rule-index")
 	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass one-unconditional-rule validation.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3403,10 +3327,9 @@ func NewTemporalTaskQueueVersioningDeleteRedirectRuleCommand(cctx *CommandContex
 	s.Command.Flags().StringVar(&s.SourceBuildId, "source-build-id", "", "Source Build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source-build-id")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3430,10 +3353,9 @@ func NewTemporalTaskQueueVersioningGetRulesCommand(cctx *CommandContext, parent 
 	s.Command.Args = cobra.NoArgs
 	s.Command.Annotations = make(map[string]string)
 	s.Command.Annotations["deprecationWarning"] = "This API has been deprecated by Worker Deployment."
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3466,10 +3388,9 @@ func NewTemporalTaskQueueVersioningInsertAssignmentRuleCommand(cctx *CommandCont
 	s.Command.Flags().IntVarP(&s.RuleIndex, "rule-index", "i", 0, "Insertion position. Ranges from 0 (insert at start) to count (append). Any number greater than the count is treated as \"append\".")
 	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Traffic percent to send to target Build ID.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3505,10 +3426,9 @@ func NewTemporalTaskQueueVersioningReplaceAssignmentRuleCommand(cctx *CommandCon
 	s.Command.Flags().IntVar(&s.Percentage, "percentage", 100, "Divert percent of traffic to target Build ID.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
 	s.Command.Flags().BoolVar(&s.Force, "force", false, "Bypass the validation that one unconditional rule remains.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3540,10 +3460,9 @@ func NewTemporalTaskQueueVersioningReplaceRedirectRuleCommand(cctx *CommandConte
 	s.Command.Flags().StringVar(&s.TargetBuildId, "target-build-id", "", "Target Build ID. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "target-build-id")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3622,10 +3541,9 @@ func NewTemporalWorkerDeploymentCreateCommand(cctx *CommandContext, parent *Temp
 	}
 	s.Command.Args = cobra.NoArgs
 	s.DeploymentNameOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3655,10 +3573,9 @@ func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, paren
 	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
 	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3682,10 +3599,9 @@ func NewTemporalWorkerDeploymentDeleteCommand(cctx *CommandContext, parent *Temp
 	}
 	s.Command.Args = cobra.NoArgs
 	s.DeploymentNameOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3711,10 +3627,9 @@ func NewTemporalWorkerDeploymentDeleteVersionCommand(cctx *CommandContext, paren
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.SkipDrainage, "skip-drainage", false, "Ignore the deletion requirement of not draining.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3738,10 +3653,9 @@ func NewTemporalWorkerDeploymentDescribeCommand(cctx *CommandContext, parent *Te
 	}
 	s.Command.Args = cobra.NoArgs
 	s.DeploymentNameOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3767,10 +3681,9 @@ func NewTemporalWorkerDeploymentDescribeVersionCommand(cctx *CommandContext, par
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.ReportTaskQueueStats, "report-task-queue-stats", false, "Report stats for task queues that are present in this version.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3792,10 +3705,9 @@ func NewTemporalWorkerDeploymentListCommand(cctx *CommandContext, parent *Tempor
 		s.Command.Long = "List existing Worker Deployments in the client's namespace.\n\n```\ntemporal worker deployment list [options]\n```\n\nFor example, listing Deployments in YourDeploymentNamespace:\n\n```\ntemporal worker deployment list \\\n    --namespace YourDeploymentNamespace\n```"
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3846,10 +3758,9 @@ func NewTemporalWorkerDeploymentManagerIdentitySetCommand(cctx *CommandContext, 
 	s.Command.Flags().BoolVar(&s.Self, "self", false, "Set Manager Identity to the identity of the user submitting this request. Required unless --manager-identity is specified.")
 	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Name for a Worker Deployment. Required.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Manager Identity.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3875,10 +3786,9 @@ func NewTemporalWorkerDeploymentManagerIdentityUnsetCommand(cctx *CommandContext
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.DeploymentName, "deployment-name", "", "Name for a Worker Deployment. Required.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm unset Manager Identity.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3908,10 +3818,9 @@ func NewTemporalWorkerDeploymentSetCurrentVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as current even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Current Version.")
 	s.DeploymentVersionOrUnversionedOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3945,10 +3854,9 @@ func NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx *CommandContext, p
 	s.Command.Flags().BoolVar(&s.AllowNoPollers, "allow-no-pollers", false, "Override protection and set version as ramping even if it has no pollers.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm set Ramping Version.")
 	s.DeploymentVersionOrUnversionedOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -3980,10 +3888,9 @@ func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandC
 	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
 	s.Command.Flags().BoolVar(&s.Remove, "remove", false, "Removes any compute configuration associated with this Worker Deployment Version.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4011,10 +3918,9 @@ func NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx *CommandContex
 	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey={\"your\": \"value\"}` Can be passed multiple times.")
 	s.Command.Flags().StringArrayVar(&s.RemoveEntries, "remove-entries", nil, "Keys of entries to be deleted from metadata. Can be passed multiple times.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4039,10 +3945,9 @@ func NewTemporalWorkerDescribeCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.WorkerInstanceKey, "worker-instance-key", "", "Worker instance key to describe. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "worker-instance-key")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4068,10 +3973,9 @@ func NewTemporalWorkerListCommand(cctx *CommandContext, parent *TemporalWorkerCo
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of workers to display.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4140,10 +4044,9 @@ func NewTemporalWorkflowCancelCommand(cctx *CommandContext, parent *TemporalWork
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4167,10 +4070,9 @@ func NewTemporalWorkflowCountCommand(cctx *CommandContext, parent *TemporalWorkf
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4194,10 +4096,9 @@ func NewTemporalWorkflowDeleteCommand(cctx *CommandContext, parent *TemporalWork
 	}
 	s.Command.Args = cobra.NoArgs
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4225,10 +4126,9 @@ func NewTemporalWorkflowDescribeCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.Flags().BoolVar(&s.ResetPoints, "reset-points", false, "Show auto-reset points only.")
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4261,10 +4161,9 @@ func NewTemporalWorkflowExecuteCommand(cctx *CommandContext, parent *TemporalWor
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4313,10 +4212,9 @@ func NewTemporalWorkflowExecuteUpdateWithStartCommand(cctx *CommandContext, pare
 		"name":        "type",
 		"update-type": "update-name",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4343,10 +4241,9 @@ func NewTemporalWorkflowFixHistoryJsonCommand(cctx *CommandContext, parent *Temp
 	s.Command.Flags().StringVarP(&s.Source, "source", "s", "", "Path to the original file. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "source")
 	s.Command.Flags().StringVarP(&s.Target, "target", "t", "", "Path to the results file. When omitted, output is sent to stdout.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4376,10 +4273,9 @@ func NewTemporalWorkflowListCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Flags().BoolVar(&s.Archived, "archived", false, "Limit output to archived Workflow Executions. EXPERIMENTAL.")
 	s.Command.Flags().IntVar(&s.Limit, "limit", 0, "Maximum number of Workflow Executions to display.")
 	s.Command.Flags().IntVar(&s.PageSize, "page-size", 0, "Maximum number of Workflow Executions to fetch at a time from the server.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4405,10 +4301,9 @@ func NewTemporalWorkflowMetadataCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.QueryModifiersOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4430,10 +4325,9 @@ func NewTemporalWorkflowPauseCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for pausing the Workflow Execution. Defaults to message with the current user's name.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4467,10 +4361,9 @@ func NewTemporalWorkflowQueryCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4517,10 +4410,9 @@ func NewTemporalWorkflowResetCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.PersistentFlags().StringVar(&s.BuildId, "build-id", "", "A Build ID. Use only with the BuildId `--type`. Resets the first Workflow task processed by this ID. By default, this reset may be in a prior run, earlier than a Continue as New point.")
 	s.Command.PersistentFlags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
 	s.Command.PersistentFlags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when `--query` is present.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4540,10 +4432,9 @@ func NewTemporalWorkflowResetWithWorkflowUpdateOptionsCommand(cctx *CommandConte
 	s.Command.Long = "Run Workflow Update Options atomically after the Workflow is reset.\nWorkflows selected by the reset command are forwarded onto the subcommand."
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowUpdateOptionsOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4567,10 +4458,9 @@ func NewTemporalWorkflowResultCommand(cctx *CommandContext, parent *TemporalWork
 	}
 	s.Command.Args = cobra.NoArgs
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4600,10 +4490,9 @@ func NewTemporalWorkflowShowCommand(cctx *CommandContext, parent *TemporalWorkfl
 	s.Command.Flags().BoolVar(&s.Detailed, "detailed", false, "Display events as detailed sections instead of table. Does not apply to JSON output.")
 	s.Command.Flags().BoolVar(&s.Reverse, "reverse", false, "Fetch Event History newest-event-first. Cannot be combined with --follow.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4635,10 +4524,9 @@ func NewTemporalWorkflowSignalCommand(cctx *CommandContext, parent *TemporalWork
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4681,10 +4569,9 @@ func NewTemporalWorkflowSignalWithStartCommand(cctx *CommandContext, parent *Tem
 		"name":        "type",
 		"signal-type": "signal-name",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4711,10 +4598,9 @@ func NewTemporalWorkflowStackCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.RejectCondition = cliext.NewFlagStringEnum([]string{"not_open", "not_completed_cleanly"}, "")
 	s.Command.Flags().Var(&s.RejectCondition, "reject-condition", "Optional flag to reject Queries based on Workflow state. Accepted values: not_open, not_completed_cleanly.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4745,10 +4631,9 @@ func NewTemporalWorkflowStartCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"name": "type",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4801,10 +4686,9 @@ func NewTemporalWorkflowStartUpdateWithStartCommand(cctx *CommandContext, parent
 		"name":        "type",
 		"update-type": "update-name",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4838,10 +4722,9 @@ func NewTemporalWorkflowTerminateCommand(cctx *CommandContext, parent *TemporalW
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to message with the current user's name.")
 	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm termination. Can only be used with --query.")
 	s.Command.Flags().Float32Var(&s.Rps, "rps", 0, "Limit batch's requests per second. Only allowed if query is present.")
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4873,10 +4756,9 @@ func NewTemporalWorkflowTraceCommand(cctx *CommandContext, parent *TemporalWorkf
 	s.Command.Flags().IntVar(&s.Depth, "depth", -1, "Set depth for your Child Workflow fetches. Pass -1 to fetch child workflows at any depth.")
 	s.Command.Flags().IntVar(&s.Concurrency, "concurrency", 10, "Number of Workflow Histories to fetch at a time.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4898,10 +4780,9 @@ func NewTemporalWorkflowUnpauseCommand(cctx *CommandContext, parent *TemporalWor
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for unpausing the Workflow Execution. Defaults to message with the current user's name.")
 	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4944,10 +4825,9 @@ func NewTemporalWorkflowUpdateDescribeCommand(cctx *CommandContext, parent *Temp
 	}
 	s.Command.Args = cobra.NoArgs
 	s.UpdateTargetingOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -4976,10 +4856,9 @@ func NewTemporalWorkflowUpdateExecuteCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -5003,10 +4882,9 @@ func NewTemporalWorkflowUpdateResultCommand(cctx *CommandContext, parent *Tempor
 	}
 	s.Command.Args = cobra.NoArgs
 	s.UpdateTargetingOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -5039,10 +4917,9 @@ func NewTemporalWorkflowUpdateStartCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
 		"type": "name",
 	}))
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
@@ -5074,10 +4951,9 @@ func NewTemporalWorkflowUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().StringVar(&s.VersioningOverrideDeploymentName, "versioning-override-deployment-name", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Deployment Name of the version to target.")
 	s.Command.Flags().StringVar(&s.VersioningOverrideBuildId, "versioning-override-build-id", "", "When overriding to a `pinned` or `one_time` behavior, specifies the Build ID of the version to target.")
 	s.SingleWorkflowOrBatchOptions.BuildFlags(s.Command.Flags())
-	s.Command.Run = func(c *cobra.Command, args []string) {
-		if err := s.run(cctx, args); err != nil {
-			cctx.Options.Fail(err)
-		}
+	s.Command.RunE = func(c *cobra.Command, args []string) error {
+		cctx.commandRunStarted = true
+		return s.run(cctx, args)
 	}
 	return &s
 }
