@@ -44,63 +44,64 @@ func TestScalerTypeByProviderCoversAllProviders(t *testing.T) {
 }
 
 func TestGCPCloudRunScalerDetails(t *testing.T) {
-	// None set -> nil payload so WCI defaults (min 0, max 30, initial 0) apply.
-	// The 0 values are ignored because the *Set booleans are false.
-	p, err := gcpCloudRunScalerDetails("gcp-cloud-run", 0, false, 0, false, 0, false)
+	// Nothing set -> nil payload so WCI defaults apply (min 0, max 30,
+	// initial 0, utilization_target 0.8).
+	p, err := gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{})
 	require.NoError(t, err)
 	require.Nil(t, p)
 
-	// Any use alongside a non-GCP provider is rejected, even for value 0.
-	_, err = gcpCloudRunScalerDetails("aws-lambda", 0, true, 0, false, 0, false)
+	// Any scaler flag alongside a non-GCP provider is rejected. Covers both an
+	// instance-count flag and the utilization flag.
+	_, err = gcpCloudRunScalerDetails("aws-lambda", gcpScalerFlags{minSet: true})
+	require.ErrorContains(t, err, "only valid with --gcp-cloud-run-worker-pool")
+	_, err = gcpCloudRunScalerDetails("aws-lambda", gcpScalerFlags{utilization: 0.5, utilizationSet: true})
 	require.ErrorContains(t, err, "only valid with --gcp-cloud-run-worker-pool")
 
-	// A partial set is rejected; all three must be set together so the
-	// min<=initial<=max relationship never depends on WCI's defaults.
-	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", 5, true, 0, false, 0, false)
+	// All four settings are one all-or-none group: any partial set is rejected.
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: 5, minSet: true})
 	require.ErrorContains(t, err, "must be set together")
-	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", 1, true, 3, true, 0, false) // missing initial
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{utilization: 0.5, utilizationSet: true}) // utilization alone
+	require.ErrorContains(t, err, "must be set together")
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{ // trio set, utilization missing
+		min: 1, minSet: true, max: 3, maxSet: true, initial: 2, initialSet: true,
+	})
 	require.ErrorContains(t, err, "must be set together")
 
-	// All set: negative min rejected.
-	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", -1, true, 3, true, 0, true)
+	// Value checks, with all four set so the group check passes first.
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: -1, minSet: true, max: 3, maxSet: true, initial: 0, initialSet: true, utilization: 0.5, utilizationSet: true})
 	require.ErrorContains(t, err, "cannot be negative")
-
-	// All set: max < 1 rejected (WCI requires max_count >= 1).
-	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", 0, true, 0, true, 0, true)
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: 0, minSet: true, max: 0, maxSet: true, initial: 0, initialSet: true, utilization: 0.5, utilizationSet: true})
 	require.ErrorContains(t, err, "--gcp-cloud-run-max-instances must be at least 1")
-
-	// All set: min > max rejected.
-	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", 5, true, 3, true, 4, true)
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: 5, minSet: true, max: 3, maxSet: true, initial: 4, initialSet: true, utilization: 0.5, utilizationSet: true})
 	require.ErrorContains(t, err, "cannot exceed")
-
-	// All set: initial outside [min, max] rejected.
-	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", 2, true, 10, true, 15, true)
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: 2, minSet: true, max: 10, maxSet: true, initial: 15, initialSet: true, utilization: 0.5, utilizationSet: true})
 	require.ErrorContains(t, err, "must be between")
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: 0, minSet: true, max: 10, maxSet: true, initial: 5, initialSet: true, utilization: 0, utilizationSet: true})
+	require.ErrorContains(t, err, "must be greater than 0 and at most 1")
+	_, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: 0, minSet: true, max: 10, maxSet: true, initial: 5, initialSet: true, utilization: 1.5, utilizationSet: true})
+	require.ErrorContains(t, err, "must be greater than 0 and at most 1")
 
-	// All set and valid -> payload decodes to the WCI rate-based config keys.
-	p, err = gcpCloudRunScalerDetails("gcp-cloud-run", 1, true, 10, true, 5, true)
+	// All four set and valid -> payload decodes to the WCI rate-based keys.
+	// JSON round-trips numbers as float64; WCI handles that on read.
+	p, err = gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{min: 1, minSet: true, max: 10, maxSet: true, initial: 5, initialSet: true, utilization: 0.5, utilizationSet: true})
 	require.NoError(t, err)
 	require.NotNil(t, p)
 	var details map[string]any
 	require.NoError(t, converter.GetDefaultDataConverter().FromPayload(p, &details))
-	// JSON round-trips numbers as float64; WCI's getInt64FromMap handles that.
-	require.Equal(t, float64(1), details["min_count"])
-	require.Equal(t, float64(10), details["max_count"])
-	require.Equal(t, float64(5), details["initial_count"])
-
-	// min and initial of 0 are valid (WCI's floor is 0) when all three are set.
-	p, err = gcpCloudRunScalerDetails("gcp-cloud-run", 0, true, 5, true, 0, true)
-	require.NoError(t, err)
-	details = nil
-	require.NoError(t, converter.GetDefaultDataConverter().FromPayload(p, &details))
-	require.Equal(t, float64(0), details["min_count"])
-	require.Equal(t, float64(5), details["max_count"])
-	require.Equal(t, float64(0), details["initial_count"])
+	require.Equal(t, float64(1), details[scalerKeyMinCount])
+	require.Equal(t, float64(10), details[scalerKeyMaxCount])
+	require.Equal(t, float64(5), details[scalerKeyInitialCount])
+	require.Equal(t, float64(0.5), details[scalerKeyUtilizationTarget])
 }
 
 func TestFormatComputeConfigProto_ScalerBounds(t *testing.T) {
 	// Build the scaler details the same way the run methods do.
-	scalerDetails, err := gcpCloudRunScalerDetails("gcp-cloud-run", 0, true, 10, true, 5, true)
+	scalerDetails, err := gcpCloudRunScalerDetails("gcp-cloud-run", gcpScalerFlags{
+		min: 0, minSet: true,
+		max: 10, maxSet: true,
+		initial: 5, initialSet: true,
+		utilization: 0.75, utilizationSet: true,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, scalerDetails)
 
@@ -113,7 +114,7 @@ func TestFormatComputeConfigProto_ScalerBounds(t *testing.T) {
 		},
 	}
 
-	// JSON/structured path surfaces min, max, and initial on the scaler.
+	// JSON/structured path surfaces min, max, initial, and utilization.
 	formatted := formatComputeConfigProto(cc)
 	require.NotNil(t, formatted)
 	sg, ok := formatted.ScalingGroups["default"]
@@ -123,12 +124,14 @@ func TestFormatComputeConfigProto_ScalerBounds(t *testing.T) {
 	require.NotNil(t, sg.Scaler.MinInstances)
 	require.NotNil(t, sg.Scaler.MaxInstances)
 	require.NotNil(t, sg.Scaler.InitialInstances)
+	require.NotNil(t, sg.Scaler.UtilizationTarget)
 	require.Equal(t, int64(0), *sg.Scaler.MinInstances)
 	require.Equal(t, int64(10), *sg.Scaler.MaxInstances)
 	require.Equal(t, int64(5), *sg.Scaler.InitialInstances)
+	require.Equal(t, float64(0.75), *sg.Scaler.UtilizationTarget)
 
-	// Human-readable summary reflects the settings (ordered min, initial, max).
-	require.Equal(t, "gcp-cloud-run (min 0, initial 5, max 10)", computeConfigSummaryStr(cc))
+	// Human-readable summary reflects the settings (min, initial, max, utilization).
+	require.Equal(t, "gcp-cloud-run (min 0, initial 5, max 10, utilization 0.75)", computeConfigSummaryStr(cc))
 
 	// Without scaler details, the settings are nil and the summary is just the
 	// provider (guards against printing zeroed-out values).
@@ -146,5 +149,6 @@ func TestFormatComputeConfigProto_ScalerBounds(t *testing.T) {
 	require.Nil(t, sg.Scaler.MinInstances)
 	require.Nil(t, sg.Scaler.MaxInstances)
 	require.Nil(t, sg.Scaler.InitialInstances)
+	require.Nil(t, sg.Scaler.UtilizationTarget)
 	require.Equal(t, "gcp-cloud-run", computeConfigSummaryStr(ccNoBounds))
 }

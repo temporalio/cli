@@ -1421,7 +1421,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
 
-	// A lone bound is rejected: min, max, and initial must be set together.
+	// A lone flag is rejected: all four scaling settings must be set together.
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1436,7 +1436,8 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be set together")
 
-	// min + max without initial is also rejected: initial is required too.
+	// The instance counts without utilization-target are also rejected:
+	// utilization-target is part of the same all-or-none group.
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1448,11 +1449,12 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
 		"--gcp-cloud-run-min-instances", "1",
 		"--gcp-cloud-run-max-instances", "3",
+		"--gcp-cloud-run-initial-instances", "2",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be set together")
 
-	// min cannot exceed max (all three set).
+	// min cannot exceed max (all four set so the group check passes first).
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1465,6 +1467,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-min-instances", "5",
 		"--gcp-cloud-run-max-instances", "3",
 		"--gcp-cloud-run-initial-instances", "4",
+		"--gcp-cloud-run-utilization-target", "0.5",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "cannot exceed")
@@ -1482,6 +1485,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-min-instances", "0",
 		"--gcp-cloud-run-max-instances", "0",
 		"--gcp-cloud-run-initial-instances", "0",
+		"--gcp-cloud-run-utilization-target", "0.5",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "--gcp-cloud-run-max-instances must be at least 1")
@@ -1499,9 +1503,43 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-min-instances", "2",
 		"--gcp-cloud-run-max-instances", "10",
 		"--gcp-cloud-run-initial-instances", "15",
+		"--gcp-cloud-run-utilization-target", "0.5",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be between")
+
+	// utilization-target must be a fraction in (0, 1] (all four set so the
+	// group check passes first).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "1.5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be greater than 0 and at most 1")
+
+	// utilization-target is GCP Cloud Run only; rejected alongside AWS Lambda.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+		"--gcp-cloud-run-utilization-target", "0.75",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
 
 	// Instance settings with AWS Lambda are also rejected on update, before the RPC.
 	res = s.Execute(
