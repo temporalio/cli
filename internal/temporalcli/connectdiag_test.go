@@ -235,27 +235,59 @@ func TestDiagnoseConnection_HealthyTLSFallsThroughToGRPC(t *testing.T) {
 func TestDiagnoseConnection_CancellationDuringTLSIsSkippedAndPrompt(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = ln.Close() })
-	accepted := make(chan struct{})
 	release := make(chan struct{})
+	tlsStarted := make(chan error, 1)
+	serverDone := make(chan struct{})
 	go func() {
+		defer close(serverDone)
 		conn, acceptErr := ln.Accept()
 		if acceptErr != nil {
+			tlsStarted <- acceptErr
 			return
 		}
 		defer conn.Close()
-		close(accepted)
+		header := make([]byte, 5)
+		_, readErr := io.ReadFull(conn, header)
+		tlsStarted <- readErr
+		if readErr != nil {
+			return
+		}
 		<-release
 	}()
-	t.Cleanup(func() { close(release) })
+	t.Cleanup(func() {
+		close(release)
+		_ = ln.Close()
+		select {
+		case <-serverDone:
+		case <-time.After(time.Second):
+			t.Error("TLS test server did not stop")
+		}
+	})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	go func() {
-		<-accepted
-		cancel()
-	}()
+	t.Cleanup(cancel)
+	diagnosisDone := make(chan *connectDiagnosis, 1)
 	started := time.Now()
-	d := diagnoseConnection(ctx, ln.Addr().String(), &tls.Config{InsecureSkipVerify: true}, errors.New("dial failed"))
+	go func() {
+		diagnosisDone <- diagnoseConnection(ctx, ln.Addr().String(), &tls.Config{InsecureSkipVerify: true}, errors.New("dial failed"))
+	}()
+
+	select {
+	case tlsErr := <-tlsStarted:
+		require.NoError(t, tlsErr)
+	case d := <-diagnosisDone:
+		t.Fatalf("diagnosis completed before TLS handshake began: %+v", d)
+	case <-time.After(time.Second):
+		t.Fatal("TLS handshake did not begin")
+	}
+	cancel()
+
+	var d *connectDiagnosis
+	select {
+	case d = <-diagnosisDone:
+	case <-time.After(time.Second):
+		t.Fatal("diagnosis did not return after cancellation")
+	}
 
 	assert.Less(t, time.Since(started), time.Second)
 	assert.Equal(t, causeUnknown, d.Cause)
