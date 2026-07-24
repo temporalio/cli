@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -25,7 +26,11 @@ func TestWriteConnectionErrorHandlesWrappedConnectError(t *testing.T) {
 	assert.Contains(t, stderr.String(), "Error: failed connecting to Temporal server at 127.0.0.1:7233: connection refused")
 	assert.Contains(t, stderr.String(), "Namespace: default")
 	assert.Contains(t, stderr.String(), "✗ TCP connection refused")
-	assert.Contains(t, stderr.String(), "temporal server start-dev")
+	expectedCommand := "temporal server start-dev"
+	if runtime.GOOS == "windows" {
+		expectedCommand = "& 'temporal' 'server' 'start-dev'"
+	}
+	assert.Contains(t, stderr.String(), expectedCommand)
 	assert.NotContains(t, stderr.String(), "\x1b[")
 }
 
