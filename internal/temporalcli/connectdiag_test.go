@@ -460,7 +460,7 @@ func TestSuggestFix(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := string(renderErrorText(errorReport{Summary: "failure", Action: suggestAction(tt.diag, tt.meta)}, renderOptions{}))
+			got := string(renderConnectionReport(connectionReport{Summary: "failure", Action: suggestAction(tt.diag, tt.meta)}, false, displayShellPOSIX))
 			for _, want := range tt.contains {
 				assert.Contains(t, got, want)
 			}
@@ -489,7 +489,7 @@ func TestConnectErrorRendering(t *testing.T) {
 		TLSConfigured: true,
 	}, origErr)
 
-	msg := string(renderErrorText(connectionErrorReport(err), renderOptions{}))
+	msg := string(renderConnectionReport(connectionErrorReport(err), false, displayShellPOSIX))
 	assert.Contains(t, msg, "failed connecting to Temporal server at foo.bar.tmprl.cloud:7233: TLS handshake failed: server requires client certificate (mTLS)")
 	assert.Contains(t, msg, "Namespace: example.namespace")
 	assert.Contains(t, msg, "TLS: true")

@@ -124,12 +124,9 @@ func TestConnectDiagnosis_MTLSRequired(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Stderr.String()
-	assert.Contains(t, msg, "Connection checks for "+addr)
-	assert.Contains(t, msg, "✓ TCP connection established")
-	assert.Contains(t, msg, "✗ TLS handshake failed: server requires mTLS")
-	assert.Contains(t, msg, "--tls-cert-path")
-	assert.Contains(t, msg, "--tls-key-path")
+	assert.Contains(t, res.Err.Error(), "failed connecting to Temporal server at "+addr)
+	assert.Contains(t, res.Err.Error(), "server requires client certificate (mTLS)")
+	assert.Empty(t, res.Stderr.String(), "the test harness overrides Fail and captures the error")
 }
 
 func TestConnectDiagnosis_Refused(t *testing.T) {
@@ -147,10 +144,9 @@ func TestConnectDiagnosis_Refused(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Stderr.String()
-	assert.Contains(t, msg, "connection refused")
-	assert.Contains(t, msg, "✗ TCP connection refused")
-	assert.Contains(t, msg, "Nothing is listening at "+addr)
+	assert.Contains(t, res.Err.Error(), "failed connecting to Temporal server at "+addr)
+	assert.Contains(t, res.Err.Error(), "connection refused")
+	assert.Empty(t, res.Stderr.String(), "the test harness overrides Fail and captures the error")
 }
 
 func TestConnectDiagnosis_DNSFailure(t *testing.T) {
@@ -163,10 +159,9 @@ func TestConnectDiagnosis_DNSFailure(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Stderr.String()
-	assert.Contains(t, msg, "could not resolve host")
-	assert.Contains(t, msg, "✗ DNS lookup")
-	assert.Contains(t, msg, `Could not resolve "does-not-exist.invalid"`)
+	assert.Contains(t, res.Err.Error(), "failed connecting to Temporal server at does-not-exist.invalid:7233")
+	assert.Contains(t, res.Err.Error(), "could not resolve host")
+	assert.Empty(t, res.Stderr.String(), "the test harness overrides Fail and captures the error")
 }
 
 func TestConnectDiagnosis_JSONOutputHasNoANSI(t *testing.T) {
@@ -184,7 +179,8 @@ func TestConnectDiagnosis_JSONOutputHasNoANSI(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	assert.NotContains(t, res.Stderr.String(), "\x1b[", "diagnosis must not contain ANSI escapes in JSON mode")
+	assert.NotContains(t, res.Err.Error(), "\x1b[", "connection errors must remain uncolored")
+	assert.Empty(t, res.Stderr.String(), "the test harness overrides Fail and captures the error")
 	assert.Empty(t, res.Stdout.String(), "connection failures must not write to stdout")
 }
 
@@ -203,7 +199,7 @@ func TestConnectDiagnosis_Disabled(t *testing.T) {
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Stderr.String()
+	msg := res.Err.Error()
 	assert.Contains(t, msg, "failed connecting to Temporal server at "+addr)
 	assert.NotContains(t, msg, "✗", "diagnosis must be suppressed when disabled")
 	assert.NotContains(t, msg, "Namespace:")
@@ -223,12 +219,12 @@ func TestConnectDiagnosis_CertFileMissing(t *testing.T) {
 	require.Error(t, res.Err)
 	var pathErr *os.PathError
 	require.ErrorAs(t, res.Err, &pathErr)
-	msg := res.Stderr.String()
+	msg := res.Err.Error()
 	assert.Contains(t, msg, "failed preparing Temporal server connection")
 	assert.NotContains(t, msg, "server connection at", "Build returned no authoritative effective address")
 	assert.Contains(t, msg, "cannot read file")
 	assert.Contains(t, msg, "/definitely/does/not/exist")
-	assert.NotContains(t, msg, "✓", "no probe stages expected when the dial never happened")
+	assert.Empty(t, res.Stderr.String(), "the test harness overrides Fail and captures the error")
 }
 
 func TestConnectDiagnosis_ProfileAddressUsesEffectiveAddressWithoutGuessingProvenance(t *testing.T) {
@@ -250,7 +246,7 @@ address = "does-not-exist.invalid:7233"
 	)
 
 	require.Error(t, res.Err)
-	msg := res.Stderr.String()
+	msg := res.Err.Error()
 	assert.Contains(t, msg, "failed connecting to Temporal server at does-not-exist.invalid:7233")
 	assert.NotContains(t, msg, "config profile")
 	assert.NotContains(t, msg, "temporal config get")

@@ -25,13 +25,13 @@ var cliArgsToParseForExtension = map[string]bool{
 	"command-timeout": true,
 }
 
-// ExtensionNonZeroExit preserves a started extension's exit status and marks
-// its output as extension-owned, so the parent does not render another error.
 type ExtensionNonZeroExit struct {
 	*exec.ExitError
 }
 
-func (err ExtensionNonZeroExit) Unwrap() error { return err.ExitError }
+func (err ExtensionNonZeroExit) Unwrap() error {
+	return err.ExitError
+}
 
 // tryExecuteExtension tries to execute an extension command if the command is not a built-in command.
 // It returns an error if the extension command fails, and a boolean indicating whether an extension was executed.

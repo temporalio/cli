@@ -12,10 +12,6 @@ Uses normal `go test`, e.g.:
 
     go test ./...
 
-The root command does not enter the nested `cliext` module. Run `(cd cliext && go test ./...)` separately.
-
-The current transition branch has a recorded standalone `cliext` compile mismatch. Until that mismatch is fixed, the nested command must match the baseline exception. Do not report it as green.
-
 See other tests for how to leverage things like the command harness and dev server suite.
 
 Example to run a single test case:

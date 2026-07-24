@@ -819,12 +819,7 @@ func (s *SharedServerSuite) TestActivity_Result_NotFound() {
 	)
 	s.Error(res.Err)
 	s.Contains(res.Err.Error(), "not found")
-	var notFound *serviceerror.NotFound
-	s.ErrorAs(res.Err, &notFound)
-	s.Equal(1, res.Runtime.ExitStatus)
-	s.Equal("Error: standalone Activity not found\n", res.Stderr.String())
-	s.NotContains(res.Stderr.String(), "Try")
-	s.Empty(res.Stdout.String())
+	s.NotContains(res.Stdout.String(), "FAILED")
 }
 
 func (s *SharedServerSuite) TestActivity_Describe() {

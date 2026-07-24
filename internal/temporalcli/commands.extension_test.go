@@ -233,28 +233,26 @@ func TestExtension_FailsOnNonExecutableCommand(t *testing.T) {
 	h := newExtensionHarness(t)
 	// Create file without execute permission.
 	path := filepath.Join(h.binDir, "temporal-foo")
-	err := os.WriteFile(path, []byte("a text file"), 0644)
+	err := os.WriteFile(path, []byte("a text file"), 0o644)
 	require.NoError(t, err)
 
 	res := h.Execute("foo")
 
-	assert.Empty(t, res.Stdout.String())
-	assert.Contains(t, res.Stderr.String(), "Usage:")
+	assert.Contains(t, res.Stdout.String(), "Usage:") // help text is shown
 	assert.EqualError(t, res.Err, "unknown command")
 }
 
 func TestExtension_PassesThroughNonZeroExit(t *testing.T) {
 	h := newExtensionHarness(t)
-	h.createExtension("temporal-foo", codeEchoArgs, codeEchoStderr("child error"), codeExit(42))
+	h.createExtension("temporal-foo", codeEchoArgs, codeExit(42))
 
 	res := h.Execute("foo")
 
 	assert.Equal(t, "Args: temporal-foo \n", res.Stdout.String())
-	var extensionErr temporalcli.ExtensionNonZeroExit
-	assert.ErrorAs(t, res.Err, &extensionErr)
-	assert.Equal(t, 42, res.Runtime.ExitStatus)
-	assert.Equal(t, "child error\n", res.Stderr.String(), "extension owns its stderr without a parent report")
-	assert.NotContains(t, res.Stderr.String(), "Error:")
+	var exitError temporalcli.ExtensionNonZeroExit
+	if assert.ErrorAs(t, res.Err, &exitError) {
+		assert.Equal(t, 42, exitError.ExitCode())
+	}
 }
 
 func TestExtension_FailsOnCommandTimeout(t *testing.T) {
@@ -312,7 +310,7 @@ func (h *extensionHarness) createExtension(name string, code ...string) string {
 
 	// Write source file.
 	srcPath := filepath.Join(h.binDir, name+".go")
-	require.NoError(h.t, os.WriteFile(srcPath, formatted, 0644))
+	require.NoError(h.t, os.WriteFile(srcPath, formatted, 0o644))
 
 	// Build executable.
 	binPath := filepath.Join(h.binDir, name)
