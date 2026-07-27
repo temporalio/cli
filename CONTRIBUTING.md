@@ -33,7 +33,12 @@ and create a PR in the Documentation repo with the corresponding updates. To gen
 
     go run ./cmd/gen-docs -input internal/temporalcli/commands.yaml -input cliext/option-sets.yaml -output dist/docs
 
-This will auto-generate a new set of docs to `dist/docs/`. If a new root command is added, a new file will be automatically generated, like `temporal activity` and `activity.mdx`.
+This will auto-generate a new set of docs to `dist/docs/`, including an
+`environment-variables.mdx` index of shell env vars derived from `implied-env`.
+If a new root command is added, a new file will be automatically generated, like `temporal activity` and `activity.mdx`.
+
+When generating cloud CLI docs with `-subdir`, the env-var index is intentionally
+omitted so a subsequent run does not overwrite the main CLI page.
 
 ## Inject additional build-time information
 

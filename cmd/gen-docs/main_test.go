@@ -36,4 +36,9 @@ func TestGenDocsMultipleInputs(t *testing.T) {
 	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
 		t.Fatal("workflow.mdx was not generated")
 	}
+
+	envVarsPath := filepath.Join(outputDir, "environment-variables.mdx")
+	if _, err := os.Stat(envVarsPath); os.IsNotExist(err) {
+		t.Fatal("environment-variables.mdx was not generated")
+	}
 }

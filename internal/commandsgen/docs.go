@@ -52,6 +52,15 @@ func GenerateDocsFiles(commands Commands, subdirNames []string) (map[string][]by
 	for key, buf := range w.fileMap {
 		finalMap[key] = buf.Bytes()
 	}
+
+	// Emit the env-var index only for full CLI docs generation. Cloud-cli runs
+	// use -subdir and would otherwise overwrite this page with a partial list.
+	if len(subdirNames) == 0 {
+		if envDocs := GenerateEnvVarDocsFile(commands); envDocs != nil {
+			finalMap["environment-variables"] = envDocs
+		}
+	}
+
 	return finalMap, nil
 }
 
