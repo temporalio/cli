@@ -2355,7 +2355,7 @@ commands:
       - name: yes
         short: y
         type: bool
-        description: Request confirmation before deletion.
+        description: Don't prompt to confirm deletion.
 
   - name: temporal operator namespace describe
     summary: Describe a Namespace
