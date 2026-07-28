@@ -180,3 +180,45 @@ func (s *SharedServerSuite) TestTaskQueue_BuildId() {
 		},
 	}, jsonReachOut)
 }
+
+func (s *SharedServerSuite) TestDeprecatedCommand_WarnsOnStderr() {
+	taskQueue := uuid.NewString()
+
+	// Run a deprecated command
+	res := s.Execute(
+		"task-queue", "update-build-ids", "add-new-default",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--build-id", "1.0",
+	)
+	s.NoError(res.Err)
+
+	// Deprecation warning must appear on stderr
+	stderr := res.Stderr.String()
+	s.Contains(stderr, "warning:")
+	s.Contains(stderr, "deprecated")
+
+	// Warning must not appear on stdout (would break JSON consumers)
+	s.NotContains(res.Stdout.String(), "warning:")
+}
+
+func (s *SharedServerSuite) TestDeprecatedCommand_WarnsOnStderr_JSON() {
+	taskQueue := uuid.NewString()
+
+	// Run a deprecated command with JSON output
+	res := s.Execute(
+		"task-queue", "get-build-ids",
+		"-o", "json",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+	)
+	s.NoError(res.Err)
+
+	// Deprecation warning must appear on stderr even with JSON output
+	stderr := res.Stderr.String()
+	s.Contains(stderr, "warning:")
+	s.Contains(stderr, "deprecated")
+
+	// Stdout must be valid JSON, not polluted by warnings
+	s.NotContains(res.Stdout.String(), "warning:")
+}

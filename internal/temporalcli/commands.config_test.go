@@ -25,6 +25,7 @@ func TestConfig_Get(t *testing.T) {
 address = "my-address"
 namespace = "my-namespace"
 api_key = "my-api-key"
+authority = "my-authority"
 codec = { endpoint = "my-endpoint", auth = "my-auth" }
 grpc_meta = { some-heAder1 = "some-value1", some-header2 = "some-value2", some_heaDer3 = "some-value3" }
 some_future_key = "some future value not handled"
@@ -74,6 +75,7 @@ disable_host_verification = true`))
 		"address":                       "my-address",
 		"namespace":                     "my-namespace",
 		"api_key":                       "my-api-key",
+		"authority":                     "my-authority",
 		"codec.endpoint":                "my-endpoint",
 		"codec.auth":                    "my-auth",
 		"grpc_meta.some-header1":        "some-value1",
@@ -117,6 +119,7 @@ disable_host_verification = true`))
 	h.JSONEq(`{
 		"address": "my-address",
 		"api_key": "my-api-key",
+		"authority": "my-authority",
 		"codec": {
 			"auth": "my-auth",
 			"endpoint": "my-endpoint"
@@ -149,6 +152,30 @@ disable_host_verification = true`))
 		}
 		h.ContainsOnSameLine(res.Stdout.String(), prop, fmt.Sprintf("%v", expectedVal))
 	}
+}
+
+func TestConfig_Get_NoTLSWhenUnconfigured(t *testing.T) {
+	// Regression test for #1077: `config get` (table output) must not display
+	// "tls true" for a profile that has no TLS configuration.
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	f, err := os.CreateTemp("", "")
+	h.NoError(err)
+	defer os.Remove(f.Name())
+	_, err = f.Write([]byte(`
+[profile.devtest]
+address = "localhost:17233"
+namespace = "default"`))
+	f.Close()
+	h.NoError(err)
+	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": f.Name(), "TEMPORAL_PROFILE": "devtest"}
+
+	res := h.Execute("config", "get")
+	h.NoError(res.Err)
+	h.Contains(res.Stdout.String(), "localhost:17233")
+	// No TLS section was configured, so "tls" should not appear at all.
+	h.NotContains(res.Stdout.String(), "tls")
 }
 
 func TestConfig_TLS_Boolean(t *testing.T) {
@@ -320,6 +347,7 @@ func TestConfig_Set(t *testing.T) {
 		"address":                       "my-address",
 		"namespace":                     "my-namespace",
 		"api_key":                       "my-api-key",
+		"authority":                     "my-authority",
 		"codec.endpoint":                "my-endpoint",
 		"codec.auth":                    "my-auth",
 		"grpc_meta.sOme_header1":        "some-value1",
@@ -350,6 +378,7 @@ func TestConfig_Set(t *testing.T) {
 					"address":   "my-address",
 					"namespace": "my-namespace",
 					"api_key":   "my-api-key",
+					"authority": "my-authority",
 					"tls": map[string]any{
 						"disabled":                  true,
 						"client_cert_path":          "my-client-cert-path",

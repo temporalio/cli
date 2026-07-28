@@ -29,6 +29,11 @@ type ClientOptionsBuilder struct {
 	// Logger is the slog logger to use for the client. If set, it will be
 	// wrapped with the SDK's structured logger adapter.
 	Logger *slog.Logger
+
+	// PayloadCodec is populated by Build when a remote payload codec is
+	// configured. Callers can use it to decode payloads outside the gRPC
+	// interceptor chain (e.g. payloads nested inside opaque proto bytes).
+	PayloadCodec converter.PayloadCodec
 }
 
 type oauthCredentials struct {
@@ -125,6 +130,11 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 	// Set API key on profile if provided
 	if cfg.ApiKey != "" {
 		profile.APIKey = cfg.ApiKey
+	}
+
+	// Set client authority on profile if provided
+	if cfg.ClientAuthority != "" {
+		profile.Authority = cfg.ClientAuthority
 	}
 
 	// Handle gRPC metadata from flags.
@@ -248,13 +258,18 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		if err != nil {
 			return client.Options{}, fmt.Errorf("invalid codec headers: %w", err)
 		}
-		interceptor, err := newPayloadCodecInterceptor(
+		payloadCodec := newRemotePayloadCodec(
 			profile.Namespace, profile.Codec.Endpoint, profile.Codec.Auth, codecHeaders)
+		interceptor, err := converter.NewPayloadCodecGRPCClientInterceptor(
+			converter.PayloadCodecGRPCClientInterceptorOptions{
+				Codecs: []converter.PayloadCodec{payloadCodec},
+			})
 		if err != nil {
 			return client.Options{}, fmt.Errorf("failed creating payload codec interceptor: %w", err)
 		}
 		clientOpts.ConnectionOptions.DialOptions = append(
 			clientOpts.ConnectionOptions.DialOptions, grpc.WithChainUnaryInterceptor(interceptor))
+		b.PayloadCodec = payloadCodec
 	}
 
 	// Set connect timeout for GetSystemInfo if provided.
@@ -278,16 +293,17 @@ func parseKeyValuePairs(pairs []string) (map[string]string, error) {
 	return result, nil
 }
 
-// newPayloadCodecInterceptor creates a gRPC interceptor for remote payload codec.
-func newPayloadCodecInterceptor(
+// newRemotePayloadCodec constructs a remote payload codec from the configured endpoint,
+// auth, and headers. The returned codec can be used both inside a gRPC interceptor and
+// to decode payloads nested inside opaque proto bytes (e.g. system Nexus operation inputs).
+func newRemotePayloadCodec(
 	namespace string,
 	codecEndpoint string,
 	codecAuth string,
 	codecHeaders map[string]string,
-) (grpc.UnaryClientInterceptor, error) {
+) converter.PayloadCodec {
 	codecEndpoint = strings.ReplaceAll(codecEndpoint, "{namespace}", namespace)
-
-	payloadCodec := converter.NewRemotePayloadCodec(
+	return converter.NewRemotePayloadCodec(
 		converter.RemotePayloadCodecOptions{
 			Endpoint: codecEndpoint,
 			ModifyRequest: func(req *http.Request) error {
@@ -300,11 +316,6 @@ func newPayloadCodecInterceptor(
 				}
 				return nil
 			},
-		},
-	)
-	return converter.NewPayloadCodecGRPCClientInterceptor(
-		converter.PayloadCodecGRPCClientInterceptorOptions{
-			Codecs: []converter.PayloadCodec{payloadCodec},
 		},
 	)
 }

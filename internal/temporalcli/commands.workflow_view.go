@@ -15,7 +15,7 @@ import (
 	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
+
 	"go.temporal.io/sdk/temporalnexus"
 )
 
@@ -210,14 +210,20 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		overrideBehavior := ""
 		overridePinnedVersionDeploymentName := ""
 		overridePinnedVersionBuildId := ""
+		overrideTargetVersionDeploymentName := ""
+		overrideTargetVersionBuildId := ""
 		if vInfo.VersioningOverride != nil {
 			switch vInfo.VersioningOverride.GetOverride().(type) {
 			case *workflow.VersioningOverride_Pinned:
-				overridePinnedVersionDeploymentName = vInfo.GetVersioningOverride().GetPinned().Version.DeploymentName
-				overridePinnedVersionBuildId = vInfo.GetVersioningOverride().GetPinned().Version.BuildId
+				overridePinnedVersionDeploymentName = vInfo.GetVersioningOverride().GetPinned().GetVersion().GetDeploymentName()
+				overridePinnedVersionBuildId = vInfo.GetVersioningOverride().GetPinned().GetVersion().GetBuildId()
 				overrideBehavior = enums.VERSIONING_BEHAVIOR_PINNED.String()
 			case *workflow.VersioningOverride_AutoUpgrade:
 				overrideBehavior = enums.VERSIONING_BEHAVIOR_AUTO_UPGRADE.String()
+			case *workflow.VersioningOverride_OneTime:
+				overrideTargetVersionDeploymentName = vInfo.GetVersioningOverride().GetOneTime().GetTargetDeploymentVersion().GetDeploymentName()
+				overrideTargetVersionBuildId = vInfo.GetVersioningOverride().GetOneTime().GetTargetDeploymentVersion().GetBuildId()
+				overrideBehavior = "OneTime"
 			}
 		}
 		_ = cctx.Printer.PrintStructured(struct {
@@ -227,6 +233,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			OverrideBehavior                    string `cli:",cardOmitEmpty"`
 			OverridePinnedVersionDeploymentName string `cli:",cardOmitEmpty"`
 			OverridePinnedVersionBuildId        string `cli:",cardOmitEmpty"`
+			OverrideTargetVersionDeploymentName string `cli:",cardOmitEmpty"`
+			OverrideTargetVersionBuildId        string `cli:",cardOmitEmpty"`
 			TransitionVersionDeploymentName     string `cli:",cardOmitEmpty"`
 			TransitionVersionBuildId            string `cli:",cardOmitEmpty"`
 		}{
@@ -236,6 +244,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			OverrideBehavior:                    overrideBehavior,
 			OverridePinnedVersionDeploymentName: overridePinnedVersionDeploymentName,
 			OverridePinnedVersionBuildId:        overridePinnedVersionBuildId,
+			OverrideTargetVersionDeploymentName: overrideTargetVersionDeploymentName,
+			OverrideTargetVersionBuildId:        overrideTargetVersionBuildId,
 			TransitionVersionDeploymentName:     vInfo.VersionTransition.GetDeploymentVersion().GetDeploymentName(),
 			TransitionVersionBuildId:            vInfo.VersionTransition.GetDeploymentVersion().GetBuildId(),
 		}, printer.StructuredOptions{})
@@ -324,8 +334,14 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			_ = cctx.Printer.PrintStructured(resp.PendingChildren, printer.StructuredOptions{})
 		}
 
-		cctx.Printer.Println(color.MagentaString("Pending Nexus Operations: %v", len(resp.PendingNexusOperations)))
-		if len(resp.PendingNexusOperations) > 0 {
+		var pendingNexusOps []*workflow.PendingNexusOperationInfo
+		for _, op := range resp.PendingNexusOperations {
+			if op.GetEndpoint() != temporalSystemNexusEndpoint {
+				pendingNexusOps = append(pendingNexusOps, op)
+			}
+		}
+		cctx.Printer.Println(color.MagentaString("Pending Nexus Operations: %v", len(pendingNexusOps)))
+		if len(pendingNexusOps) > 0 {
 			cctx.Printer.Println()
 			ops := make([]struct {
 				Endpoint                           string
@@ -335,6 +351,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				State                              enums.PendingNexusOperationState
 				Attempt                            int32
 				ScheduleToCloseTimeout             string                                `cli:",cardOmitEmpty"`
+				StartToCloseTimeout                string                                `cli:",cardOmitEmpty"`
+				ScheduleToStartTimeout             string                                `cli:",cardOmitEmpty"`
 				NextAttemptScheduleTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptCompleteTime            time.Time                             `cli:",cardOmitEmpty"`
 				LastAttemptFailure                 *failure.Failure                      `cli:",cardOmitEmpty"`
@@ -346,8 +364,8 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				CancelationLastAttemptCompleteTime time.Time                             `cli:",cardOmitEmpty"`
 				CancelationLastAttemptFailure      *failure.Failure                      `cli:",cardOmitEmpty"`
 				CancelationBlockedReason           string                                `cli:",cardOmitEmpty"`
-			}, len(resp.PendingNexusOperations))
-			for i, op := range resp.PendingNexusOperations {
+			}, len(pendingNexusOps))
+			for i, op := range pendingNexusOps {
 				ops[i].Endpoint = op.GetEndpoint()
 				ops[i].Service = op.GetService()
 				ops[i].Operation = op.GetOperation()
@@ -360,7 +378,9 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				ops[i].LastAttemptFailure = op.LastAttemptFailure
 				ops[i].LastAttemptCompleteTime = timestampToTime(op.LastAttemptCompleteTime)
 				ops[i].NextAttemptScheduleTime = timestampToTime(op.NextAttemptScheduleTime)
+				ops[i].ScheduleToStartTimeout = formatDuration(op.GetScheduleToStartTimeout().AsDuration())
 				ops[i].ScheduleToCloseTimeout = formatDuration(op.GetScheduleToCloseTimeout().AsDuration())
+				ops[i].StartToCloseTimeout = formatDuration(op.GetStartToCloseTimeout().AsDuration())
 				ops[i].BlockedReason = op.GetBlockedReason()
 				ops[i].CancelationState = op.GetCancellationInfo().GetState()
 				ops[i].CancelationAttempt = op.GetCancellationInfo().GetAttempt()
@@ -484,35 +504,16 @@ func (c *TemporalWorkflowCountCommand) run(cctx *CommandContext, args []string) 
 		return err
 	}
 
-	// Just dump response on JSON, otherwise print total and groups
+	groups := make([]countGroup, len(resp.Groups))
+	for i, g := range resp.Groups {
+		groups[i] = g
+	}
 	if cctx.JSONOutput {
-		// Shorthand does not apply to search attributes currently, so we're going
-		// to remove the "type" from the metadata encoding on group values to make
-		// it apply
-		for _, group := range resp.Groups {
-			for _, payload := range group.GroupValues {
-				delete(payload.GetMetadata(), "type")
-			}
-		}
+		stripCountGroupMetadataType(groups)
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-
 	cctx.Printer.Printlnf("Total: %v", resp.Count)
-	for _, group := range resp.Groups {
-		// Payload values are search attributes, so we can use the default converter
-		var valueStr string
-		for _, payload := range group.GroupValues {
-			var value any
-			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
-				value = fmt.Sprintf("<failed converting: %v>", err)
-			}
-			if valueStr != "" {
-				valueStr += ", "
-			}
-			valueStr += fmt.Sprintf("%v", value)
-		}
-		cctx.Printer.Printlnf("Group total: %v, values: %v", group.Count, valueStr)
-	}
+	printCountGroupsText(cctx, groups)
 	return nil
 }
 
@@ -560,7 +561,7 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 	// Log print failure and return workflow failure if workflow failed
 	if closeEvent.EventType != enums.EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED {
 		if err != nil {
-			cctx.Logger.Error("Workflow failed, and printing the output also failed", "error", err)
+			fmt.Fprintf(cctx.Options.Stderr, "Warning: printing workflow output failed: %v\n", err)
 		}
 		err = fmt.Errorf("workflow failed")
 	}
@@ -568,8 +569,12 @@ func (c *TemporalWorkflowResultCommand) run(cctx *CommandContext, _ []string) er
 }
 
 func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) error {
+	if c.Reverse && c.Follow {
+		return fmt.Errorf("--reverse cannot be combined with --follow")
+	}
+
 	// Call describe
-	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	cl, codec, err := dialClientWithCodec(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -579,10 +584,13 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 	iter := &structuredHistoryIter{
 		ctx:            cctx,
 		client:         cl,
+		namespace:      c.Parent.Namespace,
 		workflowID:     c.WorkflowId,
 		runID:          c.RunId,
 		includeDetails: c.Detailed,
 		follow:         c.Follow,
+		reverse:        c.Reverse,
+		codec:          codec,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))

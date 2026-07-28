@@ -19,7 +19,7 @@ func (c *TemporalOperatorCommand) getNSFromFlagOrArg0(cctx *CommandContext, args
 	}
 
 	if len(args) > 0 {
-		cctx.Logger.Warn("Passing the namespace as an argument is now deprecated; please switch to using -n instead")
+		fmt.Fprintln(cctx.Options.Stderr, "Warning: Passing the namespace as an argument is now deprecated; please switch to using -n instead")
 		return args[0], nil
 	}
 	return c.Namespace, nil

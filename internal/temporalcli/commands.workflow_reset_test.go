@@ -927,3 +927,42 @@ func (sut *batchResetTestData) getWorkflowHistory() ([]*history.HistoryEvent, er
 
 	return events, nil
 }
+
+func (s *SharedServerSuite) TestWorkflow_ResetBatch_SkipsCountWhenYes() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		ctx.Done().Receive(ctx, nil)
+		return nil, ctx.Err()
+	})
+
+	searchAttr := "keyword-" + uuid.NewString()
+	_, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{
+			TaskQueue:        s.Worker().Options.TaskQueue,
+			SearchAttributes: map[string]any{"CustomKeywordField": searchAttr},
+		},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: "CustomKeywordField = '" + searchAttr + "'",
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 1
+	}, 3*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"workflow", "reset",
+		"--address", s.Address(),
+		"--query", "CustomKeywordField = '"+searchAttr+"'",
+		"--type", "FirstWorkflowTask",
+		"--reason", "skip-count-test",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	s.NotContains(res.Stdout.String(), "approximately")
+	s.Contains(res.Stdout.String(), "matching query")
+}

@@ -1,11 +1,13 @@
 package temporalcli_test
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,9 +17,11 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 type jsonVersionSummariesRowType struct {
@@ -68,6 +72,15 @@ type jsonTaskQueueInfoRowType struct {
 	StatsByPriorityKey map[string]jsonVersionStatsType `json:"statsByPriorityKey,omitempty"`
 }
 
+type jsonComputeConfigScalingGroupSummary struct {
+	TaskQueueTypes []string `json:"taskQueueTypes,omitempty"`
+	ProviderType   string   `json:"providerType"`
+}
+
+type jsonComputeConfig struct {
+	ScalingGroups []jsonComputeConfigScalingGroupSummary `json:"scalingGroups,omitempty"`
+}
+
 type jsonDeploymentVersionInfoType struct {
 	Version            string                     `json:"version"`
 	CreateTime         time.Time                  `json:"createTime"`
@@ -78,6 +91,7 @@ type jsonDeploymentVersionInfoType struct {
 	DrainageInfo       jsonDrainageInfo           `json:"drainageInfo"`
 	TaskQueuesInfos    []jsonTaskQueueInfoRowType `json:"taskQueuesInfos"`
 	Metadata           map[string]*common.Payload `json:"metadata"`
+	ComputeConfig      *jsonComputeConfig         `json:"computeConfig,omitempty"`
 }
 
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
@@ -186,6 +200,17 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.NoError(res.Err)
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonVersionOut))
 	s.Nil(jsonVersionOut.Metadata)
+
+	// --build-id and --unversioned are either/or. there should be an error if
+	// the user specifies both flags.
+	res = s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", version.DeploymentName, "--build-id", version.BuildID,
+		"--unversioned",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "specify either --build-id or --unversioned")
 }
 
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version_AllowNoPollers() {
@@ -929,8 +954,8 @@ func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPrio
 		// We started one workflow with each priority key (1, 3, 5), so each should have backlog of 1
 		for _, priorityKey := range priorityKeys {
 			// Check that the priority row contains the priority key followed by backlog count of 1
-			nonZeroBacklogIncreaseRate := "0."
-			nonZeroTasksAddRate := "0."
+			nonZeroBacklogIncreaseRate := "."
+			nonZeroTasksAddRate := "."
 			zeroTaskDispatchRate := "0"
 			// Once priority is enabled in all servers by default, check that backlog count of 1 is on each priority row.
 			// For servers where priority is not enabled, or workflows that aren't actively using priority keys,
@@ -1045,4 +1070,856 @@ func (s *SharedServerSuite) testDeploymentDescribeVersionTaskQueueStats(withPrio
 	for _, run := range workflowRuns {
 		s.NoError(run.Get(s.Context, nil))
 	}
+}
+
+func (s *SharedServerSuite) TestCreateWorkerDeployment() {
+	deploymentName := uuid.NewString()
+
+	res := s.Execute(
+		"worker", "deployment", "create",
+		"--address", s.Address(),
+		"--name", deploymentName,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment")
+
+	// Wait for the deployment to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe",
+			"--address", s.Address(),
+			"--name", deploymentName,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Attempting to create a WD with the same name should fail with a conflict
+	// error.
+	res = s.Execute(
+		"worker", "deployment", "create",
+		"--address", s.Address(),
+		"--name", deploymentName,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "already exists")
+}
+
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_EmptyComputeConfig() {
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_NoComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Wait for the lazily-created deployment to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", lazyCreatedBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Now that we know the worker deployment exists (because the above
+	// lazily-created worker deployment version ended up creating it), we will
+	// manually create a new worker deployment version using the `temporal
+	// worker deployment create-version` CLI command.
+	noComputeConfigBuildID := uuid.NewString()
+
+	// Attempting to create a WDV with no compute provider configuration should
+	// fail.
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", noComputeConfigBuildID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing configuration for compute provider")
+
+	// TODO(jaypipes): Uncomment the test block below once support for Cloud
+	// Run is added. When we add another compute provider, we can test for the
+	// return of a duplicate WDV. Until that point, we cannot create an "empty"
+	// WDV to test the build ID existence.
+
+	/*
+		res := s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
+
+		// Wait for the deployment version to appear
+		s.EventuallyWithT(func(t *assert.CollectT) {
+			res := s.Execute(
+				"worker", "deployment", "describe-version",
+				"--address", s.Address(),
+				"--deployment-name", deploymentName,
+				"--build-id", noComputeConfigBuildID,
+			)
+			assert.NoError(t, res.Err)
+		}, 30*time.Second, 100*time.Millisecond)
+
+		// Check that there is no compute config returned for this WDV
+		res = s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+			"--output", "json",
+		)
+		s.NoError(res.Err)
+		var jsonOut jsonDeploymentVersionInfoType
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		s.Nil(jsonOut.ComputeConfig, "ComputeConfig should be nil.")
+
+		// Attempting to create a WDV with the same BuildID should fail with a
+		// conflict error.
+		res = s.Execute(
+			"worker", "deployment", "create-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", noComputeConfigBuildID,
+		)
+		s.Error(res.Err)
+		s.ErrorContains(res.Err, "already exists")
+	*/
+}
+
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
+	// Keep the fake AWS validation case local; otherwise the SDK tries EC2 IMDS
+	// during credential resolution and waits on network retries.
+	s.T().Setenv("AWS_EC2_METADATA_DISABLED", "true")
+
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_Errors",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Wait for the lazily-created deployment to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", lazyCreatedBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Create some WDVs with invalid compute config parameters.
+	assumeRoleFailureBuildID := uuid.NewString()
+
+	invokeARN := "arn:aws:lambda:us-east-1:123456789012:function:MyExampleFunction:1"
+	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
+	assumeRoleExternalID := "external-id"
+
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", assumeRoleFailureBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "failed to assume role arn:aws:iam::123456789012:role/MyServiceRole: operation error STS: AssumeRole")
+
+	missingExternalIDBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingExternalIDBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role_external_id")
+
+	missingAssumeRoleBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingAssumeRoleBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role")
+
+	// --gcp-cloud-run-worker-pool requires project, region, and
+	// service-account; the first missing detail key is reported.
+	missingGCPProjectBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingGCPProjectBuildID,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required GCP Cloud Run provider detail: project")
+
+	// The impersonation target (service-account) is required too.
+	missingGCPServiceAccountBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", missingGCPServiceAccountBuildID,
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required GCP Cloud Run provider detail: service_account")
+
+	// AWS Lambda and GCP Cloud Run providers are mutually exclusive on create.
+	mixedProvidersBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", mixedProvidersBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+
+	// Attempting to update the compute config for a non-existent WDV
+	// should fail.
+	nonExistingBuildID := "non-existing"
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", nonExistingBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "build ID 'non-existing' not found")
+
+	// Same for attempting to remove the compute config for a non-existent WDV.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", nonExistingBuildID,
+		"--remove",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "build ID 'non-existing' not found")
+
+	// AWS Lambda and GCP Cloud Run providers are mutually exclusive on update
+	// too. This is rejected client-side, before the RPC, so the existing
+	// (lazily-created) build ID is fine to target.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+
+	// --remove cannot be combined with GCP Cloud Run flags.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--remove",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--remove cannot be combined with")
+
+	// --remove cannot be combined with the scaler settings flags either; a lone
+	// scaler flag alongside --remove is contradictory and rejected client-side.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--gcp-cloud-run-min-instances", "5",
+		"--remove",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--remove cannot be combined with")
+
+	// Instance settings are GCP Cloud Run (rate-based) knobs only; setting them
+	// alongside a (fully specified) AWS Lambda provider is rejected client-side.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+		"--gcp-cloud-run-min-instances", "1",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
+
+	// A lone flag is rejected: all four scaling settings must be set together.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "32",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be set together")
+
+	// The instance counts without utilization-target are also rejected:
+	// utilization-target is part of the same all-or-none group.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "1",
+		"--gcp-cloud-run-max-instances", "3",
+		"--gcp-cloud-run-initial-instances", "2",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be set together")
+
+	// min cannot exceed max (all four set so the group check passes first).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "5",
+		"--gcp-cloud-run-max-instances", "3",
+		"--gcp-cloud-run-initial-instances", "4",
+		"--gcp-cloud-run-utilization-target", "0.5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot exceed")
+
+	// An explicit max of 0 is rejected (WCI requires at least 1).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "0",
+		"--gcp-cloud-run-initial-instances", "0",
+		"--gcp-cloud-run-utilization-target", "0.5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--gcp-cloud-run-max-instances must be at least 1")
+
+	// initial outside [min, max] is rejected.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "2",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "15",
+		"--gcp-cloud-run-utilization-target", "0.5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be between")
+
+	// utilization-target must be a fraction in (0, 1] (all four set so the
+	// group check passes first).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "1.5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be greater than 0 and at most 1")
+
+	// utilization-target is GCP Cloud Run only; rejected alongside AWS Lambda.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+		"--gcp-cloud-run-utilization-target", "0.75",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
+
+	// Instance settings with AWS Lambda are also rejected on update, before the RPC.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+		"--gcp-cloud-run-max-instances", "3",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
+}
+
+// TestUpdateWorkerDeploymentVersionComputeConfig_UpdateModes verifies the shape
+// of the update request for each mode. It captures the outbound gRPC request and
+// short-circuits it, so the assertions don't need a real (GCP-backed) version on
+// the server.
+func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_UpdateModes() {
+	var mu sync.Mutex
+	var captured *workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context, method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest); ok {
+				mu.Lock()
+				captured = r
+				mu.Unlock()
+				return nil // capture only; do not forward to the server
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+	takeCaptured := func() *workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest {
+		mu.Lock()
+		defer mu.Unlock()
+		r := captured
+		captured = nil
+		return r
+	}
+
+	deploymentName := uuid.NewString()
+	buildID := "1.0"
+	serviceAccount := "customer-sa@my-gcp-project.iam.gserviceaccount.com"
+
+	// Scaler-only update (no provider flags): the mask is just scaler.details,
+	// no provider is sent, and all four settings are carried.
+	res := s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+	)
+	s.NoError(res.Err)
+	req := takeCaptured()
+	s.NotNil(req)
+	sg := req.GetComputeConfigScalingGroups()["default"]
+	s.NotNil(sg)
+	s.Equal([]string{"scaler.details"}, sg.GetUpdateMask().GetPaths())
+	s.Nil(sg.GetScalingGroup().GetProvider())
+	var details map[string]any
+	s.NoError(converter.GetDefaultDataConverter().FromPayload(sg.GetScalingGroup().GetScaler().GetDetails(), &details))
+	s.Equal(float64(0), details["min_count"])
+	s.Equal(float64(10), details["max_count"])
+	s.Equal(float64(5), details["initial_count"])
+	s.Equal(float64(0.5), details["utilization_target"])
+
+	// Switching to AWS Lambda clears the (rate-based) scaler.details so they
+	// don't linger under the no-sync scaler.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--aws-lambda-function-arn", "arn:aws:lambda:us-east-1:123:function:F:1",
+		"--aws-lambda-assume-role-arn", "arn:aws:iam::123:role/R",
+		"--aws-lambda-assume-role-external-id", "x",
+	)
+	s.NoError(res.Err)
+	req = takeCaptured()
+	s.NotNil(req)
+	sg = req.GetComputeConfigScalingGroups()["default"]
+	s.Contains(sg.GetUpdateMask().GetPaths(), "scaler.details")
+	s.Equal("aws-lambda", sg.GetScalingGroup().GetProvider().GetType())
+	s.Nil(sg.GetScalingGroup().GetScaler().GetDetails())
+
+	// Updating only GCP provider fields (no scaler flags) leaves scaler.details
+	// out of the mask, so existing bounds are preserved.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", serviceAccount,
+	)
+	s.NoError(res.Err)
+	req = takeCaptured()
+	s.NotNil(req)
+	sg = req.GetComputeConfigScalingGroups()["default"]
+	s.NotContains(sg.GetUpdateMask().GetPaths(), "scaler.details")
+	s.Equal("gcp-cloud-run", sg.GetScalingGroup().GetProvider().GetType())
+
+	// A scaler-only update still requires all four flags together.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--gcp-cloud-run-min-instances", "5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be set together")
+
+	// Nothing to update at all is rejected.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "no compute configuration provided to update")
+}
+
+// TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
+// fixtures since the CLI test harness uses a real Temporal Server and a real
+// Temporal Server validates any supplied AWS Lambda Function and Assume Role
+// ARNs are good...
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfig() {
+	s.T().Skip("AWS Lambda Function and Assume Role fixtures needed.")
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_LambdaComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Now that we know the worker deployment exists (because the above
+	// lazily-created worker deployment version ended up creating it), we will
+	// manually create a new worker deployment version using the `temporal
+	// worker deployment create-version` CLI command.
+	//
+	// Create a WDV with a valid Compute Config specified and verify that the
+	// compute config provider is displayed in the output of `temporal worker
+	// deployment describe-version`
+	computeConfigBuildID := uuid.NewString()
+
+	invokeARN := "arn:aws:lambda:us-east-1:123456789012:function:MyExampleFunction:1"
+	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
+	assumeRoleExternalID := "external-id"
+
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", computeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Check that there is a compute config returned for this WDV
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	jsonOut := jsonDeploymentVersionInfoType{}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut.ComputeConfig, "ComputeConfig should not be nil.")
+
+	// We should be able to update the compute config.
+	invokeARN2 := "arn:aws:lambda:us-east-1:123456789012:function:MyExampleFunction:2"
+	assumeRoleARN2 := "arn:aws:iam::123456789012:role/MyServiceRole2"
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-lambda-function-arn", invokeARN2,
+		"--aws-lambda-assume-role-arn", assumeRoleARN2,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")
+
+	// As well as remove the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--remove",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully removed worker deployment version compute config")
+}
+
+// TODO(jaypipes): Enable this test when we have a way of ensuring GCP resource
+// fixtures since the CLI test harness uses a real Temporal Server and a real
+// Temporal Server validates that any supplied GCP Cloud Run worker pool and
+// service account are good (the server impersonates the service account to
+// manage the worker pool).
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_GCPCloudRunComputeConfig() {
+	s.T().Skip("GCP Cloud Run worker pool and service account fixtures needed.")
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_GCPCloudRunComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Create a WDV with a valid GCP Cloud Run Compute Config specified and
+	// verify that the compute config provider is displayed in the output of
+	// `temporal worker deployment describe-version`.
+	computeConfigBuildID := uuid.NewString()
+
+	project := "my-gcp-project"
+	region := "us-central1"
+	workerPool := "my-worker-pool"
+	serviceAccount := "customer-sa@my-gcp-project.iam.gserviceaccount.com"
+
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--gcp-cloud-run-project", project,
+		"--gcp-cloud-run-region", region,
+		"--gcp-cloud-run-worker-pool", workerPool,
+		"--gcp-cloud-run-service-account", serviceAccount,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", computeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Check that the compute config returned for this WDV reports the
+	// gcp-cloud-run provider.
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	jsonOut := jsonDeploymentVersionInfoType{}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut.ComputeConfig, "ComputeConfig should not be nil.")
+	s.Len(jsonOut.ComputeConfig.ScalingGroups, 1)
+	s.Equal("gcp-cloud-run", jsonOut.ComputeConfig.ScalingGroups[0].ProviderType)
+
+	// We should be able to update the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--gcp-cloud-run-project", project,
+		"--gcp-cloud-run-region", region,
+		"--gcp-cloud-run-worker-pool", "updated-worker-pool",
+		"--gcp-cloud-run-service-account", serviceAccount,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")
+
+	// As well as remove the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--remove",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully removed worker deployment version compute config")
 }

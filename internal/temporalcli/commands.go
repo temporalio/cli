@@ -48,7 +48,9 @@ type CommandContext struct {
 	FlagsWithEnvVars          []*pflag.Flag
 
 	// These values may not be available until after pre-run of main command
-	Printer               *printer.Printer
+	Printer *printer.Printer
+	// The logger is for the SDK and server. The CLI itself should print warnings or errors to
+	// stderr but should not use logging.
 	Logger                *slog.Logger
 	JSONOutput            bool
 	JSONShorthandPayloads bool
@@ -143,11 +145,12 @@ func (c *CommandContext) preprocessOptions() error {
 			if c.Err() != nil {
 				err = fmt.Errorf("program interrupted")
 			}
-			if c.Logger != nil {
-				c.Logger.Error(err.Error())
-			} else {
-				fmt.Fprintln(os.Stderr, err)
+			if exitError, ok := errors.AsType[ExtensionNonZeroExit](err); ok {
+				// An extension failed after being found and successfully started. Here we defer
+				// to its own error handling logic, and just copy the exit code through.
+				os.Exit(exitError.ExitCode())
 			}
+			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -234,6 +237,36 @@ func (c *CommandContext) MarshalFriendlyFailureBodyText(f *failure.Failure, inde
 	return
 }
 
+type countGroup interface {
+	GetGroupValues() []*commonpb.Payload
+	GetCount() int64
+}
+
+func printCountGroupsText(cctx *CommandContext, groups []countGroup) {
+	for _, group := range groups {
+		var valueStr string
+		for _, payload := range group.GetGroupValues() {
+			var value any
+			if err := converter.GetDefaultDataConverter().FromPayload(payload, &value); err != nil {
+				value = fmt.Sprintf("<failed converting: %v>", err)
+			}
+			if valueStr != "" {
+				valueStr += ", "
+			}
+			valueStr += fmt.Sprintf("%v", value)
+		}
+		cctx.Printer.Printlnf("Group total: %v, values: %v", group.GetCount(), valueStr)
+	}
+}
+
+func stripCountGroupMetadataType(groups []countGroup) {
+	for _, group := range groups {
+		for _, payload := range group.GetGroupValues() {
+			delete(payload.GetMetadata(), "type")
+		}
+	}
+}
+
 // Takes payload shorthand into account, can use
 // MarshalProtoJSONNoPayloadShorthand if needed
 func (c *CommandContext) MarshalProtoJSON(m proto.Message) ([]byte, error) {
@@ -260,13 +293,11 @@ func UnmarshalProtoJSONWithOptions(b []byte, m proto.Message, jsonShorthandPaylo
 	return opts.Unmarshal(b, m)
 }
 
-// Set flag values from environment file & variables. Returns a callback to log anything interesting
-// since logging will not yet be initialized when this runs.
-func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.Logger), error) {
+// Set flag values from environment file & variables.
+func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) error {
 	if flags == nil {
-		return func(logger *slog.Logger) {}, nil
+		return nil
 	}
-	var logCalls []func(*slog.Logger)
 	var flagErr error
 	flags.VisitAll(func(flag *pflag.Flag) {
 		// If the flag was already changed by the user, we don't overwrite
@@ -289,20 +320,14 @@ func (c *CommandContext) populateFlagsFromEnv(flags *pflag.FlagSet) (func(*slog.
 					return
 				}
 				if flag.Changed {
-					logCalls = append(logCalls, func(l *slog.Logger) {
-						l.Info("Env var overrode --env setting", "env_var", anns[0], "flag", flag.Name)
-					})
+					fmt.Fprintf(c.Options.Stderr,
+						"Warning: env var %s overrode --env setting for flag --%s\n", anns[0], flag.Name)
 				}
 				flag.Changed = true
 			}
 		}
 	})
-	logFn := func(logger *slog.Logger) {
-		for _, call := range logCalls {
-			call(logger)
-		}
-	}
-	return logFn, flagErr
+	return flagErr
 }
 
 // Returns error if JSON output enabled
@@ -459,8 +484,7 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 		cctx.CurrentCommand = cmd
 		// Populate environ. We will make the error return here which will cause
 		// usage to be printed.
-		logCalls, err := cctx.populateFlagsFromEnv(cmd.Flags())
-		if err != nil {
+		if err := cctx.populateFlagsFromEnv(cmd.Flags()); err != nil {
 			return err
 		}
 
@@ -472,13 +496,16 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 
 		res := c.preRun(cctx)
 
-		logCalls(cctx.Logger)
-
 		// Always disable color if JSON output is on (must be run after preRun so JSONOutput is set)
 		if cctx.JSONOutput {
 			color.NoColor = true
 		}
 		cctx.ActuallyRanCommand = true
+
+		// Print deprecation warning to stderr so it doesn't break JSON output
+		if msg, ok := cmd.Annotations["deprecationWarning"]; ok {
+			fmt.Fprintf(cctx.Options.Stderr, "warning: %s\n", strings.ToLower(strings.TrimRight(msg, ".")))
+		}
 
 		if cctx.Options.DeprecatedEnvConfig.EnvConfigName != "default" {
 			if _, ok := cctx.DeprecatedEnvConfigValues[cctx.Options.DeprecatedEnvConfig.EnvConfigName]; !ok {
@@ -502,7 +529,7 @@ var buildInfo string
 func VersionString() string {
 	// To add build-time information to the version string, use
 	// go build -ldflags "-X github.com/temporalio/cli/internal.buildInfo=<MyString>"
-	var bi = buildInfo
+	bi := buildInfo
 	if bi != "" {
 		bi = fmt.Sprintf(", %s", bi)
 	}

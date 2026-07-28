@@ -21,8 +21,17 @@ import (
 // so often used by callers after this call to know the currently configured
 // namespace.
 func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, error) {
+	cl, _, err := dialClientWithCodec(cctx, c)
+	return cl, err
+}
+
+// dialClientWithCodec is like [dialClient] but also returns the configured remote
+// payload codec, or nil if no codec is configured. The codec is the same instance
+// used by the gRPC interceptor; callers can use it to decode payloads nested inside
+// opaque proto bytes (e.g. the request/response of a system Nexus operation).
+func dialClientWithCodec(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, converter.PayloadCodec, error) {
 	if cctx.RootCommand == nil {
-		return nil, fmt.Errorf("root command unexpectedly missing when dialing client")
+		return nil, nil, fmt.Errorf("root command unexpectedly missing when dialing client")
 	}
 
 	// Set default identity if not provided
@@ -47,7 +56,7 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 	}
 	clientOpts, err := builder.Build(cctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// We do not put codec on data converter here, it is applied via
@@ -78,14 +87,14 @@ func dialClient(cctx *CommandContext, c *cliext.ClientOptions) (client.Client, e
 
 	cl, err := client.DialContext(dialCtx, clientOpts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Since this namespace value is used by many commands after this call,
 	// we are mutating it to be the derived one
 	c.Namespace = clientOpts.Namespace
 
-	return cl, nil
+	return cl, builder.PayloadCodec, nil
 }
 
 func fixedHeaderOverrideInterceptor(

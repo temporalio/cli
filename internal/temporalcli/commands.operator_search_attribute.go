@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/fatih/color"
@@ -130,12 +131,17 @@ func (c *TemporalOperatorSearchAttributeListCommand) run(cctx *CommandContext, a
 			Type: saType.String(),
 		})
 	}
+	slices.SortFunc(sas, func(a, b saNameType) int { return strings.Compare(a.Name, b.Name) })
+
+	var csa []saNameType
 	for saName, saType := range resp.CustomAttributes {
-		sas = append(sas, saNameType{
+		csa = append(csa, saNameType{
 			Name: saName,
 			Type: saType.String(),
 		})
 	}
+	slices.SortFunc(csa, func(a, b saNameType) int { return strings.Compare(a.Name, b.Name) })
+	sas = append(sas, csa...)
 
 	return cctx.Printer.PrintStructured(sas, printer.StructuredOptions{Table: &printer.TableOptions{}})
 }

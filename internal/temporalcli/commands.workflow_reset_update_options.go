@@ -3,9 +3,7 @@ package temporalcli
 import (
 	"fmt"
 
-	deploymentpb "go.temporal.io/api/deployment/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
-	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
@@ -14,12 +12,14 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 		return err
 	}
 
-	if c.VersioningOverrideBehavior.Value == "pinned" {
+	if c.VersioningOverrideBehavior.Value == "pinned" ||
+		c.VersioningOverrideBehavior.Value == "one_time" {
 		if c.VersioningOverrideDeploymentName == "" || c.VersioningOverrideBuildId == "" {
-			return fmt.Errorf("deployment name and build id are required with 'pinned' behavior")
+			return fmt.Errorf("deployment name and build id are required with '%s' behavior", c.VersioningOverrideBehavior.Value)
 		}
 	}
-	if c.VersioningOverrideBehavior.Value != "pinned" {
+	if c.VersioningOverrideBehavior.Value != "pinned" &&
+		c.VersioningOverrideBehavior.Value != "one_time" {
 		if c.VersioningOverrideDeploymentName != "" || c.VersioningOverrideBuildId != "" {
 			return fmt.Errorf("cannot set deployment name or build id with %v behavior", c.VersioningOverrideBehavior.Value)
 		}
@@ -31,28 +31,30 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 	}
 	defer cl.Close()
 
-	VersioningOverride := &workflowpb.VersioningOverride{}
+	var versioningOverride *workflowpb.VersioningOverride
 	switch c.VersioningOverrideBehavior.Value {
 	case "pinned":
-		VersioningOverride.Override = &workflowpb.VersioningOverride_Pinned{
-			Pinned: &workflowpb.VersioningOverride_PinnedOverride{
-				Behavior: workflowpb.VersioningOverride_PINNED_OVERRIDE_BEHAVIOR_PINNED,
-				Version: &deploymentpb.WorkerDeploymentVersion{
-					DeploymentName: c.VersioningOverrideDeploymentName,
-					BuildId:        c.VersioningOverrideBuildId,
+		versioningOverride = &workflowpb.VersioningOverride{
+			Override: &workflowpb.VersioningOverride_Pinned{
+				Pinned: &workflowpb.VersioningOverride_PinnedOverride{
+					Behavior: workflowpb.VersioningOverride_PINNED_OVERRIDE_BEHAVIOR_PINNED,
+					Version:  workerDeploymentVersionToProto(c.VersioningOverrideDeploymentName, c.VersioningOverrideBuildId),
 				},
 			},
 		}
+	case "one_time":
+		versioningOverride = oneTimeVersioningOverrideToProto(c.VersioningOverrideDeploymentName, c.VersioningOverrideBuildId)
 	case "auto_upgrade":
-		VersioningOverride.Override = &workflowpb.VersioningOverride_AutoUpgrade{
-			AutoUpgrade: true,
+		versioningOverride = &workflowpb.VersioningOverride{
+			Override: &workflowpb.VersioningOverride_AutoUpgrade{
+				AutoUpgrade: true,
+			},
 		}
 	default:
-		return fmt.Errorf("invalid deployment behavior: %v, valid values are: 'pinned', and 'auto_upgrade'", c.VersioningOverrideBehavior.Value)
+		return fmt.Errorf("invalid deployment behavior: %v, valid values are: 'pinned', 'auto_upgrade', and 'one_time'", c.VersioningOverrideBehavior.Value)
 	}
 
-	var workflowExecutionOptions *workflowpb.WorkflowExecutionOptions
-	protoMask, err := fieldmaskpb.New(workflowExecutionOptions, "versioning_override")
+	workflowExecutionOptions, protoMask, err := workflowExecutionOptionsForVersioningOverride(versioningOverride)
 	if err != nil {
 		return fmt.Errorf("invalid field mask: %w", err)
 	}
@@ -60,10 +62,8 @@ func (c *TemporalWorkflowResetWithWorkflowUpdateOptionsCommand) run(cctx *Comman
 	postOp := &workflowpb.PostResetOperation{
 		Variant: &workflowpb.PostResetOperation_UpdateWorkflowOptions_{
 			UpdateWorkflowOptions: &workflowpb.PostResetOperation_UpdateWorkflowOptions{
-				WorkflowExecutionOptions: &workflowpb.WorkflowExecutionOptions{
-					VersioningOverride: VersioningOverride,
-				},
-				UpdateMask: protoMask,
+				WorkflowExecutionOptions: workflowExecutionOptions,
+				UpdateMask:               protoMask,
 			},
 		},
 	}

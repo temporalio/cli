@@ -233,6 +233,16 @@ func (s *SharedServerSuite) SetupSuite() {
 				"frontend.namespaceRPS.visibility": 10000,
 				// Disable DescribeTaskQueue cache.
 				"frontend.activityAPIsEnabled": true,
+				"history.enableChasm":          true,
+				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
+				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
+				// the __temporal_system endpoint from inside a workflow.
+				"history.enableSignalWithStartFromWorkflow": true,
+				"activity.enableStandalone":                 true,
+				"activity.startDelayEnabled":                true,
+				"activity.longPollTimeout":                  2 * time.Second,
+				"nexusoperation.enableStandalone":           true,
+				"history.enableChasmCallbacks":              true,
 				// this is overridden since we don't want caching to be enabled
 				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
@@ -506,10 +516,10 @@ type DevWorkerOptions struct {
 	NexusServices []*nexus.Service
 }
 
-// Simply a stub for client use
+// A stub for client use
 func DevWorkflow(workflow.Context, any) (any, error) { panic("Unreachable") }
 
-// Simply a stub for client use
+// A stub for client use
 func DevActivity(context.Context, any) (any, error) { panic("Unreachable") }
 
 // Stops when harness closes.
@@ -547,7 +557,9 @@ func (d *DevWorker) Stop() {
 	d.Worker.Stop()
 }
 
-// Default is just to return DevActivity result
+// OnDevWorkflow sets the callback invoked by the pre-registered "DevWorkflow" on this worker,
+// letting a test supply workflow behavior without registering a new workflow type. If unset,
+// DevWorkflow executes DevActivity and returns its result.
 func (d *DevWorker) OnDevWorkflow(fn func(workflow.Context, any) (any, error)) {
 	d.devOpsLock.Lock()
 	defer d.devOpsLock.Unlock()
@@ -560,7 +572,9 @@ func (d *DevWorker) DevWorkflowLastInput() any {
 	return d.devWorkflowLastInput
 }
 
-// Default is just to return result
+// OnDevActivity sets the callback invoked by the pre-registered DevActivity on this worker, letting
+// a test supply activity behavior without registering a new activity. If unset, DevActivity echoes
+// its input back as the result.
 func (d *DevWorker) OnDevActivity(fn func(context.Context, any) (any, error)) {
 	d.devOpsLock.Lock()
 	defer d.devOpsLock.Unlock()
@@ -623,6 +637,26 @@ func TestUnknownCommandExitsNonzero(t *testing.T) {
 	commandHarness := NewCommandHarness(t)
 	res := commandHarness.Execute("blerkflow")
 	assert.Contains(t, res.Err.Error(), "unknown command")
+}
+
+func TestErrorsAreNotLogMessages(t *testing.T) {
+	// Errors must be reported through Fail regardless of --log-level, and
+	// must not produce structured log output on stderr.
+	for _, logLevel := range []string{"never", "error", "info"} {
+		t.Run("log-level="+logLevel, func(t *testing.T) {
+			h := NewCommandHarness(t)
+			res := h.Execute(
+				"workflow", "list",
+				"--address", "not-a-valid-host:1",
+				"--log-level", logLevel,
+			)
+			require.Error(t, res.Err)
+
+			stderr := res.Stderr.String()
+			assert.NotContains(t, stderr, "level=",
+				"errors should not appear as structured log messages on stderr")
+		})
+	}
 }
 
 func (s *SharedServerSuite) TestHiddenAliasLogFormat() {
