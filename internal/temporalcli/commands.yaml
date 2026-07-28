@@ -1502,16 +1502,18 @@ commands:
           Minimum number of Cloud Run worker pool instances the scaler will
           maintain. Optional, but --gcp-cloud-run-min-instances,
           --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
-          to 0 when unset. Only valid with --gcp-cloud-run-worker-pool.
+          --gcp-cloud-run-utilization-target must all be set together. If
+          omitted, the version's existing scaling settings are left unchanged.
+          Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-max-instances
         type: int
         description: |
           Maximum number of Cloud Run worker pool instances the scaler may
           scale up to. Optional, but --gcp-cloud-run-min-instances,
           --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
-          to 30 when unset. Only valid with --gcp-cloud-run-worker-pool.
+          --gcp-cloud-run-utilization-target must all be set together. If
+          omitted, the version's existing scaling settings are left unchanged.
+          Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-initial-instances
         type: int
         description: |
@@ -1519,8 +1521,9 @@ commands:
           Optional, but --gcp-cloud-run-min-instances,
           --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
           --gcp-cloud-run-utilization-target must all be set together, and this
-          value must be between the min and max (inclusive). Defaults to 0 when
-          unset. Only valid with --gcp-cloud-run-worker-pool.
+          value must be between the min and max (inclusive). If omitted, the
+          version's existing scaling settings are left unchanged. Only valid
+          with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-utilization-target
         type: float
         description: |
@@ -1528,8 +1531,9 @@ commands:
           in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
           --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
           --gcp-cloud-run-utilization-target must all be set together. Lower
-          values keep more spare capacity per worker. Defaults to 0.8 when
-          unset. Only valid with --gcp-cloud-run-worker-pool.
+          values keep more spare capacity per worker. If omitted, the version's
+          existing scaling settings are left unchanged. Only valid with
+          --gcp-cloud-run-worker-pool.
       - name: remove
         type: bool
         description: |

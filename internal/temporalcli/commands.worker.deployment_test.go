@@ -1406,6 +1406,19 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "--remove cannot be combined with")
 
+	// --remove cannot be combined with the scaler settings flags either; a lone
+	// scaler flag alongside --remove is contradictory and rejected client-side.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--gcp-cloud-run-min-instances", "5",
+		"--remove",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--remove cannot be combined with")
+
 	// Instance settings are GCP Cloud Run (rate-based) knobs only; setting them
 	// alongside a (fully specified) AWS Lambda provider is rejected client-side.
 	res = s.Execute(
