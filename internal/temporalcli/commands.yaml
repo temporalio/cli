@@ -1236,11 +1236,28 @@ commands:
         type: int
         description: Maximum number of workers to display.
 
+  - name: temporal worker count
+    summary: Count workers in a namespace (EXPERIMENTAL)
+    description: |
+      Show a count of workers in a namespace. Use `--query` to count a subset:
+
+      ```
+      temporal worker count --namespace YourNamespace --query 'TaskQueue="YourTaskQueue"'
+      ```
+    options:
+      - name: query
+        short: q
+        type: string
+        description: Content for an SQL-like `QUERY` List Filter.
+      - name: include-system-workers
+        type: bool
+        description: Include system workers created by the server.
+
   - name: temporal worker describe
     summary: Returns information about a specific worker (EXPERIMENTAL)
     description: |
       Look up information of a specific worker.
-      
+
       ```
       temporal worker describe --namespace YourNamespace --worker-instance-key YourKey
       ```

@@ -2845,10 +2845,40 @@ func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 		s.Command.Long = "Modify or read state associated with a Worker, for example,\nusing Worker Deployments commands:\n\n```\ntemporal worker deployment\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerCountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerListCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	return &s
+}
+
+type TemporalWorkerCountCommand struct {
+	Parent               *TemporalWorkerCommand
+	Command              cobra.Command
+	Query                string
+	IncludeSystemWorkers bool
+}
+
+func NewTemporalWorkerCountCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerCountCommand {
+	var s TemporalWorkerCountCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "count [flags]"
+	s.Command.Short = "Count workers in a namespace (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Show a count of workers in a namespace. Use \x1b[1m--query\x1b[0m to count a subset:\n\n\x1b[1mtemporal worker count --namespace YourNamespace --query 'TaskQueue=\"YourTaskQueue\"'\x1b[0m"
+	} else {
+		s.Command.Long = "Show a count of workers in a namespace. Use `--query` to count a subset:\n\n```\ntemporal worker count --namespace YourNamespace --query 'TaskQueue=\"YourTaskQueue\"'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
+	s.Command.Flags().BoolVar(&s.IncludeSystemWorkers, "include-system-workers", false, "Include system workers created by the server.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
