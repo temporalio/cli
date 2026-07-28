@@ -1337,48 +1337,62 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 		if err != nil {
 			return err
 		}
-		if providerType == "" {
-			return fmt.Errorf("missing configuration for compute provider")
-		}
-		scalerType, err := scalerTypeForProvider(providerType)
-		if err != nil {
-			return err
-		}
-		scalerDetails, err := gcpCloudRunScalerDetails(providerType, c.gcpScalerFlags())
-		if err != nil {
-			return err
-		}
-		sg := &computepb.ComputeConfigScalingGroup{
-			Provider: &computepb.ComputeProvider{
-				Type:    providerType,
-				Details: detailsPayload,
-			},
-			Scaler: &computepb.ComputeScaler{
-				Type:    scalerType,
-				Details: scalerDetails,
-			},
-		}
-		updatePaths := []string{
-			"provider.type",
-			"provider.details",
-			"scaler.type",
-		}
-		// Only touch scaler.details when the user supplied instance bounds;
-		// otherwise leave any existing scaler config untouched rather than
-		// clearing it.
-		if scalerDetails != nil {
-			updatePaths = append(updatePaths, "scaler.details")
-		}
-		ccScalingGroups := map[string]*computepb.ComputeConfigScalingGroupUpdate{
-			"default": &computepb.ComputeConfigScalingGroupUpdate{
-				ScalingGroup: sg,
-				UpdateMask: &fieldmaskpb.FieldMask{
-					Paths: updatePaths,
-				},
-			},
-		}
-		request.ComputeConfigScalingGroups = ccScalingGroups
+		scalerFlags := c.gcpScalerFlags()
 
+		var sg *computepb.ComputeConfigScalingGroup
+		var updatePaths []string
+		switch {
+		case providerType != "":
+			// Provider (re)configuration: rebuild the provider and scaler type,
+			// and keep scaler.details consistent with the (possibly new) type.
+			scalerType, err := scalerTypeForProvider(providerType)
+			if err != nil {
+				return err
+			}
+			scalerDetails, err := gcpCloudRunScalerDetails(providerType, scalerFlags)
+			if err != nil {
+				return err
+			}
+			sg = &computepb.ComputeConfigScalingGroup{
+				Provider: &computepb.ComputeProvider{
+					Type:    providerType,
+					Details: detailsPayload,
+				},
+				Scaler: &computepb.ComputeScaler{
+					Type:    scalerType,
+					Details: scalerDetails,
+				},
+			}
+			updatePaths = []string{"provider.type", "provider.details", "scaler.type"}
+			// scaler.details must stay consistent with the scaler type. A
+			// non-GCP scaler (no-sync) can't carry the rate-based details, so
+			// clear them when switching away from GCP; for GCP, overwrite only
+			// when new settings were supplied, otherwise preserve existing ones.
+			if providerType != "gcp-cloud-run" || scalerDetails != nil {
+				updatePaths = append(updatePaths, "scaler.details")
+			}
+		case scalerFlags.anySet():
+			// Scaler-only update: change scaler.details without touching the
+			// provider or scaler type. Targets the version's existing GCP Cloud
+			// Run scaler; the server validates against the real config.
+			scalerDetails, err := gcpCloudRunScalerDetails("gcp-cloud-run", scalerFlags)
+			if err != nil {
+				return err
+			}
+			sg = &computepb.ComputeConfigScalingGroup{
+				Scaler: &computepb.ComputeScaler{Details: scalerDetails},
+			}
+			updatePaths = []string{"scaler.details"}
+		default:
+			return fmt.Errorf("no compute configuration provided to update")
+		}
+
+		request.ComputeConfigScalingGroups = map[string]*computepb.ComputeConfigScalingGroupUpdate{
+			"default": {
+				ScalingGroup: sg,
+				UpdateMask:   &fieldmaskpb.FieldMask{Paths: updatePaths},
+			},
+		}
 	}
 
 	_, err = cl.WorkflowService().UpdateWorkerDeploymentVersionComputeConfig(cctx, request)

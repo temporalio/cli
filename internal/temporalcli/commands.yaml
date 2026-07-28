@@ -1439,6 +1439,22 @@ commands:
           --gcp-cloud-run-utilization-target 0.75
       ```
 
+      To update only the scaling settings on an existing GCP Cloud Run Worker
+      Deployment Version, supply the four scaler flags without the provider
+      fields (all four must be set together):
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --gcp-cloud-run-min-instances 1 \
+          --gcp-cloud-run-max-instances 3 \
+          --gcp-cloud-run-initial-instances 1 \
+          --gcp-cloud-run-utilization-target 0.75
+      ```
+
+      Provider fields are only required when changing the compute provider.
+      Switching the provider resets the scaling settings for the new provider.
+
       If --remove is specified, the compute configuration for the Worker
       Deployment Version will be removed:
 

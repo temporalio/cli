@@ -1,11 +1,13 @@
 package temporalcli_test
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,9 +17,11 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 type jsonVersionSummariesRowType struct {
@@ -1567,6 +1571,121 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
+}
+
+// TestUpdateWorkerDeploymentVersionComputeConfig_UpdateModes verifies the shape
+// of the update request for each mode. It captures the outbound gRPC request and
+// short-circuits it, so the assertions don't need a real (GCP-backed) version on
+// the server.
+func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_UpdateModes() {
+	var mu sync.Mutex
+	var captured *workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context, method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest); ok {
+				mu.Lock()
+				captured = r
+				mu.Unlock()
+				return nil // capture only; do not forward to the server
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+	takeCaptured := func() *workflowservice.UpdateWorkerDeploymentVersionComputeConfigRequest {
+		mu.Lock()
+		defer mu.Unlock()
+		r := captured
+		captured = nil
+		return r
+	}
+
+	deploymentName := uuid.NewString()
+	buildID := "1.0"
+	serviceAccount := "customer-sa@my-gcp-project.iam.gserviceaccount.com"
+
+	// Scaler-only update (no provider flags): the mask is just scaler.details,
+	// no provider is sent, and all four settings are carried.
+	res := s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+	)
+	s.NoError(res.Err)
+	req := takeCaptured()
+	s.NotNil(req)
+	sg := req.GetComputeConfigScalingGroups()["default"]
+	s.NotNil(sg)
+	s.Equal([]string{"scaler.details"}, sg.GetUpdateMask().GetPaths())
+	s.Nil(sg.GetScalingGroup().GetProvider())
+	var details map[string]any
+	s.NoError(converter.GetDefaultDataConverter().FromPayload(sg.GetScalingGroup().GetScaler().GetDetails(), &details))
+	s.Equal(float64(0), details["min_count"])
+	s.Equal(float64(10), details["max_count"])
+	s.Equal(float64(5), details["initial_count"])
+	s.Equal(float64(0.5), details["utilization_target"])
+
+	// Switching to AWS Lambda clears the (rate-based) scaler.details so they
+	// don't linger under the no-sync scaler.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--aws-lambda-function-arn", "arn:aws:lambda:us-east-1:123:function:F:1",
+		"--aws-lambda-assume-role-arn", "arn:aws:iam::123:role/R",
+		"--aws-lambda-assume-role-external-id", "x",
+	)
+	s.NoError(res.Err)
+	req = takeCaptured()
+	s.NotNil(req)
+	sg = req.GetComputeConfigScalingGroups()["default"]
+	s.Contains(sg.GetUpdateMask().GetPaths(), "scaler.details")
+	s.Equal("aws-lambda", sg.GetScalingGroup().GetProvider().GetType())
+	s.Nil(sg.GetScalingGroup().GetScaler().GetDetails())
+
+	// Updating only GCP provider fields (no scaler flags) leaves scaler.details
+	// out of the mask, so existing bounds are preserved.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", serviceAccount,
+	)
+	s.NoError(res.Err)
+	req = takeCaptured()
+	s.NotNil(req)
+	sg = req.GetComputeConfigScalingGroups()["default"]
+	s.NotContains(sg.GetUpdateMask().GetPaths(), "scaler.details")
+	s.Equal("gcp-cloud-run", sg.GetScalingGroup().GetProvider().GetType())
+
+	// A scaler-only update still requires all four flags together.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--gcp-cloud-run-min-instances", "5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be set together")
+
+	// Nothing to update at all is rejected.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "no compute configuration provided to update")
 }
 
 // TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
