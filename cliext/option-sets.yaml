@@ -26,7 +26,9 @@ option-sets:
         implied-env: TEMPORAL_CONFIG_FILE
       - name: profile
         type: string
-        description: Profile to use for config file.
+        description: |
+          Configuration profile to use. Overrides the TEMPORAL_PROFILE environment
+          variable and defaults to "default".
         implied-env: TEMPORAL_PROFILE
       - name: disable-config-file
         type: bool
