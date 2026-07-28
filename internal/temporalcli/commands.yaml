@@ -1108,7 +1108,11 @@ commands:
           --gcp-cloud-run-project YourGCPProject \
           --gcp-cloud-run-region us-central1 \
           --gcp-cloud-run-worker-pool YourWorkerPool \
-          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \
+          --gcp-cloud-run-min-instances 1 \
+          --gcp-cloud-run-max-instances 3 \
+          --gcp-cloud-run-initial-instances 1 \
+          --gcp-cloud-run-utilization-target 0.75
       ```
 
       If a Worker Deployment Version with the supplied BuildID already exists,
@@ -1161,6 +1165,40 @@ commands:
           Customer GCP service account the Temporal server impersonates to
           manage the Cloud Run worker pool. Required when
           --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-min-instances
+        type: int
+        description: |
+          Minimum number of Cloud Run worker pool instances the scaler will
+          maintain. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          to 0 when unset. Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-max-instances
+        type: int
+        description: |
+          Maximum number of Cloud Run worker pool instances the scaler may
+          scale up to. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          to 30 when unset. Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-initial-instances
+        type: int
+        description: |
+          Number of Cloud Run worker pool instances the scaler starts with.
+          Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together, and this
+          value must be between the min and max (inclusive). Defaults to 0 when
+          unset. Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-utilization-target
+        type: float
+        description: |
+          Target average worker utilization the scaler aims for, as a fraction
+          in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together. Lower
+          values keep more spare capacity per worker. Defaults to 0.8 when
+          unset. Only valid with --gcp-cloud-run-worker-pool.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
@@ -1398,8 +1436,28 @@ commands:
           --gcp-cloud-run-project YourGCPProject \
           --gcp-cloud-run-region us-central1 \
           --gcp-cloud-run-worker-pool UpdatedWorkerPool \
-          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com
+          --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \
+          --gcp-cloud-run-min-instances 1 \
+          --gcp-cloud-run-max-instances 3 \
+          --gcp-cloud-run-initial-instances 1 \
+          --gcp-cloud-run-utilization-target 0.75
       ```
+
+      To update only the scaling settings on an existing GCP Cloud Run Worker
+      Deployment Version, supply the four scaler flags without the provider
+      fields (all four must be set together):
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --gcp-cloud-run-min-instances 1 \
+          --gcp-cloud-run-max-instances 3 \
+          --gcp-cloud-run-initial-instances 1 \
+          --gcp-cloud-run-utilization-target 0.75
+      ```
+
+      Provider fields are only required when changing the compute provider.
+      Switching the provider resets the scaling settings for the new provider.
 
       If --remove is specified, the compute configuration for the Worker
       Deployment Version will be removed:
@@ -1458,6 +1516,44 @@ commands:
           Customer GCP service account the Temporal server impersonates to
           manage the Cloud Run worker pool. Required when
           --gcp-cloud-run-worker-pool is specified.
+      - name: gcp-cloud-run-min-instances
+        type: int
+        description: |
+          Minimum number of Cloud Run worker pool instances the scaler will
+          maintain. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together. If
+          omitted, the version's existing scaling settings are left unchanged.
+          Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-max-instances
+        type: int
+        description: |
+          Maximum number of Cloud Run worker pool instances the scaler may
+          scale up to. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together. If
+          omitted, the version's existing scaling settings are left unchanged.
+          Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-initial-instances
+        type: int
+        description: |
+          Number of Cloud Run worker pool instances the scaler starts with.
+          Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together, and this
+          value must be between the min and max (inclusive). If omitted, the
+          version's existing scaling settings are left unchanged. Only valid
+          with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-utilization-target
+        type: float
+        description: |
+          Target average worker utilization the scaler aims for, as a fraction
+          in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
+          --gcp-cloud-run-utilization-target must all be set together. Lower
+          values keep more spare capacity per worker. If omitted, the version's
+          existing scaling settings are left unchanged. Only valid with
+          --gcp-cloud-run-worker-pool.
       - name: remove
         type: bool
         description: |
