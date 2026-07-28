@@ -33,10 +33,9 @@ func workflowEventLink() *commonpb.Link {
 	}
 }
 
-// TestNexusLinkStrings verifies that nexusLinkStrings converts workflow-event,
-// nexus-operation, and activity common links into their Nexus link URLs using
-// the converters that now live in go.temporal.io/api/temporalnexus, and skips
-// variants that have no Nexus equivalent.
+// TestNexusLinkStrings verifies that nexusLinkStrings converts supported common
+// links into their Nexus link URLs and skips variants that have no Nexus
+// equivalent.
 func TestNexusLinkStrings(t *testing.T) {
 	activityLink := &commonpb.Link{
 		Variant: &commonpb.Link_Activity_{
@@ -53,6 +52,16 @@ func TestNexusLinkStrings(t *testing.T) {
 				Namespace:   "ns",
 				OperationId: "op-id",
 				RunId:       "run-id",
+			},
+		},
+	}
+	workflowLink := &commonpb.Link{
+		Variant: &commonpb.Link_Workflow_{
+			Workflow: &commonpb.Link_Workflow{
+				Namespace:  "ns",
+				WorkflowId: "wf-id",
+				RunId:      "run-id",
+				Reason:     "started activity",
 			},
 		},
 	}
@@ -78,6 +87,13 @@ func TestNexusLinkStrings(t *testing.T) {
 		require.Contains(t, got[0], "act-id")
 		require.Contains(t, got[1], "temporal://")
 		require.Contains(t, got[1], "op-id")
+	})
+
+	t.Run("workflow link", func(t *testing.T) {
+		got := nexusLinkStrings([]*commonpb.Link{workflowLink})
+		require.Equal(t, []string{
+			"temporal:///namespaces/ns/workflows/wf-id/run-id?reason=started+activity",
+		}, got)
 	})
 
 	t.Run("skips unsupported variants and preserves order", func(t *testing.T) {

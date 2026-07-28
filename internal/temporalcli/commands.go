@@ -617,13 +617,8 @@ func timestampToTime(t *timestamppb.Timestamp) time.Time {
 func nexusLinkStrings(links []*commonpb.Link) []string {
 	var out []string
 	for _, link := range links {
-		switch {
-		case link.GetWorkflowEvent() != nil:
-			out = append(out, temporalnexus.ConvertLinkWorkflowEventToNexusLink(link.GetWorkflowEvent()).URL.String())
-		case link.GetNexusOperation() != nil:
-			out = append(out, temporalnexus.ConvertLinkNexusOperationToNexusLink(link.GetNexusOperation()).URL.String())
-		case link.GetActivity() != nil:
-			out = append(out, temporalnexus.ConvertLinkActivityToNexusLink(link.GetActivity()).URL.String())
+		if nexusLink, ok := temporalnexus.CommonLinkToNexusLink(link); ok {
+			out = append(out, nexusLink.GetUrl())
 		}
 	}
 	return out
