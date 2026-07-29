@@ -401,10 +401,10 @@ commands:
           at a time from the server.
 
   - name: temporal activity update-options
-    summary: Change the values of options affecting a running Activity
+    summary: Change the values of options affecting an Activity
     description: |
-      Update the options of a running Activity that were passed into it from
-      a Workflow. Updates are incremental, only changing the specified options.
+      Update an Activity's options. Updates are incremental, only changing the
+      specified options.
 
       For example:
 
@@ -425,6 +425,13 @@ commands:
 
       You may follow this command with `temporal activity reset`, and the new
       values will apply after the reset.
+
+      For a Standalone Activity before its first dispatch, use `--start-delay`
+      to change when the first Activity Task becomes available. The duration is
+      measured from the Activity's original schedule time, and `0s` makes it
+      available immediately. `--start-delay` cannot be changed after the first
+      Activity Task has been dispatched and is not supported for workflow
+      Activities.
 
       Either `--activity-id` or `--query` must be specified.
 
@@ -473,6 +480,13 @@ commands:
         type: duration
         description: |
           Maximum permitted time between successful worker heartbeats.
+      - name: start-delay
+        type: duration
+        description: |
+          For a Standalone Activity before its first Activity Task is dispatched,
+          changes when that task becomes available. The duration is measured from
+          the Activity's original schedule time. Set to `0s` to make the task
+          available immediately.
       - name: retry-initial-interval
         type: duration
         description: |
@@ -631,8 +645,7 @@ commands:
       Reset an activity.
       This restarts the activity as if it were first being
       scheduled. That is, it will reset both the number of attempts and the
-      activity timeout, as well as, optionally, the
-      [heartbeat details](#reset-heartbeats).
+      activity timeout, as well as the [heartbeat details](#reset-heartbeats).
 
       If the activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
@@ -658,7 +671,7 @@ commands:
       If, in your Activity, you need to do any cleanup when an Activity is
       reset, handle this error and then re-throw it when you've cleaned up.
 
-      If the `--reset-heartbeats` flag is set, the heartbeat details will also be cleared.
+      Reset always clears the heartbeat details.
 
       Specify the Activity and Workflow IDs:
 

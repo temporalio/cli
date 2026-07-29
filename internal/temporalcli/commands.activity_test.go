@@ -389,6 +389,56 @@ func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions() {
 	s.ContainsOnSameLine(out, "MaximumAttempts", "5")
 }
 
+func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions_StartDelay() {
+	var started atomic.Bool
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		started.Store(true)
+		return nil, nil
+	})
+
+	handle, err := s.Client.ExecuteActivity(
+		s.Context,
+		client.StartActivityOptions{
+			ID:                  newStandaloneActivityID(),
+			TaskQueue:           s.Worker().Options.TaskQueue,
+			StartToCloseTimeout: time.Minute,
+			StartDelay:          15 * time.Second,
+		},
+		"DevActivity",
+		"input",
+	)
+	s.NoError(err)
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"activity", "update-options",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--start-delay", "0s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"activity", "unpause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(started.Load, 2*time.Second, 100*time.Millisecond)
+}
+
 func (s *SharedServerSuite) TestActivityStandalone_PauseByActivityIdOnly() {
 	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
 	defer stopFailing()

@@ -34,6 +34,7 @@ type (
 		ScheduleToStartTimeout time.Duration
 		StartToCloseTimeout    time.Duration
 		HeartbeatTimeout       time.Duration
+		StartDelay             time.Duration
 
 		InitialInterval    time.Duration
 		BackoffCoefficient float64
@@ -903,6 +904,11 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		updatePath = append(updatePath, "heartbeat_timeout")
 	}
 
+	if c.Command.Flags().Changed("start-delay") {
+		activityOptions.StartDelay = durationpb.New(c.StartDelay.Duration())
+		updatePath = append(updatePath, "start_delay")
+	}
+
 	if c.Command.Flags().Changed("retry-initial-interval") ||
 		c.Command.Flags().Changed("retry-maximum-interval") ||
 		c.Command.Flags().Changed("retry-backoff-coefficient") ||
@@ -988,6 +994,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 			ScheduleToStartTimeout: result.GetActivityOptions().ScheduleToStartTimeout.AsDuration(),
 			StartToCloseTimeout:    result.GetActivityOptions().StartToCloseTimeout.AsDuration(),
 			HeartbeatTimeout:       result.GetActivityOptions().HeartbeatTimeout.AsDuration(),
+			StartDelay:             result.GetActivityOptions().StartDelay.AsDuration(),
 
 			InitialInterval:    result.GetActivityOptions().RetryPolicy.InitialInterval.AsDuration(),
 			BackoffCoefficient: result.GetActivityOptions().RetryPolicy.BackoffCoefficient,
@@ -1173,12 +1180,12 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		}
 
 		request := &workflowservice.ResetActivityExecutionRequest{
-			Namespace:      c.Parent.Namespace,
-			WorkflowId:     c.WorkflowId,
-			ActivityId:     c.ActivityId,
-			RunId:          c.RunId,
-			Identity:       c.Parent.Identity,
-			KeepPaused:     c.KeepPaused,
+			Namespace:  c.Parent.Namespace,
+			WorkflowId: c.WorkflowId,
+			ActivityId: c.ActivityId,
+			RunId:      c.RunId,
+			Identity:   c.Parent.Identity,
+			KeepPaused: c.KeepPaused,
 		}
 
 		resp, err := cl.WorkflowService().ResetActivityExecution(cctx, request)
@@ -1187,11 +1194,11 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		}
 
 		resetResponse := struct {
-			KeepPaused      bool `json:"keepPaused"`
-			ServerResponse  bool `json:"-"`
+			KeepPaused     bool `json:"keepPaused"`
+			ServerResponse bool `json:"-"`
 		}{
-			ServerResponse:  resp != nil,
-			KeepPaused:      c.KeepPaused,
+			ServerResponse: resp != nil,
+			KeepPaused:     c.KeepPaused,
 		}
 
 		_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
