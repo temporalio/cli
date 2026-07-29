@@ -17,10 +17,10 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.52.0
-	go.temporal.io/api v1.63.4-0.20260720155646-7a3ca3626ec2
+	go.temporal.io/api v1.63.4
 	go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
-	go.temporal.io/server v1.29.0-135.0.0.20260720172935-768cd1f81135
+	go.temporal.io/server v1.32.0-160.0
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
 	golang.org/x/mod v0.37.0
 	golang.org/x/term v0.45.0
@@ -170,7 +170,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/temporalio/ringpop-go v0.0.0-20250130211428-b97329e994f7 // indirect
-	github.com/temporalio/sqlparser v0.0.0-20231115171017-f4060bcfa6cb // indirect
+	github.com/temporalio/sqlparser v0.0.0-20260722001706-17d16cfe1da5 // indirect
 	github.com/temporalio/tchannel-go v1.22.1-0.20260129151045-8706a1ab5f61 // indirect
 	github.com/tidwall/btree v1.8.1 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
