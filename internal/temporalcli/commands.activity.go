@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/batch/v1"
@@ -39,6 +41,8 @@ type (
 		MaximumAttempts    int32
 	}
 )
+
+const activityDeleteWarning = "WARNING: Deleting Standalone Activity Executions in a global Namespace removes them from all replicas. Requests sent to a passive cluster are forwarded to the active cluster by default; to target the passive cluster directly, specify `--grpc-meta xdc-redirection=false`."
 
 func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
@@ -562,6 +566,65 @@ func (c *TemporalActivityCountCommand) run(cctx *CommandContext, args []string) 
 	return nil
 }
 
+func (s *ActivityReferenceOrBatchOptions) activityExecOrBatch(
+	cctx *CommandContext,
+	namespace string,
+	cl client.Client,
+	yesFlag bool,
+	overrides singleOrBatchOverrides,
+) (*client.GetActivityHandleOptions, *workflowservice.StartBatchOperationRequest, error) {
+	// If activity is set, we return activity handle options with activity ID and run ID
+	if s.ActivityId != "" {
+		if s.Query != "" {
+			return nil, nil, fmt.Errorf("cannot set query when activity ID is set")
+		} else if yesFlag && !overrides.AllowYesWithActivityID {
+			return nil, nil, fmt.Errorf("cannot set 'yes' when activity ID is set")
+		} else if s.Rps != 0 {
+			return nil, nil, fmt.Errorf("cannot set rps when activity ID is set")
+		}
+		return &client.GetActivityHandleOptions{
+			ActivityID: s.ActivityId,
+			RunID:      s.RunId,
+		}, nil, nil
+	}
+
+	// Check query is set properly
+	if s.Query == "" {
+		return nil, nil, fmt.Errorf("must set either activity ID or query")
+	} else if s.ActivityId != "" { // This is redundant, but kept for completeness
+		return nil, nil, fmt.Errorf("cannot set activity ID when query is set")
+	} else if s.RunId != "" {
+		return nil, nil, fmt.Errorf("cannot set run ID when query is set")
+	}
+
+	// The count is only used in the confirmation prompt; skip the request when --yes
+	// bypasses it, so batch jobs can still proceed if the visibility API is timing out.
+	var promptMessage string
+	if yesFlag {
+		promptMessage = fmt.Sprintf("Start batch against standalone activities matching query %q? y/N", s.Query)
+	} else {
+		count, err := cl.CountActivities(cctx, client.CountActivitiesOptions{Query: s.Query})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed counting standalone activities from query: %w", err)
+		}
+		promptMessage = fmt.Sprintf("Start batch against approximately %v standalone activities(s)? y/N", count.Count)
+	}
+	isYes, err := cctx.promptYes(promptMessage, yesFlag)
+	if err != nil {
+		return nil, nil, err
+	} else if !isYes {
+		// We consider this a command failure
+		return nil, nil, fmt.Errorf("user denied confirmation")
+	}
+
+	return nil, &workflowservice.StartBatchOperationRequest{
+		MaxOperationsPerSecond: s.Rps,
+		Namespace:              namespace,
+		JobId:                  uuid.NewString(),
+		VisibilityQuery:        s.Query,
+	}, nil
+}
+
 func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -569,14 +632,41 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
-		ActivityID: c.ActivityId,
-		RunID:      c.RunId,
-	})
-	if err := handle.Cancel(cctx, client.CancelActivityOptions{Reason: c.Reason}); err != nil {
-		return fmt.Errorf("failed to request activity cancellation: %w", err)
+	opts := ActivityReferenceOrBatchOptions{
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Rps:        c.Rps,
 	}
-	cctx.Printer.Println("Cancellation requested")
+
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{})
+	if err != nil {
+		return err
+	}
+
+	if activityOptions != nil {
+		handle := cl.GetActivityHandle(*activityOptions)
+		if err := handle.Cancel(cctx, client.CancelActivityOptions{Reason: c.Reason}); err != nil {
+			return fmt.Errorf("failed to request activity cancellation: %w", err)
+		}
+		cctx.Printer.Println("Cancellation requested")
+	} else { // batchReq != nil
+		cancelActivitiesOperation := &batch.BatchOperationCancelActivities{
+			Identity: c.Parent.Identity,
+			// do not fallback to defaultReason, to be consistent with single activity cancel
+			Reason: c.Reason,
+		}
+
+		// Reason in batch request falls back to defaultReason
+		batchReq.Reason = cmp.Or(c.Reason, defaultReason())
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancelActivitiesOperation{
+			CancelActivitiesOperation: cancelActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -587,22 +677,115 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	}
 	defer cl.Close()
 
-	// The CLI adds a default for terminate but not cancel.
-	// This matches the behavior for workflows.
-	reason := c.Reason
-	if reason == "" {
-		reason = defaultReason()
+	opts := ActivityReferenceOrBatchOptions{
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Rps:        c.Rps,
 	}
-	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
-		ActivityID: c.ActivityId,
-		RunID:      c.RunId,
-	})
-	// Terminate may fail if the activity doesn't exist or has already completed.
-	if err := handle.Terminate(cctx, client.TerminateActivityOptions{Reason: reason}); err != nil {
-		return fmt.Errorf("failed to terminate activity: %w", err)
+
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{})
+	if err != nil {
+		return err
 	}
-	cctx.Printer.Println("Activity terminated")
+
+	// Reason for single terminate or batch request falls back to defaultReason
+	reason := cmp.Or(c.Reason, defaultReason())
+
+	if activityOptions != nil {
+		// The CLI adds a default for terminate but not cancel.
+		// This matches the behavior for workflows.
+		handle := cl.GetActivityHandle(*activityOptions)
+		// Terminate may fail if the activity doesn't exist or has already completed.
+		if err := handle.Terminate(cctx, client.TerminateActivityOptions{Reason: reason}); err != nil {
+			return fmt.Errorf("failed to terminate activity: %w", err)
+		}
+		cctx.Printer.Println("Activity terminated")
+	} else { // batchReq != nil
+		terminateActivitiesOperation := &batch.BatchOperationTerminateActivities{
+			Identity: c.Parent.Identity,
+			Reason:   reason,
+		}
+
+		batchReq.Reason = reason
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminateActivitiesOperation{
+			TerminateActivitiesOperation: terminateActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Only warn when the namespace is global, or can't get the namespace info
+	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: c.Parent.Namespace,
+	})
+	if nsErr != nil || nsResp.GetIsGlobalNamespace() {
+		fmt.Fprintln(cctx.Options.Stderr, activityDeleteWarning)
+	}
+
+	opts := ActivityReferenceOrBatchOptions{
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Rps:        c.Rps,
+	}
+
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{
+		AllowYesWithActivityID: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	if activityOptions != nil {
+		yes, err := cctx.promptYes(activityDeleteSingleConfirmationMessage(activityOptions), c.Yes)
+		if err != nil {
+			return err
+		} else if !yes {
+			return fmt.Errorf("user denied confirmation")
+		}
+		_, err = cl.WorkflowService().DeleteActivityExecution(cctx, &workflowservice.DeleteActivityExecutionRequest{
+			Namespace:  c.Parent.Namespace,
+			ActivityId: c.ActivityId,
+			RunId:      c.RunId,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete standalone activity: %w", err)
+		}
+		cctx.Printer.Println("Delete activity succeeded")
+	} else { // batchReq != nil
+		deleteActivitiesOperation := &batch.BatchOperationDeleteActivities{}
+		batchReq.Reason = cmp.Or(c.Reason, defaultReason())
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeleteActivitiesOperation{
+			DeleteActivitiesOperation: deleteActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func activityDeleteSingleConfirmationMessage(activityOptions *client.GetActivityHandleOptions) string {
+	action := fmt.Sprintf("Delete Standalone Activity %q", activityOptions.ActivityID)
+	if activityOptions.RunID != "" {
+		action += fmt.Sprintf(" with Run ID %q", activityOptions.RunID)
+	}
+	return fmt.Sprintf("%s? y/N", action)
 }
 
 func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []string) error {
