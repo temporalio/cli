@@ -3669,17 +3669,18 @@ type TemporalWorkerDeploymentCreateVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
-	AwsLambdaFunctionArn          string
-	AwsLambdaAssumeRoleArn        string
-	AwsLambdaAssumeRoleExternalId string
-	GcpCloudRunProject            string
-	GcpCloudRunRegion             string
-	GcpCloudRunWorkerPool         string
-	GcpCloudRunServiceAccount     string
-	GcpCloudRunMinInstances       int
-	GcpCloudRunMaxInstances       int
-	GcpCloudRunInitialInstances   int
-	GcpCloudRunUtilizationTarget  float32
+	AwsLambdaFunctionArn           string
+	AwsLambdaAssumeRoleArn         string
+	AwsLambdaAssumeRoleExternalId  string
+	AwsLambdaSkipRoleAndExternalId bool
+	GcpCloudRunProject             string
+	GcpCloudRunRegion              string
+	GcpCloudRunWorkerPool          string
+	GcpCloudRunServiceAccount      string
+	GcpCloudRunMinInstances        int
+	GcpCloudRunMaxInstances        int
+	GcpCloudRunInitialInstances    int
+	GcpCloudRunUtilizationTarget   float32
 }
 
 func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentCreateVersionCommand {
@@ -3695,8 +3696,9 @@ func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, paren
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified. This requirement can be ignored with the option --aws-lambda-skip-role-and-external-id.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified. This requirement can be ignored with the option --aws-lambda-skip-role-and-external-id.")
+	s.Command.Flags().BoolVar(&s.AwsLambdaSkipRoleAndExternalId, "aws-lambda-skip-role-and-external-id", false, "Permit omitting --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id when --aws-lambda-function-arn is specified. Both are required unless this flag is passed.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunProject, "gcp-cloud-run-project", "", "GCP project ID hosting the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunRegion, "gcp-cloud-run-region", "", "Region of the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunWorkerPool, "gcp-cloud-run-worker-pool", "", "GCP Cloud Run worker pool name to scale when there are no active pollers for task queue targets in the Worker Deployment.")
@@ -4008,18 +4010,19 @@ type TemporalWorkerDeploymentUpdateVersionComputeConfigCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
-	AwsLambdaFunctionArn          string
-	AwsLambdaAssumeRoleArn        string
-	AwsLambdaAssumeRoleExternalId string
-	GcpCloudRunProject            string
-	GcpCloudRunRegion             string
-	GcpCloudRunWorkerPool         string
-	GcpCloudRunServiceAccount     string
-	GcpCloudRunMinInstances       int
-	GcpCloudRunMaxInstances       int
-	GcpCloudRunInitialInstances   int
-	GcpCloudRunUtilizationTarget  float32
-	Remove                        bool
+	AwsLambdaFunctionArn           string
+	AwsLambdaAssumeRoleArn         string
+	AwsLambdaAssumeRoleExternalId  string
+	AwsLambdaSkipRoleAndExternalId bool
+	GcpCloudRunProject             string
+	GcpCloudRunRegion              string
+	GcpCloudRunWorkerPool          string
+	GcpCloudRunServiceAccount      string
+	GcpCloudRunMinInstances        int
+	GcpCloudRunMaxInstances        int
+	GcpCloudRunInitialInstances    int
+	GcpCloudRunUtilizationTarget   float32
+	Remove                         bool
 }
 
 func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand {
@@ -4035,8 +4038,9 @@ func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandC
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified. This requirement can be ignored with the option --aws-lambda-skip-role-and-external-id.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified. This requirement can be ignored with the option --aws-lambda-skip-role-and-external-id.")
+	s.Command.Flags().BoolVar(&s.AwsLambdaSkipRoleAndExternalId, "aws-lambda-skip-role-and-external-id", false, "Permit omitting --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id when --aws-lambda-function-arn is specified. Both are required unless this flag is passed.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunProject, "gcp-cloud-run-project", "", "GCP project ID hosting the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunRegion, "gcp-cloud-run-region", "", "Region of the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunWorkerPool, "gcp-cloud-run-worker-pool", "", "GCP Cloud Run worker pool name to scale when there are no active pollers for task queue targets in the Worker Deployment.")

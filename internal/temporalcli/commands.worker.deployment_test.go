@@ -1315,6 +1315,22 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role")
 
+	// --aws-lambda-skip-role-and-external-id bypasses the client-side check, so
+	// the request reaches the server, which enforces its own
+	// require_role_and_external_id policy (enabled by default here).
+	skipRoleAndIDBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", skipRoleAndIDBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-skip-role-and-external-id",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, `AWS Lambda compute provider requires "role" to be configured`)
+
 	// --gcp-cloud-run-worker-pool requires project, region, and
 	// service-account; the first missing detail key is reported.
 	missingGCPProjectBuildID := uuid.NewString()

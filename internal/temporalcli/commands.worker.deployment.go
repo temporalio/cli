@@ -989,8 +989,15 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 	return nil
 }
 
-func validateAWSLambdaProviderDetails(details map[string]any) error {
-	for _, key := range []string{"arn", "role", "role_external_id"} {
+func validateAWSLambdaProviderDetails(details map[string]any, skipRoleAndExternalID bool) error {
+	keys := []string{"arn"}
+	if !skipRoleAndExternalID {
+		// The server governs whether these are mandatory via its
+		// require_role_and_external_id setting; --aws-lambda-skip-role-and-external-id
+		// opts out of the client-side check for servers where it is disabled.
+		keys = append(keys, "role", "role_external_id")
+	}
+	for _, key := range keys {
 		if _, ok := details[key]; !ok {
 			return fmt.Errorf("missing required AWS Lambda provider detail: %s", key)
 		}
@@ -1004,6 +1011,7 @@ func awsLambdaProviderDetailsPayload(
 	functionARN string,
 	assumeRoleARN string,
 	assumeRoleExternalID string,
+	skipRoleAndExternalID bool,
 ) (*commonpb.Payload, error) {
 	// Map keys from temporal-auto-scaled-workers:
 	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
@@ -1016,7 +1024,7 @@ func awsLambdaProviderDetailsPayload(
 	if assumeRoleExternalID != "" {
 		providerDetails["role_external_id"] = assumeRoleExternalID
 	}
-	err := validateAWSLambdaProviderDetails(providerDetails)
+	err := validateAWSLambdaProviderDetails(providerDetails, skipRoleAndExternalID)
 	if err != nil {
 		return nil, err
 	}
@@ -1069,6 +1077,7 @@ func computeProviderConfig(
 	awsLambdaFunctionARN string,
 	awsLambdaAssumeRoleARN string,
 	awsLambdaAssumeRoleExternalID string,
+	awsLambdaSkipRoleAndExternalID bool,
 	gcpCloudRunProject string,
 	gcpCloudRunRegion string,
 	gcpCloudRunWorkerPool string,
@@ -1086,6 +1095,7 @@ func computeProviderConfig(
 			awsLambdaFunctionARN,
 			awsLambdaAssumeRoleARN,
 			awsLambdaAssumeRoleExternalID,
+			awsLambdaSkipRoleAndExternalID,
 		)
 		return "aws-lambda", p, err
 	case gcpCloudRunWorkerPool != "":
@@ -1230,6 +1240,7 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 		c.AwsLambdaFunctionArn,
 		c.AwsLambdaAssumeRoleArn,
 		c.AwsLambdaAssumeRoleExternalId,
+		c.AwsLambdaSkipRoleAndExternalId,
 		c.GcpCloudRunProject,
 		c.GcpCloudRunRegion,
 		c.GcpCloudRunWorkerPool,
@@ -1329,6 +1340,7 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 			c.AwsLambdaFunctionArn,
 			c.AwsLambdaAssumeRoleArn,
 			c.AwsLambdaAssumeRoleExternalId,
+			c.AwsLambdaSkipRoleAndExternalId,
 			c.GcpCloudRunProject,
 			c.GcpCloudRunRegion,
 			c.GcpCloudRunWorkerPool,

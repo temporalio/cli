@@ -1136,14 +1136,22 @@ commands:
           AWS IAM role ARN that the Temporal server will assume when invoking
           the Lambda function that spawns a new Worker in this Worker
           Deployment Version. Required when --aws-lambda-function-arn is
-          specified.
+          specified. This requirement can be ignored with the option
+          --aws-lambda-skip-role-and-external-id.
       - name: aws-lambda-assume-role-external-id
         type: string
         description: |
           Temporal server will enforce that the AWS IAM trust policy associated
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
-          when --aws-lambda-function-arn is specified.
+          when --aws-lambda-function-arn is specified. This requirement can be
+          ignored with the option --aws-lambda-skip-role-and-external-id.
+      - name: aws-lambda-skip-role-and-external-id
+        type: bool
+        description: |
+          Permit omitting --aws-lambda-assume-role-arn and
+          --aws-lambda-assume-role-external-id when --aws-lambda-function-arn
+          is specified. Both are required unless this flag is passed.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1487,14 +1495,22 @@ commands:
           AWS IAM role ARN that the Temporal server will assume when invoking
           the Lambda function that spawns a new Worker in this Worker
           Deployment Version. Required when --aws-lambda-function-arn is
-          specified.
+          specified. This requirement can be ignored with the option
+          --aws-lambda-skip-role-and-external-id.
       - name: aws-lambda-assume-role-external-id
         type: string
         description: |
           Temporal server will enforce that the AWS IAM trust policy associated
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
-          when --aws-lambda-function-arn is specified.
+          when --aws-lambda-function-arn is specified. This requirement can be
+          ignored with the option --aws-lambda-skip-role-and-external-id.
+      - name: aws-lambda-skip-role-and-external-id
+        type: bool
+        description: |
+          Permit omitting --aws-lambda-assume-role-arn and
+          --aws-lambda-assume-role-external-id when --aws-lambda-function-arn
+          is specified. Both are required unless this flag is passed.
       - name: gcp-cloud-run-project
         type: string
         description: |
