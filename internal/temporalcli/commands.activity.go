@@ -1116,9 +1116,10 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 				WorkflowId: c.WorkflowId,
 				RunId:      c.RunId,
 			},
-			Identity:       c.Parent.Identity,
-			KeepPaused:     c.KeepPaused,
-			ResetHeartbeat: c.ResetHeartbeats,
+			Identity:   c.Parent.Identity,
+			KeepPaused: c.KeepPaused,
+			// A reset always clears the heartbeat details; the deprecated API gates that on a flag.
+			ResetHeartbeat: true,
 		}
 
 		resp, err := cl.WorkflowService().ResetActivity(cctx, request)
@@ -1127,21 +1128,19 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		}
 
 		resetResponse := struct {
-			KeepPaused      bool `json:"keepPaused"`
-			ResetHeartbeats bool `json:"resetHeartbeats"`
-			ServerResponse  bool `json:"-"`
+			KeepPaused     bool `json:"keepPaused"`
+			ServerResponse bool `json:"-"`
 		}{
-			ServerResponse:  resp != nil,
-			KeepPaused:      c.KeepPaused,
-			ResetHeartbeats: c.ResetHeartbeats,
+			ServerResponse: resp != nil,
+			KeepPaused:     c.KeepPaused,
 		}
 
 		_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
 	} else { // batch operation
 		resetActivitiesOperation := &batch.BatchOperationResetActivities{
-			Identity:               c.Parent.Identity,
-			ResetAttempts:          c.ResetAttempts,
-			ResetHeartbeat:         c.ResetHeartbeats,
+			Identity: c.Parent.Identity,
+			// A reset always clears the heartbeat details; the deprecated API gates that on a flag.
+			ResetHeartbeat:         true,
 			KeepPaused:             c.KeepPaused,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),
 			RestoreOriginalOptions: c.RestoreOriginalOptions,

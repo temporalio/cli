@@ -571,10 +571,11 @@ commands:
     summary: Reset an Activity
     description: |
       Reset an activity. Not supported for Standalone Activities.
-      This restarts the activity as if it were first being
-      scheduled. That is, it will reset both the number of attempts and the
-      activity timeout, as well as, optionally, the
-      [heartbeat details](#reset-heartbeats).
+      This restarts the activity as if it were first being scheduled: the
+      attempt count returns to one, any pending retry backoff is discarded, the
+      per-attempt timeouts are re-armed for the new attempt, and the
+      [heartbeat details](#reset-heartbeats) are cleared. The
+      schedule-to-close deadline keeps running.
 
       If the activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
@@ -598,7 +599,8 @@ commands:
       If, in your Activity, you need to do any cleanup when an Activity is
       reset, handle this error and then re-throw it when you've cleaned up.
 
-      If the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.
+      A reset clears the heartbeat details, so the new attempt starts without a
+      checkpoint.
 
       Specify the Activity and Workflow IDs:
 
@@ -607,7 +609,6 @@ commands:
           --activity-id YourActivityId \
           --workflow-id YourWorkflowId
           --keep-paused
-          --reset-heartbeats
       ```
 
       Activities can be reset in bulk with a visibility query list filter:
@@ -624,12 +625,6 @@ commands:
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
-      - name: reset-attempts
-        type: bool
-        description: Reset the activity attempts.
-      - name: reset-heartbeats
-        type: bool
-        description: Reset the Activity's heartbeats.
       - name: jitter
         type: duration
         description: |
