@@ -1053,11 +1053,9 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 				WorkflowId: c.WorkflowId,
 				RunId:      c.RunId,
 			},
-			ResetAttempts:  c.ResetAttempts,
-			ResetHeartbeat: c.ResetHeartbeats,
-			Jitter:         durationpb.New(c.Jitter.Duration()),
-			Identity:       c.Parent.Identity,
-			Activity:       &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId},
+			Jitter:   durationpb.New(c.Jitter.Duration()),
+			Identity: c.Parent.Identity,
+			Activity: &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId},
 		}
 
 		_, err = cl.WorkflowService().UnpauseActivity(cctx, request)
@@ -1066,11 +1064,9 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		}
 	} else { // batch operation
 		unpauseActivitiesOperation := &batch.BatchOperationUnpauseActivities{
-			Identity:       c.Parent.Identity,
-			ResetAttempts:  c.ResetAttempts,
-			ResetHeartbeat: c.ResetHeartbeats,
-			Jitter:         durationpb.New(c.Jitter.Duration()),
-			Activity:       &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true},
+			Identity: c.Parent.Identity,
+			Jitter:   durationpb.New(c.Jitter.Duration()),
+			Activity: &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true},
 		}
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UnpauseActivitiesOperation{

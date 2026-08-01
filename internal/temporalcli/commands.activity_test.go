@@ -218,7 +218,7 @@ func (s *SharedServerSuite) TestActivityPauseUnpause() {
 		return len(resp.PendingActivities) > 0 && resp.PendingActivities[0].Paused
 	}, 5*time.Second, 100*time.Millisecond)
 
-	res = sendActivityCommand("unpause", run, s, "--activity-id", activityId, "--reset-attempts")
+	res = sendActivityCommand("unpause", run, s, "--activity-id", activityId)
 	s.NoError(res.Err)
 
 	s.Eventually(func() bool {
