@@ -1045,6 +1045,11 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
+	resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+	if c.WorkflowId == "" {
+		resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
+	}
+
 	request := &workflowservice.PauseActivityExecutionRequest{
 		Namespace:  c.Parent.Namespace,
 		WorkflowId: c.WorkflowId,
@@ -1052,6 +1057,7 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 		RunId:      c.RunId,
 		Identity:   c.Identity,
 		Reason:     c.Reason,
+		ResourceId: resourceID,
 	}
 	if request.Identity == "" {
 		request.Identity = c.Parent.Identity
@@ -1106,16 +1112,22 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		if c.ActivityId == "" {
 			return errActivityTarget
 		}
+		resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+		if c.WorkflowId == "" {
+			resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
+		}
 
 		request := &workflowservice.UnpauseActivityExecutionRequest{
 			Namespace:      c.Parent.Namespace,
 			WorkflowId:     c.WorkflowId,
 			ActivityId:     c.ActivityId,
 			RunId:          c.RunId,
+			Identity:       c.Parent.Identity,
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
+			Reason:         c.Reason,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
-			Identity:       c.Parent.Identity,
+			ResourceId:     resourceID,
 		}
 
 		_, err = cl.WorkflowService().UnpauseActivityExecution(cctx, request)
