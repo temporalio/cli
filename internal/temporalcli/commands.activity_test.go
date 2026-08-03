@@ -439,6 +439,30 @@ func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions_StartDelay() {
 	s.Eventually(started.Load, 2*time.Second, 100*time.Millisecond)
 }
 
+func (s *SharedServerSuite) TestActivityUpdateOptions_StartDelayRejectedForWorkflowActivity() {
+	run := s.waitActivityStarted()
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", activityId,
+		"--workflow-id", run.GetID(),
+		"--start-delay", "30s",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "--start-delay")
+	s.ErrorContains(res.Err, "--workflow-id")
+
+	res = s.Execute(
+		"activity", "update-options",
+		"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+		"--start-delay", "30s",
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "--start-delay")
+	s.ErrorContains(res.Err, "--query")
+}
+
 func (s *SharedServerSuite) TestActivityStandalone_PauseByActivityIdOnly() {
 	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
 	defer stopFailing()
