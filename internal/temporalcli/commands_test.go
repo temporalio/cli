@@ -237,12 +237,13 @@ func (s *SharedServerSuite) SetupSuite() {
 				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
 				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
 				// the __temporal_system endpoint from inside a workflow.
-				"history.enableSignalWithStartFromWorkflow": true,
-				"activity.enableStandalone":                 true,
-				"activity.startDelayEnabled":                true,
-				"activity.longPollTimeout":                  2 * time.Second,
-				"nexusoperation.enableStandalone":           true,
-				"history.enableChasmCallbacks":              true,
+				"history.enableSignalWithStartFromWorkflow":        true,
+				"activity.enableStandalone":                        true,
+				"activity.startDelayEnabled":                       true,
+				"history.enableStandaloneActivityOperatorCommands": true,
+				"activity.longPollTimeout":                         2 * time.Second,
+				"nexusoperation.enableStandalone":                  true,
+				"history.enableChasmCallbacks":                     true,
 				// this is overridden since we don't want caching to be enabled
 				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
