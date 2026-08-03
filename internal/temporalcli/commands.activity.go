@@ -970,18 +970,24 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		if c.ActivityId == "" {
 			return errActivityTarget
 		}
+		resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+		if c.WorkflowId == "" {
+			resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
+		}
 		result, err := cl.WorkflowService().UpdateActivityExecutionOptions(
 			cctx,
 			&workflowservice.UpdateActivityExecutionOptionsRequest{
 				Namespace:       c.Parent.Namespace,
 				WorkflowId:      c.WorkflowId,
-				RunId:           c.RunId,
 				ActivityId:      c.ActivityId,
+				RunId:           c.RunId,
+				Identity:        c.Parent.Identity,
 				ActivityOptions: activityOptions,
 				UpdateMask: &fieldmaskpb.FieldMask{
 					Paths: updatePath,
 				},
-				Identity: c.Parent.Identity,
+				RestoreOriginal: c.RestoreOriginalOptions,
+				ResourceId:      resourceID,
 			})
 		if err != nil {
 			return fmt.Errorf("unable to update Activity options: %w", err)
@@ -1178,14 +1184,21 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		if c.ActivityId == "" {
 			return errActivityTarget
 		}
+		resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+		if c.WorkflowId == "" {
+			resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
+		}
 
 		request := &workflowservice.ResetActivityExecutionRequest{
-			Namespace:  c.Parent.Namespace,
-			WorkflowId: c.WorkflowId,
-			ActivityId: c.ActivityId,
-			RunId:      c.RunId,
-			Identity:   c.Parent.Identity,
-			KeepPaused: c.KeepPaused,
+			Namespace:              c.Parent.Namespace,
+			WorkflowId:             c.WorkflowId,
+			ActivityId:             c.ActivityId,
+			RunId:                  c.RunId,
+			Identity:               c.Parent.Identity,
+			KeepPaused:             c.KeepPaused,
+			Jitter:                 durationpb.New(c.Jitter.Duration()),
+			RestoreOriginalOptions: c.RestoreOriginalOptions,
+			ResourceId:             resourceID,
 		}
 
 		resp, err := cl.WorkflowService().ResetActivityExecution(cctx, request)

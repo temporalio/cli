@@ -5328,8 +5328,9 @@ option-sets:
         type: string
         short: w
         description: |
-          Workflow ID.
-          You must set either --workflow-id or --query.
+          Workflow ID. Set to target a workflow Activity. Omit to target a
+          standalone Activity. For a Workflow Activity you must set either
+          --workflow-id or --query.
       - name: query
         type: string
         short: q
@@ -5342,7 +5343,7 @@ option-sets:
         short: r
         description: |
           Run ID.
-          Only use with --workflow-id.
+          Only use with --workflow-id or --activity-id.
           Cannot use with --query.
       - name: reason
         type: string
