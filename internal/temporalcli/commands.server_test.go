@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/internal/devserver"
@@ -362,9 +363,10 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 
 	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
 	httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
-	// Use os.TempDir with an explicit defer-remove so Windows file-lock cleanup
-	// (os.RemoveAll in t.TempDir) does not race with a still-open SQLite handle.
-	dbFilename := filepath.Join(os.TempDir(), "devserver-banner-"+t.Name()+".sqlite")
+	// Use a unique file in os.TempDir to isolate repeated invocations from prior
+	// SQLite state. Explicit cleanup avoids making t.TempDir's os.RemoveAll race
+	// a still-open SQLite handle on Windows.
+	dbFilename := filepath.Join(os.TempDir(), "devserver-banner-"+uuid.NewString()+".sqlite")
 	t.Cleanup(func() {
 		_ = os.Remove(dbFilename)
 		_ = os.Remove(dbFilename + "-shm")
@@ -377,7 +379,8 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 	}()
 
 	var cl client.Client
-	// File-backed server takes longer to start due to SQLite initialization.
+	// File-backed server takes longer to start due to SQLite initialization,
+	// especially on slower Windows CI runners.
 	h.EventuallyWithT(func(t *assert.CollectT) {
 		select {
 		case res := <-resCh:
@@ -388,7 +391,7 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 		var err error
 		cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
 		assert.NoError(t, err)
-	}, 15*time.Second, 200*time.Millisecond)
+	}, 30*time.Second, 200*time.Millisecond)
 	defer cl.Close()
 
 	h.CancelContext()

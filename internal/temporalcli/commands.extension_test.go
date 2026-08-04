@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cli/internal/temporalcli"
 	"golang.org/x/tools/imports"
 )
 
@@ -232,7 +233,7 @@ func TestExtension_FailsOnNonExecutableCommand(t *testing.T) {
 	h := newExtensionHarness(t)
 	// Create file without execute permission.
 	path := filepath.Join(h.binDir, "temporal-foo")
-	err := os.WriteFile(path, []byte("a text file"), 0644)
+	err := os.WriteFile(path, []byte("a text file"), 0o644)
 	require.NoError(t, err)
 
 	res := h.Execute("foo")
@@ -248,7 +249,10 @@ func TestExtension_PassesThroughNonZeroExit(t *testing.T) {
 	res := h.Execute("foo")
 
 	assert.Equal(t, "Args: temporal-foo \n", res.Stdout.String())
-	assert.NoError(t, res.Err)
+	var exitError temporalcli.ExtensionNonZeroExit
+	if assert.ErrorAs(t, res.Err, &exitError) {
+		assert.Equal(t, 42, exitError.ExitCode())
+	}
 }
 
 func TestExtension_FailsOnCommandTimeout(t *testing.T) {
@@ -306,7 +310,7 @@ func (h *extensionHarness) createExtension(name string, code ...string) string {
 
 	// Write source file.
 	srcPath := filepath.Join(h.binDir, name+".go")
-	require.NoError(h.t, os.WriteFile(srcPath, formatted, 0644))
+	require.NoError(h.t, os.WriteFile(srcPath, formatted, 0o644))
 
 	// Build executable.
 	binPath := filepath.Join(h.binDir, name)

@@ -145,6 +145,11 @@ func (c *CommandContext) preprocessOptions() error {
 			if c.Err() != nil {
 				err = fmt.Errorf("program interrupted")
 			}
+			if exitError, ok := errors.AsType[ExtensionNonZeroExit](err); ok {
+				// An extension failed after being found and successfully started. Here we defer
+				// to its own error handling logic, and just copy the exit code through.
+				os.Exit(exitError.ExitCode())
+			}
 			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -524,7 +529,7 @@ var buildInfo string
 func VersionString() string {
 	// To add build-time information to the version string, use
 	// go build -ldflags "-X github.com/temporalio/cli/internal.buildInfo=<MyString>"
-	var bi = buildInfo
+	bi := buildInfo
 	if bi != "" {
 		bi = fmt.Sprintf(", %s", bi)
 	}

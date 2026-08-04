@@ -580,6 +580,7 @@ func defaultReason() string {
 type singleOrBatchOverrides struct {
 	AllowReasonWithWorkflowID bool
 	AllowYesWithWorkflowID    bool
+	AllowYesWithActivityID    bool
 }
 
 func (s *SingleWorkflowOrBatchOptions) workflowExecOrBatch(

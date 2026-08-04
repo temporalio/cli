@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	workerpb "go.temporal.io/api/worker/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -60,6 +62,72 @@ func (s *SharedServerSuite) TestWorkerHeartbeat_List() {
 	)
 	s.NoError(res.Err)
 	s.ContainsOnSameLine(res.Stdout.String(), heartbeat.WorkerInstanceKey, heartbeat.TaskQueue, heartbeat.WorkerIdentity)
+}
+
+func (s *SharedServerSuite) TestWorkerCount() {
+	heartbeat, err := s.recordWorkerHeartbeat()
+	s.NoError(err)
+
+	// Wait for worker to be visible
+	s.waitForWorkerListJSON(heartbeat.TaskQueue, heartbeat.WorkerInstanceKey)
+
+	// Count with query filter
+	res := s.Execute(
+		"worker", "count",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf("TaskQueue=\"%s\"", heartbeat.TaskQueue),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "1")
+
+	// JSON output
+	res = s.Execute(
+		"worker", "count",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf("TaskQueue=\"%s\"", heartbeat.TaskQueue),
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var parsed struct {
+		Count json.Number `json:"count"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &parsed))
+	s.Equal("1", parsed.Count.String())
+}
+
+func (s *SharedServerSuite) TestWorkerHeartbeat_List_IncludeSystemWorkers() {
+	var lastRequestLock sync.Mutex
+	var listWorkersRequest *workflowservice.ListWorkersRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.ListWorkersRequest); ok {
+				lastRequestLock.Lock()
+				listWorkersRequest = r
+				lastRequestLock.Unlock()
+				return nil
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"worker", "list",
+		"--address", s.Address(),
+		"--include-system-workers",
+	)
+	s.NoError(res.Err)
+
+	lastRequestLock.Lock()
+	req := listWorkersRequest
+	lastRequestLock.Unlock()
+	s.NotNil(req)
+	s.True(req.GetIncludeSystemWorkers())
 }
 
 func (s *SharedServerSuite) TestWorkerHeartbeat_Describe() {
