@@ -440,12 +440,10 @@ func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions_StartDelay() {
 }
 
 func (s *SharedServerSuite) TestActivityUpdateOptions_StartDelayRejectedForWorkflowActivity() {
-	run := s.waitActivityStarted()
-
 	res := s.Execute(
 		"activity", "update-options",
 		"--activity-id", activityId,
-		"--workflow-id", run.GetID(),
+		"--workflow-id", "anything",
 		"--start-delay", "30s",
 		"--address", s.Address(),
 	)
@@ -454,7 +452,7 @@ func (s *SharedServerSuite) TestActivityUpdateOptions_StartDelayRejectedForWorkf
 
 	res = s.Execute(
 		"activity", "update-options",
-		"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+		"--query", "anything",
 		"--start-delay", "30s",
 		"--yes",
 		"--address", s.Address(),
