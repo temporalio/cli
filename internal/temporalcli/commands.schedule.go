@@ -365,10 +365,9 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 		}
 		// TODO: remove this after https://github.com/temporalio/api-go/pull/154
 		noShorthand := false
-		cctx.Printer.PrintStructured(res, printer.StructuredOptions{
+		return cctx.Printer.PrintStructuredErr(res, printer.StructuredOptions{
 			OverrideJSONPayloadShorthand: &noShorthand,
 		})
-		return nil
 	}
 
 	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
@@ -378,7 +377,7 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 	}
 
 	printable := describeResultToPrintable(c.ScheduleId, res)
-	return cctx.Printer.PrintStructured(printable, printer.StructuredOptions{})
+	return cctx.Printer.PrintStructuredErr(printable, printer.StructuredOptions{})
 }
 
 func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {

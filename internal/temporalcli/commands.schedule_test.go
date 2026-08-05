@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -18,10 +19,50 @@ import (
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
 )
+
+type failAfterWriter struct {
+	buf       bytes.Buffer
+	remaining int
+	err       error
+}
+
+func (w *failAfterWriter) Write(p []byte) (int, error) {
+	if w.remaining <= 0 {
+		return 0, w.err
+	}
+	if len(p) > w.remaining {
+		p = p[:w.remaining]
+	}
+	n, _ := w.buf.Write(p)
+	w.remaining -= n
+	if w.remaining == 0 {
+		return n, w.err
+	}
+	return n, nil
+}
+
+func (s *SharedServerSuite) executeWithStdout(stdout io.Writer, args ...string) (error, string) {
+	options := s.CommandHarness.Options
+	var stderr bytes.Buffer
+	options.Stdin = &s.Stdin
+	options.Stdout = stdout
+	options.Stderr = &stderr
+	options.Args = args
+	options.DeprecatedEnvConfig.DisableEnvConfig = true
+	options.DeprecatedEnvConfig.EnvConfigName = "default"
+	var commandErr error
+	options.Fail = func(err error) {
+		commandErr = err
+		fmt.Fprintf(&stderr, "Error: %v\n", err)
+	}
+	temporalcli.Execute(s.Context, options)
+	return commandErr, stderr.String()
+}
 
 func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId string, res *CommandResult) {
 	schedId = fmt.Sprintf("sched-%x", rand.Uint32())
@@ -270,6 +311,119 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
 	s.Equal(schedWfId, j.Schedule.Action.StartWorkflow.Id)
+}
+
+func (s *SharedServerSuite) TestSchedule_DescribeReturnsWriteFailure() {
+	schedID, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+
+	for _, testCase := range []struct {
+		name       string
+		outputArgs []string
+	}{
+		{name: "text"},
+		{name: "JSON", outputArgs: []string{"--output", "json"}},
+		{name: "JSONL", outputArgs: []string{"--output", "jsonl"}},
+	} {
+		s.T().Run(testCase.name, func(t *testing.T) {
+			wantErr := errors.New("stdout write failed")
+			stdout := &failAfterWriter{remaining: 8, err: wantErr}
+			args := []string{
+				"schedule", "describe",
+				"--address", s.Address(),
+				"--schedule-id", schedID,
+			}
+			err, stderr := s.executeWithStdout(stdout, append(args, testCase.outputArgs...)...)
+
+			assert.ErrorIs(t, err, wantErr)
+			assert.Contains(t, stderr, wantErr.Error())
+			assert.NotEmpty(t, stdout.buf.String())
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_DescribeStructuredReturnsSerializationFailure() {
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.DescribeScheduleRequest); ok {
+				resp := reply.(*workflowservice.DescribeScheduleResponse)
+				resp.Schedule = &schedule.Schedule{
+					State: &schedule.ScheduleState{Notes: string([]byte{0xff})},
+				}
+				return nil
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	for _, output := range []string{"json", "jsonl"} {
+		s.T().Run(output, func(t *testing.T) {
+			var stdout bytes.Buffer
+			err, stderr := s.executeWithStdout(
+				&stdout,
+				"schedule", "describe",
+				"--address", s.Address(),
+				"--schedule-id", "serialization-failure",
+				"--output", output,
+			)
+
+			assert.Error(t, err)
+			assert.Contains(t, stderr, "invalid UTF-8")
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_DescribeTextReturnsSerializationFailure() {
+	schedID, _, res := s.createSchedule("--calendar", `{"minute":"0","comment":"valid"}`)
+	s.NoError(res.Err)
+
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if err := invoker(ctx, method, req, reply, cc, opts...); err != nil {
+				return err
+			}
+			if _, ok := req.(*workflowservice.DescribeScheduleRequest); !ok {
+				return nil
+			}
+			resp := reply.(*workflowservice.DescribeScheduleResponse)
+			calendars := resp.GetSchedule().GetSpec().GetStructuredCalendar()
+			if len(calendars) == 0 {
+				return errors.New("valid Describe response has no structured calendar")
+			}
+			calendars[0].Comment = string([]byte{0xff})
+			return nil
+		}),
+	)
+
+	var stdout bytes.Buffer
+	err, stderr := s.executeWithStdout(
+		&stdout,
+		"schedule", "describe",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+	)
+
+	s.Error(err)
+	s.Contains(stderr, "invalid UTF-8")
+	s.Empty(stdout.String())
 }
 
 func (s *SharedServerSuite) TestSchedule_CreateDescribeCalendar() {
