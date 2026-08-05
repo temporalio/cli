@@ -17,6 +17,7 @@ func TestHelp_Root(t *testing.T) {
 
 	assert.Contains(t, res.Stdout.String(), "Available Commands:")
 	assert.Contains(t, res.Stdout.String(), "workflow")
+	assert.Contains(t, res.Stdout.String(), "temporal workflow list -o json")
 	assert.NoError(t, res.Err)
 }
 
@@ -42,6 +43,28 @@ func TestHelp_WithValueFlag(t *testing.T) {
 		assert.NotContains(t, res.Stderr.String(), "pflag: help requested")
 		assert.NoError(t, res.Err)
 	}
+}
+
+func TestHelp_ConfigProfileExamples(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	for _, args := range [][]string{
+		{"config", "--help"},
+		{"config", "get", "--help"},
+		{"config", "set", "--help"},
+		{"config", "delete", "--help"},
+		{"config", "delete-profile", "--help"},
+	} {
+		res := h.Execute(args...)
+		require.Contains(t, res.Stdout.String(), "--profile YourProfile", strings.Join(args[:2], " "))
+		require.NoError(t, res.Err)
+	}
+
+	res := h.Execute("config", "list", "--help")
+	descriptionAndExamples := strings.SplitN(res.Stdout.String(), "\nUsage:", 2)
+	require.Len(t, descriptionAndExamples, 2)
+	require.NotContains(t, descriptionAndExamples[0], "--profile")
+	require.NoError(t, res.Err)
 }
 
 func TestHelp_HelpShowsAllFlag(t *testing.T) {

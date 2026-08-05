@@ -64,6 +64,38 @@ func (s *SharedServerSuite) TestWorkerHeartbeat_List() {
 	s.ContainsOnSameLine(res.Stdout.String(), heartbeat.WorkerInstanceKey, heartbeat.TaskQueue, heartbeat.WorkerIdentity)
 }
 
+func (s *SharedServerSuite) TestWorkerCount() {
+	heartbeat, err := s.recordWorkerHeartbeat()
+	s.NoError(err)
+
+	// Wait for worker to be visible
+	s.waitForWorkerListJSON(heartbeat.TaskQueue, heartbeat.WorkerInstanceKey)
+
+	// Count with query filter
+	res := s.Execute(
+		"worker", "count",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf("TaskQueue=\"%s\"", heartbeat.TaskQueue),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "1")
+
+	// JSON output
+	res = s.Execute(
+		"worker", "count",
+		"--address", s.Address(),
+		"--query", fmt.Sprintf("TaskQueue=\"%s\"", heartbeat.TaskQueue),
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	var parsed struct {
+		Count json.Number `json:"count"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &parsed))
+	s.Equal("1", parsed.Count.String())
+}
+
 func (s *SharedServerSuite) TestWorkerHeartbeat_List_IncludeSystemWorkers() {
 	var lastRequestLock sync.Mutex
 	var listWorkersRequest *workflowservice.ListWorkersRequest
