@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"reflect"
 	"slices"
 	"strconv"
@@ -64,6 +65,28 @@ func (p *Printer) PrintlnErr(s ...string) error {
 	for _, v := range append(append([]string{}, s...), "\n") {
 		if err := p.writeStrSafeErr(v); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// PrintlnStrictErr prints a line in text output and returns the first write error.
+// Unlike PrintlnErr, it returns broken pipe errors to its caller.
+// It is ignored during JSON output.
+func (p *Printer) PrintlnStrictErr(s ...string) error {
+	if p.JSON {
+		return nil
+	}
+	sigpipe := make(chan os.Signal, 1)
+	signal.Notify(sigpipe, syscall.SIGPIPE)
+	defer signal.Stop(sigpipe)
+	for _, v := range append(append([]string{}, s...), "\n") {
+		n, err := p.Output.Write([]byte(v))
+		if err != nil {
+			return err
+		}
+		if n != len(v) {
+			return io.ErrShortWrite
 		}
 	}
 	return nil

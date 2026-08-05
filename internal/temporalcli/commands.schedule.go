@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -19,6 +20,7 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/proto"
 )
 
 type printableSchedule struct {
@@ -539,6 +541,77 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 		return err
 	}
 	cctx.Printer.Println("Trigger request sent")
+	return nil
+}
+
+type scheduleNotesPatchIntent struct {
+	set   bool
+	unset bool
+	notes string
+}
+
+func (i scheduleNotesPatchIntent) validate() error {
+	if !i.set && !i.unset {
+		return errors.New("one of --notes or --unset-notes is required")
+	}
+	if i.set && i.unset {
+		return errors.New("--notes and --unset-notes are mutually exclusive")
+	}
+	return nil
+}
+
+func (i scheduleNotesPatchIntent) apply(schedule *schedpb.Schedule) {
+	if i.set {
+		schedule.State.Notes = i.notes
+		return
+	}
+	schedule.State.Notes = ""
+}
+
+func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) error {
+	intent := scheduleNotesPatchIntent{
+		set:   c.Command.Flags().Changed("notes"),
+		unset: c.UnsetNotes,
+		notes: c.Notes,
+	}
+	if err := intent.validate(); err != nil {
+		return err
+	}
+	if c.ScheduleId == "" {
+		return errors.New("schedule ID is required")
+	}
+
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	describeResponse, err := cl.WorkflowService().DescribeSchedule(cctx, &workflowservice.DescribeScheduleRequest{
+		Namespace:  c.Parent.Namespace,
+		ScheduleId: c.ScheduleId,
+	})
+	if err != nil {
+		return err
+	}
+
+	schedule := proto.Clone(describeResponse.Schedule).(*schedpb.Schedule)
+	intent.apply(schedule)
+	_, err = cl.WorkflowService().UpdateSchedule(cctx, &workflowservice.UpdateScheduleRequest{
+		Namespace:     c.Parent.Namespace,
+		ScheduleId:    c.ScheduleId,
+		Schedule:      schedule,
+		ConflictToken: describeResponse.ConflictToken,
+		Identity:      c.Parent.Identity,
+		RequestId:     uuid.NewString(),
+	})
+	if err != nil {
+		return err
+	}
+	if err := cctx.Printer.PrintlnStrictErr("Schedule patch submitted"); err != nil {
+		fmt.Fprintln(cctx.Options.Stderr, "Schedule patch may already have been submitted")
+		return err
+	}
 	return nil
 }
 

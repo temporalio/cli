@@ -3136,12 +3136,30 @@ commands:
       Schedule memo and search attributes cannot be updated with this
       command. They are set only during Schedule creation and are not affected
       by updates.
+
+      For field-preserving changes to individual fields, use
+      `temporal schedule patch`.
     option-sets:
       - schedule-configuration
       - schedule-id
       - overlap-policy
       - shared-workflow-start
       - payload-input
+
+  - name: temporal schedule patch
+    summary: Patch Schedule details
+    description: |
+      Update individual Schedule fields without replacing the full Schedule
+      configuration.
+    option-sets:
+      - schedule-id
+    options:
+      - name: notes
+        type: string
+        description: Set the Schedule notes field.
+      - name: unset-notes
+        type: bool
+        description: Clear the Schedule notes field.
 
   - name: temporal server
     summary: Run Temporal Server

@@ -124,6 +124,80 @@ func TestPrinter_PrintlnErrReturnsWriteFailure(t *testing.T) {
 	require.ErrorIs(t, p.PrintlnErr("not printed"), wantErr)
 }
 
+func TestPrinter_PrintlnStrictErrReturnsAcknowledgementWriteFailures(t *testing.T) {
+	const helperEnv = "TEMPORAL_CLI_PRINTER_STRICT_ACKNOWLEDGEMENT_EPIPE"
+	if os.Getenv(helperEnv) != "" {
+		p := printer.Printer{Output: writerFunc(func([]byte) (int, error) {
+			return 0, syscall.EPIPE
+		})}
+		if err := p.PrintlnStrictErr("not printed"); err != syscall.EPIPE {
+			os.Exit(10)
+		}
+		_, _ = os.Stderr.WriteString("strict acknowledgement returned EPIPE\n")
+		return
+	}
+
+	t.Run("returns the original EPIPE without exiting", func(t *testing.T) {
+		cmd := exec.Command(os.Args[0], "-test.run=^TestPrinter_PrintlnStrictErrReturnsAcknowledgementWriteFailures$")
+		cmd.Env = append(os.Environ(), helperEnv+"=1")
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err)
+		require.Contains(t, string(output), "strict acknowledgement returned EPIPE")
+	})
+
+	t.Run("returns short write", func(t *testing.T) {
+		p := printer.Printer{Output: writerFunc(func(p []byte) (int, error) {
+			return len(p) - 1, nil
+		})}
+		require.ErrorIs(t, p.PrintlnStrictErr("not printed"), io.ErrShortWrite)
+	})
+
+	t.Run("is silent in JSON", func(t *testing.T) {
+		var output bytes.Buffer
+		p := printer.Printer{Output: &output, JSON: true}
+		require.NoError(t, p.PrintlnStrictErr("not printed"))
+		require.Empty(t, output.String())
+	})
+}
+
+func TestPrinter_PrintlnStrictErrReturnsEPIPEFromRealStdoutPipe(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows pipes do not generate SIGPIPE")
+	}
+	const (
+		helperEnv      = "TEMPORAL_CLI_PRINTER_STRICT_REAL_STDOUT_PIPE"
+		helperExitCode = 23
+		helperMarker   = "strict real stdout pipe returned EPIPE\n"
+	)
+	if os.Getenv(helperEnv) != "" {
+		p := printer.Printer{Output: os.Stdout}
+		if err := p.PrintlnStrictErr("not printed"); !errors.Is(err, syscall.EPIPE) {
+			_, _ = os.Stderr.WriteString("strict real stdout pipe did not return EPIPE\n")
+			os.Exit(24)
+		}
+		_, _ = os.Stderr.WriteString(helperMarker)
+		os.Exit(helperExitCode)
+	}
+
+	pipeReader, pipeWriter, err := os.Pipe()
+	require.NoError(t, err)
+	require.NoError(t, pipeReader.Close())
+	t.Cleanup(func() { _ = pipeWriter.Close() })
+
+	cmd := exec.Command(os.Args[0], "-test.run=^TestPrinter_PrintlnStrictErrReturnsEPIPEFromRealStdoutPipe$")
+	cmd.Env = append(os.Environ(), helperEnv+"=1")
+	cmd.Stdout = pipeWriter
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	require.NoError(t, pipeWriter.Close())
+
+	var exitErr *exec.ExitError
+	require.ErrorAs(t, err, &exitErr)
+	require.Equal(t, helperExitCode, exitErr.ExitCode(), "stderr: %s", stderr.String())
+	require.Contains(t, stderr.String(), helperMarker)
+}
+
 func TestPrinter_StartListErrReturnsWriteFailure(t *testing.T) {
 	wantErr := errors.New("write failed")
 	p := printer.Printer{

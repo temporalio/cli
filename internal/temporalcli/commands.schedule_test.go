@@ -11,7 +11,9 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -25,6 +27,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 type failAfterWriter struct {
@@ -1267,6 +1270,628 @@ func (s *SharedServerSuite) TestSchedule_UpdateHelpExplainsFullReplacement() {
 	s.Contains(res.Stdout.String(), "full replacement")
 	s.Contains(res.Stdout.String(), "Any options not provided will be reset to their default\nvalues")
 	s.Contains(res.Stdout.String(), "temporal schedule describe")
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersNotes() {
+	res := s.Execute("schedule", "patch", "--help")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "--notes")
+	s.Contains(res.Stdout.String(), "--unset-notes")
+	s.NotContains(res.Stdout.String(), "--headers")
+
+	res = s.Execute("schedule", "update", "--help")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "full replacement")
+	s.Contains(res.Stdout.String(), "field-preserving")
+	s.Contains(res.Stdout.String(), "temporal schedule patch")
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchUpdatesStoredNotes() {
+	const (
+		initialNotes = "initial notes"
+		patchedNotes = "patched notes"
+	)
+	scheduleID, _, res := s.createSchedule("--interval", "10d", "--notes", initialNotes)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--schedule-id", scheduleID,
+		"--notes", patchedNotes,
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"schedule", "describe",
+			"--address", s.Address(),
+			"--schedule-id", scheduleID,
+			"--output", "json",
+		)
+		if res.Err != nil {
+			return false
+		}
+		var description struct {
+			Schedule struct {
+				State struct {
+					Notes string `json:"notes"`
+				} `json:"state"`
+			} `json:"schedule"`
+		}
+		if err := json.Unmarshal(res.Stdout.Bytes(), &description); err != nil {
+			return false
+		}
+		return description.Schedule.State.Notes == patchedNotes
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchRejectsInvalidRequestsBeforeMutation() {
+	var scheduleRequests atomic.Int32
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		switch req.(type) {
+		case *workflowservice.DescribeScheduleRequest, *workflowservice.UpdateScheduleRequest:
+			scheduleRequests.Add(1)
+		}
+		return handler(ctx, req)
+	})
+
+	for _, tc := range []struct {
+		name          string
+		args          []string
+		errorContains string
+	}{
+		{
+			name:          "no operation",
+			args:          []string{"schedule", "patch", "--schedule-id", "schedule-id"},
+			errorContains: "one of --notes or --unset-notes is required",
+		},
+		{
+			name:          "set and unset notes",
+			args:          []string{"schedule", "patch", "--schedule-id", "schedule-id", "--notes", "note", "--unset-notes"},
+			errorContains: "--notes and --unset-notes are mutually exclusive",
+		},
+		{
+			name:          "missing schedule ID",
+			args:          []string{"schedule", "patch", "--notes", "note"},
+			errorContains: "required flag(s) \"schedule-id\" not set",
+		},
+		{
+			name:          "empty schedule ID",
+			args:          []string{"schedule", "patch", "--address", s.Address(), "--schedule-id=", "--notes", "note"},
+			errorContains: "schedule ID is required",
+		},
+		{
+			name:          "headers",
+			args:          []string{"schedule", "patch", "--schedule-id", "schedule-id", "--notes", "note", "--headers", "example=123"},
+			errorContains: "unknown flag: --headers",
+		},
+	} {
+		scheduleRequests.Store(0)
+		res := s.Execute(tc.args...)
+		assert.Error(s.T(), res.Err, tc.name)
+		assert.ErrorContains(s.T(), res.Err, tc.errorContains, tc.name)
+		assert.Equal(s.T(), int32(0), scheduleRequests.Load(), tc.name)
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsNotesWithSingleRawUpdate() {
+	const (
+		namespace  = "patch-notes-namespace"
+		scheduleID = "patch-notes-schedule"
+		identity   = "patch-notes-identity"
+	)
+	conflictToken := []byte("patch-notes-conflict-token")
+	describedSchedule := &schedule.Schedule{
+		Spec:  &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+		State: &schedule.ScheduleState{Notes: "existing notes"},
+	}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+
+	var lock sync.Mutex
+	var describeRequests []*workflowservice.DescribeScheduleRequest
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests = append(describeRequests, proto.Clone(request).(*workflowservice.DescribeScheduleRequest))
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = append([]byte(nil), conflictToken...)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				lock.Unlock()
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	requestIDs := map[string]struct{}{}
+	for _, tc := range []struct {
+		name  string
+		notes string
+	}{
+		{name: "different value", notes: "updated notes"},
+		{name: "explicit empty string", notes: ""},
+		{name: "same value", notes: "existing notes"},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			lock.Lock()
+			describeRequests = nil
+			updateRequests = nil
+			lock.Unlock()
+
+			res := s.Execute(
+				"schedule", "patch",
+				"--address", s.Address(),
+				"--namespace", namespace,
+				"--identity", identity,
+				"--schedule-id", scheduleID,
+				"--notes", tc.notes,
+			)
+			assert.NoError(t, res.Err)
+
+			lock.Lock()
+			gotDescribeRequests := append([]*workflowservice.DescribeScheduleRequest(nil), describeRequests...)
+			gotUpdateRequests := append([]*workflowservice.UpdateScheduleRequest(nil), updateRequests...)
+			lock.Unlock()
+			assert.Len(t, gotDescribeRequests, 1)
+			assert.Len(t, gotUpdateRequests, 1)
+			if len(gotDescribeRequests) != 1 || len(gotUpdateRequests) != 1 {
+				return
+			}
+
+			describeRequest := gotDescribeRequests[0]
+			assert.Equal(t, namespace, describeRequest.GetNamespace())
+			assert.Equal(t, scheduleID, describeRequest.GetScheduleId())
+
+			updateRequest := gotUpdateRequests[0]
+			assert.Equal(t, namespace, updateRequest.GetNamespace())
+			assert.Equal(t, scheduleID, updateRequest.GetScheduleId())
+			assert.Equal(t, conflictToken, updateRequest.GetConflictToken())
+			assert.Equal(t, identity, updateRequest.GetIdentity())
+			assert.NotEmpty(t, updateRequest.GetRequestId())
+			_, exists := requestIDs[updateRequest.GetRequestId()]
+			assert.False(t, exists)
+			requestIDs[updateRequest.GetRequestId()] = struct{}{}
+			assert.Nil(t, updateRequest.GetMemo())
+			assert.Nil(t, updateRequest.GetSearchAttributes())
+
+			expectedSchedule := proto.Clone(describedSchedule).(*schedule.Schedule)
+			expectedSchedule.State.Notes = tc.notes
+			assert.True(t, proto.Equal(expectedSchedule, updateRequest.GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchUnsetsNotesWithSingleRawUpdate() {
+	const (
+		namespace  = "patch-unset-notes-namespace"
+		scheduleID = "patch-unset-notes-schedule"
+		identity   = "patch-unset-notes-identity"
+	)
+	conflictToken := []byte("patch-unset-notes-conflict-token")
+	describedSchedule := &schedule.Schedule{
+		Spec: &schedule.ScheduleSpec{
+			CronString:   []string{"0 12 * * *"},
+			TimezoneName: "America/New_York",
+			TimezoneData: []byte{1, 2, 3},
+		},
+		Policies: &schedule.SchedulePolicies{
+			PauseOnFailure:         true,
+			KeepOriginalWorkflowId: true,
+		},
+		State: &schedule.ScheduleState{
+			Notes:            "notes to clear",
+			Paused:           true,
+			LimitedActions:   true,
+			RemainingActions: 3,
+		},
+	}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+
+	var lock sync.Mutex
+	var describeRequests []*workflowservice.DescribeScheduleRequest
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests = append(describeRequests, proto.Clone(request).(*workflowservice.DescribeScheduleRequest))
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = append([]byte(nil), conflictToken...)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				lock.Unlock()
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	res := s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--namespace", namespace,
+		"--identity", identity,
+		"--schedule-id", scheduleID,
+		"--unset-notes",
+	)
+	s.NoError(res.Err)
+
+	lock.Lock()
+	gotDescribeRequests := append([]*workflowservice.DescribeScheduleRequest(nil), describeRequests...)
+	gotUpdateRequests := append([]*workflowservice.UpdateScheduleRequest(nil), updateRequests...)
+	lock.Unlock()
+	s.Len(gotDescribeRequests, 1)
+	s.Len(gotUpdateRequests, 1)
+	if len(gotDescribeRequests) != 1 || len(gotUpdateRequests) != 1 {
+		return
+	}
+
+	s.Equal(namespace, gotDescribeRequests[0].GetNamespace())
+	s.Equal(scheduleID, gotDescribeRequests[0].GetScheduleId())
+
+	updateRequest := gotUpdateRequests[0]
+	s.Equal(namespace, updateRequest.GetNamespace())
+	s.Equal(scheduleID, updateRequest.GetScheduleId())
+	s.Equal(conflictToken, updateRequest.GetConflictToken())
+	s.Equal(identity, updateRequest.GetIdentity())
+	s.NotEmpty(updateRequest.GetRequestId())
+
+	expectedSchedule := proto.Clone(describedSchedule).(*schedule.Schedule)
+	expectedSchedule.State.Notes = ""
+	s.True(proto.Equal(expectedSchedule, updateRequest.GetSchedule()))
+	s.True(proto.Equal(describedScheduleSnapshot, describedSchedule))
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchDescribeErrorsStopBeforeUpdate() {
+	const injectedDescribeError = "injected Describe error"
+
+	var lock sync.Mutex
+	var injectDescribeError bool
+	var describeRequests []*workflowservice.DescribeScheduleRequest
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests = append(describeRequests, proto.Clone(request).(*workflowservice.DescribeScheduleRequest))
+				inject := injectDescribeError
+				lock.Unlock()
+				if inject {
+					return errors.New(injectedDescribeError)
+				}
+				return invoker(ctx, method, req, reply, cc, opts...)
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				lock.Unlock()
+				return invoker(ctx, method, req, reply, cc, opts...)
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name          string
+		scheduleID    string
+		inject        bool
+		errorContains string
+	}{
+		{
+			name:          "injected Describe error",
+			scheduleID:    "patch-injected-describe-error",
+			inject:        true,
+			errorContains: injectedDescribeError,
+		},
+		{
+			name:       "nonexistent Schedule",
+			scheduleID: "patch-nonexistent-schedule",
+		},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			lock.Lock()
+			injectDescribeError = tc.inject
+			describeRequests = nil
+			updateRequests = nil
+			lock.Unlock()
+
+			res := s.Execute(
+				"schedule", "patch",
+				"--address", s.Address(),
+				"--schedule-id", tc.scheduleID,
+				"--notes", "updated notes",
+			)
+			assert.Error(t, res.Err)
+			if tc.errorContains != "" {
+				assert.ErrorContains(t, res.Err, tc.errorContains)
+			}
+
+			lock.Lock()
+			gotDescribeRequests := append([]*workflowservice.DescribeScheduleRequest(nil), describeRequests...)
+			gotUpdateRequests := append([]*workflowservice.UpdateScheduleRequest(nil), updateRequests...)
+			lock.Unlock()
+			assert.Len(t, gotDescribeRequests, 1)
+			assert.Len(t, gotUpdateRequests, 0)
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchUpdateFailureDoesNotClaimSubmission() {
+	const (
+		namespace  = "patch-update-error-namespace"
+		scheduleID = "patch-update-error-schedule"
+	)
+	wantErr := errors.New("injected UpdateSchedule error")
+	conflictToken := []byte("patch-update-error-conflict-token")
+	describedSchedule := &schedule.Schedule{
+		State: &schedule.ScheduleState{Notes: "existing notes"},
+	}
+
+	var lock sync.Mutex
+	describeRequests := 0
+	updateRequests := 0
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests++
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = append([]byte(nil), conflictToken...)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests++
+				lock.Unlock()
+				return wantErr
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	res := s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--namespace", namespace,
+		"--schedule-id", scheduleID,
+		"--notes", "updated notes",
+	)
+	assert.Error(s.T(), res.Err)
+	assert.ErrorContains(s.T(), res.Err, wantErr.Error())
+	assert.NotContains(s.T(), res.Stdout.String(), "Schedule patch submitted\n")
+	assert.NotContains(s.T(), res.Stderr.String(), "Schedule patch may already have been submitted")
+
+	lock.Lock()
+	gotDescribeRequests := describeRequests
+	gotUpdateRequests := updateRequests
+	lock.Unlock()
+	assert.Equal(s.T(), 1, gotDescribeRequests)
+	assert.Equal(s.T(), 1, gotUpdateRequests)
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSuccessfulOutputModes() {
+	const (
+		namespace  = "patch-output-namespace"
+		scheduleID = "patch-output-schedule"
+	)
+	conflictToken := []byte("patch-output-conflict-token")
+	describedSchedule := &schedule.Schedule{
+		State: &schedule.ScheduleState{Notes: "existing notes"},
+	}
+
+	var lock sync.Mutex
+	describeRequests := 0
+	updateRequests := 0
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests++
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = append([]byte(nil), conflictToken...)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests++
+				lock.Unlock()
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name       string
+		outputArgs []string
+		wantStdout string
+	}{
+		{name: "text", wantStdout: "Schedule patch submitted\n"},
+		{name: "json", outputArgs: []string{"--output", "json"}},
+		{name: "jsonl", outputArgs: []string{"--output", "jsonl"}},
+		{name: "none", outputArgs: []string{"--output", "none"}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			lock.Lock()
+			describeRequests = 0
+			updateRequests = 0
+			lock.Unlock()
+
+			args := append([]string{
+				"schedule", "patch",
+				"--address", s.Address(),
+				"--namespace", namespace,
+				"--schedule-id", scheduleID,
+				"--notes", "updated notes",
+			}, tc.outputArgs...)
+			res := s.Execute(args...)
+			assert.NoError(t, res.Err)
+			assert.Equal(t, tc.wantStdout, res.Stdout.String())
+			assert.Empty(t, res.Stderr.String())
+
+			lock.Lock()
+			gotDescribeRequests := describeRequests
+			gotUpdateRequests := updateRequests
+			lock.Unlock()
+			assert.Equal(t, 1, gotDescribeRequests)
+			assert.Equal(t, 1, gotUpdateRequests)
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchWarnsWhenAcknowledgementWriteFails() {
+	const (
+		namespace  = "patch-write-error-namespace"
+		scheduleID = "patch-write-error-schedule"
+	)
+	conflictToken := []byte("patch-write-error-conflict-token")
+	describedSchedule := &schedule.Schedule{
+		State: &schedule.ScheduleState{Notes: "existing notes"},
+	}
+
+	var lock sync.Mutex
+	describeRequests := 0
+	updateRequests := 0
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests++
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = append([]byte(nil), conflictToken...)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests++
+				lock.Unlock()
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, testCase := range []struct {
+		name    string
+		wantErr error
+	}{
+		{name: "ordinary write error", wantErr: errors.New("stdout write failed")},
+		{name: "broken pipe", wantErr: syscall.EPIPE},
+	} {
+		s.T().Run(testCase.name, func(t *testing.T) {
+			lock.Lock()
+			describeRequests = 0
+			updateRequests = 0
+			lock.Unlock()
+
+			stdout := &failAfterWriter{remaining: 1, err: testCase.wantErr}
+			err, stderr := s.executeWithStdout(
+				stdout,
+				"schedule", "patch",
+				"--address", s.Address(),
+				"--namespace", namespace,
+				"--schedule-id", scheduleID,
+				"--notes", "updated notes",
+			)
+			assert.Equal(t, testCase.wantErr, err)
+			assert.ErrorIs(t, err, testCase.wantErr)
+			assert.NotContains(t, stdout.buf.String(), "Schedule patch submitted\n")
+			assert.Equal(t, "Schedule patch may already have been submitted\nError: "+testCase.wantErr.Error()+"\n", stderr)
+
+			lock.Lock()
+			gotDescribeRequests := describeRequests
+			gotUpdateRequests := updateRequests
+			lock.Unlock()
+			assert.Equal(t, 1, gotDescribeRequests)
+			assert.Equal(t, 1, gotUpdateRequests)
+		})
+	}
 }
 
 func (s *SharedServerSuite) TestSchedule_UpdateDoesNotPrompt() {

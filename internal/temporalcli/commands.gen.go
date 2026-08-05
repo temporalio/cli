@@ -2496,6 +2496,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalSchedulePatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -2696,6 +2697,33 @@ func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *T
 	return &s
 }
 
+type TemporalSchedulePatchCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	Notes      string
+	UnsetNotes bool
+}
+
+func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalSchedulePatchCommand {
+	var s TemporalSchedulePatchCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "patch [flags]"
+	s.Command.Short = "Patch Schedule details"
+	s.Command.Long = "Update individual Schedule fields without replacing the full Schedule\nconfiguration."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Notes, "notes", "", "Set the Schedule notes field.")
+	s.Command.Flags().BoolVar(&s.UnsetNotes, "unset-notes", false, "Clear the Schedule notes field.")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalScheduleToggleCommand struct {
 	Parent  *TemporalScheduleCommand
 	Command cobra.Command
@@ -2775,9 +2803,9 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update Schedule details"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\x1b[0m\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n\x1b[1mtemporal schedule describe\x1b[0m before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\x1b[0m\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n\x1b[1mtemporal schedule describe\x1b[0m before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates.\n\nFor field-preserving changes to individual fields, use\n\x1b[1mtemporal schedule patch\x1b[0m."
 	} else {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\n```\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n`temporal schedule describe` before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\n```\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n`temporal schedule describe` before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates.\n\nFor field-preserving changes to individual fields, use\n`temporal schedule patch`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())
