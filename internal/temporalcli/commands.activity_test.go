@@ -188,6 +188,39 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
 }
 
+func (s *SharedServerSuite) TestActivityOptionsUpdate_BatchMatchAll() {
+	run1 := s.waitActivityStarted()
+	run2 := s.waitActivityStarted()
+	query := fmt.Sprintf("WorkflowId = '%s' OR WorkflowId = '%s'", run1.GetID(), run2.GetID())
+
+	// Wait for both Workflow Executions to be visible to the batch query.
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: query,
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 2
+	}, 3*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--query", query,
+		"--task-queue", "batch-updated-task-queue",
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	for _, run := range []client.WorkflowRun{run1, run2} {
+		s.Eventually(func() bool {
+			resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+			s.NoError(err)
+			return len(resp.GetPendingActivities()) == 1 &&
+				resp.GetPendingActivities()[0].GetActivityOptions().GetTaskQueue().GetName() == "batch-updated-task-queue"
+		}, 5*time.Second, 100*time.Millisecond)
+	}
+}
+
 func sendActivityCommand(command string, run client.WorkflowRun, s *SharedServerSuite, extraArgs ...string) *CommandResult {
 	args := []string{
 		"activity", command,
