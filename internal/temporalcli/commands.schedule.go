@@ -3,6 +3,7 @@ package temporalcli
 import (
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -253,6 +254,22 @@ func (c *ScheduleConfigurationOptions) toScheduleSpec(spec *client.ScheduleSpec)
 }
 
 func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (client.ScheduleAction, error) {
+	if len(sw.Headers) > 0 {
+		return nil, fmt.Errorf("headers are not supported for schedule actions")
+	}
+	if sw.PriorityKey < 0 || sw.PriorityKey > 5 {
+		return nil, fmt.Errorf("priority key must be between 0 and 5")
+	}
+	if len(sw.FairnessKey) > 64 {
+		return nil, fmt.Errorf("fairness key must be at most 64 bytes")
+	}
+	if math.IsNaN(float64(sw.FairnessWeight)) ||
+		sw.FairnessWeight < 0 ||
+		(sw.FairnessWeight > 0 && sw.FairnessWeight < 0.001) ||
+		sw.FairnessWeight > 1000 {
+		return nil, fmt.Errorf("fairness weight must be between 0.001 and 1000")
+	}
+
 	opts, err := buildStartOptions(sw, &WorkflowStartOptions{})
 	if err != nil {
 		return nil, err
@@ -273,6 +290,7 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		Memo:                    opts.Memo,
 		StaticSummary:           opts.StaticSummary,
 		StaticDetails:           opts.StaticDetails,
+		Priority:                opts.Priority,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
 		return nil, err

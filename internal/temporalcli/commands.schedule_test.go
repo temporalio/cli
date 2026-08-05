@@ -10,13 +10,17 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId string, res *CommandResult) {
@@ -57,6 +61,127 @@ func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId s
 func (s *SharedServerSuite) TestSchedule_Create() {
 	_, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
+}
+
+func (s *SharedServerSuite) TestSchedule_CreateRejectsHeadersBeforeMutation() {
+	var createRequests atomic.Int32
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		if _, ok := req.(*workflowservice.CreateScheduleRequest); ok {
+			createRequests.Add(1)
+		}
+		return handler(ctx, req)
+	})
+
+	_, _, res := s.createSchedule("--interval", "10d", "--headers", "example=123")
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "headers are not supported for schedule actions")
+	s.Equal(int32(0), createRequests.Load())
+}
+
+func (s *SharedServerSuite) TestSchedule_CreateAppliesPriorityAndFairness() {
+	var createRequest *workflowservice.CreateScheduleRequest
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		if request, ok := req.(*workflowservice.CreateScheduleRequest); ok {
+			createRequest = request
+		}
+		return handler(ctx, req)
+	})
+
+	_, _, res := s.createSchedule(
+		"--interval", "10d",
+		"--priority-key", "2",
+		"--fairness-key", "tenant-a",
+		"--fairness-weight", "2.5",
+	)
+	s.NoError(res.Err)
+	if createRequest == nil {
+		s.Fail("CreateSchedule request was not captured")
+		return
+	}
+
+	priority := createRequest.GetSchedule().GetAction().GetStartWorkflow().GetPriority()
+	if priority == nil {
+		s.Fail("CreateSchedule request did not include priority")
+		return
+	}
+	s.Equal(int32(2), priority.GetPriorityKey())
+	s.Equal("tenant-a", priority.GetFairnessKey())
+	s.Equal(float32(2.5), priority.GetFairnessWeight())
+}
+
+func (s *SharedServerSuite) TestSchedule_CreateRejectsInvalidPriorityAndFairnessBeforeMutation() {
+	var createRequests atomic.Int32
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		if _, ok := req.(*workflowservice.CreateScheduleRequest); ok {
+			createRequests.Add(1)
+		}
+		return handler(ctx, req)
+	})
+
+	for _, testCase := range []struct {
+		name string
+		args []string
+	}{
+		{name: "negative priority", args: []string{"--priority-key", "-1"}},
+		{name: "priority above maximum", args: []string{"--priority-key", "6"}},
+		{name: "fairness key longer than 64 bytes", args: []string{"--fairness-key", strings.Repeat("a", 65)}},
+		{name: "negative fairness weight", args: []string{"--fairness-weight", "-1"}},
+		{name: "fairness weight below minimum", args: []string{"--fairness-weight", "0.0009"}},
+		{name: "fairness weight above maximum", args: []string{"--fairness-weight", "1000.1"}},
+	} {
+		s.T().Run(testCase.name, func(t *testing.T) {
+			args := append([]string{"--interval", "10d"}, testCase.args...)
+			_, _, res := s.createSchedule(args...)
+			if res.Err == nil {
+				t.Fatal("schedule create returned nil error")
+			}
+		})
+	}
+
+	s.Equal(int32(0), createRequests.Load())
+}
+
+func (s *SharedServerSuite) TestSchedule_CreateAcceptsEmptyFairnessKeyAndZeroWeight() {
+	var createRequest *workflowservice.CreateScheduleRequest
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		if request, ok := req.(*workflowservice.CreateScheduleRequest); ok {
+			createRequest = request
+		}
+		return handler(ctx, req)
+	})
+
+	_, _, res := s.createSchedule(
+		"--interval", "10d",
+		"--fairness-key=",
+		"--fairness-weight", "0",
+	)
+	s.NoError(res.Err)
+	if createRequest == nil {
+		s.Fail("CreateSchedule request was not captured")
+		return
+	}
+
+	s.Nil(createRequest.GetSchedule().GetAction().GetStartWorkflow().GetPriority())
 }
 
 func (s *SharedServerSuite) TestSchedule_Delete() {
