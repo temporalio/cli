@@ -151,11 +151,23 @@ type CommandResult struct {
 }
 
 func (h *CommandHarness) Execute(args ...string) *CommandResult {
+	ctx, cancel := context.WithCancel(h.Context)
+	h.t.Cleanup(cancel)
+	defer cancel()
+	return h.execute(ctx, &h.Stdin, args...)
+}
+
+func (h *CommandHarness) ExecuteWithContext(ctx context.Context, args ...string) *CommandResult {
+	var stdin bytes.Buffer
+	return h.execute(ctx, &stdin, args...)
+}
+
+func (h *CommandHarness) execute(ctx context.Context, stdin io.Reader, args ...string) *CommandResult {
 	// Copy options, update as needed
 	res := &CommandResult{}
 	options := h.Options
 	// Set stdio
-	options.Stdin = &h.Stdin
+	options.Stdin = stdin
 	options.Stdout = &res.Stdout
 	options.Stderr = &res.Stderr
 	// Set args
@@ -175,10 +187,6 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 		res.Err = err
 	}
 
-	// Run
-	ctx, cancel := context.WithCancel(h.Context)
-	h.t.Cleanup(cancel)
-	defer cancel()
 	h.t.Logf("Calling: %v", strings.Join(args, " "))
 	temporalcli.Execute(ctx, options)
 	if res.Stdout.Len() > 0 {
@@ -237,18 +245,22 @@ func (s *SharedServerSuite) SetupSuite() {
 				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
 				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
 				// the __temporal_system endpoint from inside a workflow.
-				"history.enableSignalWithStartFromWorkflow": true,
-				"activity.enableStandalone":                 true,
-				"activity.startDelayEnabled":                true,
-				"activity.longPollTimeout":                  2 * time.Second,
-				"nexusoperation.enableStandalone":           true,
-				"history.enableChasmCallbacks":              true,
+				"history.enableSignalWithStartFromWorkflow":        true,
+				"activity.enableStandalone":                        true,
+				"activity.startDelayEnabled":                       true,
+				"history.enableStandaloneActivityOperatorCommands": true,
+				"activity.longPollTimeout":                         2 * time.Second,
+				"nexusoperation.enableStandalone":                  true,
+				"history.enableChasmCallbacks":                     true,
 				// this is overridden since we don't want caching to be enabled
 				// while testing DescribeTaskQueue behaviour related to versioning
 				"matching.TaskQueueInfoByBuildIdTTL": 0 * time.Second,
 				// worker heartbeating
 				"frontend.WorkerHeartbeatsEnabled": true,
 				"frontend.ListWorkersEnabled":      true,
+				// Required by TestActivity_CancelTerminateDelete_*
+				// to enable batch operations on standalone activities.
+				"frontend.enableBatchOperationsForStandaloneActivities": true,
 			},
 		},
 	})

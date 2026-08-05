@@ -247,6 +247,8 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// should be removed.
 	dynConf[dynamicconfig.EnableChasm.Key()] = true
 	dynConf[activity.Enabled.Key()] = true
+	dynConf[activity.EnableStandaloneActivityOperatorCommands.Key()] = true
+	dynConf[dynamicconfig.FrontendEnableBatchOperationsForStandaloneActivities.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
