@@ -143,6 +143,8 @@ commands:
             `temporal activity complete --help`
       * Return structured output with `-o`:
             `temporal workflow list -o json`
+      * View global and connection options:
+            `temporal options`
     has-init: true
     option-sets:
       - common

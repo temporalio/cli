@@ -18,6 +18,7 @@ func TestHelp_Root(t *testing.T) {
 	assert.Contains(t, res.Stdout.String(), "Available Commands:")
 	assert.Contains(t, res.Stdout.String(), "workflow")
 	assert.Contains(t, res.Stdout.String(), "temporal workflow list -o json")
+	assert.Contains(t, res.Stdout.String(), "temporal options")
 	assert.NoError(t, res.Err)
 }
 
