@@ -87,7 +87,7 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 	if len(delegatableCommands) > 0 && isCompletionCommand(delegatableCommands[0]) && len(extArgs) == 0 {
 		// __complete always expects at least one argument, the last of which is the current subcommand
 		// or argument to expand, with an empty string matching all possibilities.
-		// ["temporal", "__complete", "activity"] means this cli should return any subcommands and extentions that
+		// ["temporal", "__complete", "activity"] means this cli should return any subcommands and extensions that
 		// match "activity", whereas ["temporal", "__complete", "activity", ""] means we should show what's available
 		// on the activity subcommand. The same logic applies to extension commands, so even if we matched an extension,
 		// if there are no further args, it's still this cli's responsibility to respond to the completion request.

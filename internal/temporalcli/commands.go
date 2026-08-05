@@ -389,7 +389,7 @@ func Execute(ctx context.Context, options CommandOptions) {
 
 		if !cctx.ActuallyRanCommand && len(cctx.Options.Args) > 0 && isCompletionCommand(cctx.Options.Args[0]) {
 			// Completion was requested, but we didn't match an extension and delegate. Register all extension
-			// commands so things like "temporal cl<TABL>" will expand to "temporal cloud"
+			// commands so things like "temporal cl<TAB>" will expand to "temporal cloud"
 			registerExtensionCommands(&cmd.Command)
 		}
 
