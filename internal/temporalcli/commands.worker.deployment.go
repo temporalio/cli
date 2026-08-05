@@ -990,14 +990,18 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 }
 
 func validateAWSLambdaProviderDetails(details map[string]any, skipRoleAndExternalID bool) error {
-	keys := []string{"arn"}
-	if !skipRoleAndExternalID {
-		// The server governs whether these are mandatory via its
-		// require_role_and_external_id setting; --aws-lambda-skip-role-and-external-id
-		// opts out of the client-side check for servers where it is disabled.
-		keys = append(keys, "role", "role_external_id")
+	if _, ok := details["arn"]; !ok {
+		return fmt.Errorf("missing required AWS Lambda provider detail: arn")
 	}
-	for _, key := range keys {
+	if skipRoleAndExternalID {
+		for _, key := range []string{"role", "role_external_id"} {
+			if _, ok := details[key]; ok {
+				return fmt.Errorf("AWS Lambda provider detail %q must not be set when --aws-lambda-skip-role-and-external-id is passed", key)
+			}
+		}
+		return nil
+	}
+	for _, key := range []string{"role", "role_external_id"} {
 		if _, ok := details[key]; !ok {
 			return fmt.Errorf("missing required AWS Lambda provider detail: %s", key)
 		}
