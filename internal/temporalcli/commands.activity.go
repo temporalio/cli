@@ -905,6 +905,10 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	}
 
 	if c.Command.Flags().Changed("start-delay") {
+		if c.WorkflowId != "" || c.Query != "" {
+			return errors.New("--start-delay is only supported for Standalone Activities, " +
+				"so it cannot be used with --workflow-id or --query")
+		}
 		activityOptions.StartDelay = durationpb.New(c.StartDelay.Duration())
 		updatePath = append(updatePath, "start_delay")
 	}
