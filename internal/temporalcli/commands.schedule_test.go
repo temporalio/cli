@@ -136,6 +136,33 @@ func (s *SharedServerSuite) TestSchedule_Describe() {
 	s.Equal(schedWfId, j.Schedule.Action.StartWorkflow.Id)
 }
 
+func (s *SharedServerSuite) TestSchedule_Describe_Priority() {
+	schedId, _, res := s.createSchedule("--interval", "2s", "--priority-key", "1")
+	s.NoError(res.Err)
+
+	// json — verify priority is sent to server correctly
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"-s", schedId,
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	var j struct {
+		Schedule struct {
+			Action struct {
+				StartWorkflow struct {
+					Priority struct {
+						PriorityKey int32 `json:"priorityKey"`
+					} `json:"priority"`
+				} `json:"startWorkflow"`
+			} `json:"action"`
+		} `json:"schedule"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &j))
+	s.Equal(int32(1), j.Schedule.Action.StartWorkflow.Priority.PriorityKey)
+}
+
 func (s *SharedServerSuite) TestSchedule_CreateDescribeCalendar() {
 	schedId, _, res := s.createSchedule("--calendar", `{"hour":"2,4","dayOfWeek":"thu,fri"}`)
 	s.NoError(res.Err)
