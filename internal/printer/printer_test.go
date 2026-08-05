@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"unicode"
 
@@ -155,6 +156,23 @@ func TestPrinter_EndListErrReturnsWriteFailure(t *testing.T) {
 	require.ErrorIs(t, p.EndListErr(), wantErr)
 }
 
+func TestPrinter_EndListErrResetsListStateAfterWriteFailure(t *testing.T) {
+	wantErr := errors.New("write failed")
+	p := printer.Printer{
+		Output:     &bytes.Buffer{},
+		JSON:       true,
+		JSONIndent: "  ",
+	}
+	require.NoError(t, p.StartListErr())
+	p.Output = writerFunc(func([]byte) (int, error) {
+		return 0, wantErr
+	})
+	require.ErrorIs(t, p.EndListErr(), wantErr)
+	p.Output = &bytes.Buffer{}
+
+	require.NoError(t, p.StartListErr())
+}
+
 func TestPrinter_VoidListBoundariesRetainWriteFailureBehavior(t *testing.T) {
 	wantErr := errors.New("write failed")
 	failingOutput := writerFunc(func([]byte) (int, error) {
@@ -272,6 +290,46 @@ func TestPrinter_PrintStructuredErrReturnsShortWrite(t *testing.T) {
 	}
 
 	require.ErrorIs(t, p.PrintStructuredErr(map[string]string{"key": "value"}, printer.StructuredOptions{}), io.ErrShortWrite)
+}
+
+func TestPrinter_ErrorReturningMethodsExitSuccessfullyOnBrokenPipe(t *testing.T) {
+	const helperEnv = "TEMPORAL_CLI_PRINTER_BROKEN_PIPE_METHOD"
+	if method := os.Getenv(helperEnv); method != "" {
+		brokenPipeOutput := writerFunc(func([]byte) (int, error) {
+			return 0, syscall.EPIPE
+		})
+		var err error
+		switch method {
+		case "println":
+			p := printer.Printer{Output: brokenPipeOutput}
+			err = p.PrintlnErr("not printed")
+		case "start-list":
+			p := printer.Printer{Output: brokenPipeOutput, JSON: true, JSONIndent: "  "}
+			err = p.StartListErr()
+		case "print-structured":
+			p := printer.Printer{Output: brokenPipeOutput, JSON: true}
+			err = p.PrintStructuredErr(map[string]string{"key": "value"}, printer.StructuredOptions{})
+		case "end-list":
+			p := printer.Printer{Output: &bytes.Buffer{}, JSON: true, JSONIndent: "  "}
+			require.NoError(t, p.StartListErr())
+			p.Output = brokenPipeOutput
+			err = p.EndListErr()
+		default:
+			os.Exit(12)
+		}
+		if err != nil {
+			os.Exit(10)
+		}
+		os.Exit(11)
+	}
+
+	for _, method := range []string{"println", "start-list", "print-structured", "end-list"} {
+		t.Run(method, func(t *testing.T) {
+			cmd := exec.Command(os.Args[0], "-test.run=^TestPrinter_ErrorReturningMethodsExitSuccessfullyOnBrokenPipe$")
+			cmd.Env = append(os.Environ(), helperEnv+"="+method)
+			require.NoError(t, cmd.Run())
+		})
+	}
 }
 
 func TestPrinter_JSONList(t *testing.T) {

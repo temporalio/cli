@@ -23,12 +23,75 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type failAfterWriter struct {
 	buf       bytes.Buffer
 	remaining int
 	err       error
+}
+
+type failListFinalizationWriter struct {
+	buf bytes.Buffer
+	err error
+}
+
+type shortWriteBuffer struct {
+	buf bytes.Buffer
+}
+
+type failOnJSONItemWriter struct {
+	buf        bytes.Buffer
+	itemWrites int
+	failItem   int
+	err        error
+}
+
+type failItemAndFinalizationWriter struct {
+	itemErr           error
+	finalizationErr   error
+	finalizationCalls int
+}
+
+func (w *failItemAndFinalizationWriter) Write(p []byte) (int, error) {
+	switch {
+	case bytes.Equal(p, []byte("\n]\n")):
+		w.finalizationCalls++
+		if w.finalizationErr == nil {
+			return len(p), nil
+		}
+		return 0, w.finalizationErr
+	case len(p) > 0 && p[0] == '{':
+		return 0, w.itemErr
+	default:
+		return len(p), nil
+	}
+}
+
+func (w *failOnJSONItemWriter) Write(p []byte) (int, error) {
+	if len(p) > 0 && p[0] == '{' {
+		w.itemWrites++
+		if w.itemWrites == w.failItem {
+			return 0, w.err
+		}
+	}
+	return w.buf.Write(p)
+}
+
+func (w *shortWriteBuffer) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	return w.buf.Write(p[:len(p)-1])
+}
+
+func (w *failListFinalizationWriter) Write(p []byte) (int, error) {
+	if bytes.Equal(p, []byte("\n]\n")) {
+		return 0, w.err
+	}
+	return w.buf.Write(p)
 }
 
 func (w *failAfterWriter) Write(p []byte) (int, error) {
@@ -653,6 +716,296 @@ func (s *SharedServerSuite) TestSchedule_List() {
 		"--query", "unknownField = 'notHere'",
 	)
 	s.Error(res.Err)
+}
+
+func (s *SharedServerSuite) TestSchedule_ListReturnsOpeningFailure() {
+	wantErr := errors.New("stdout opening failed")
+	stdout := &failAfterWriter{err: wantErr}
+
+	err, stderr := s.executeWithStdout(
+		stdout,
+		"schedule", "list",
+		"--address", s.Address(),
+		"--output", "json",
+	)
+
+	assert.ErrorIs(s.T(), err, wantErr)
+	assert.Contains(s.T(), stderr, wantErr.Error())
+}
+
+func (s *SharedServerSuite) TestSchedule_ListReturnsFirstItemWriteFailure() {
+	_, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+	wantErr := errors.New("stdout first item failed")
+	stdout := &failAfterWriter{err: wantErr}
+
+	err, stderr := s.executeWithStdout(
+		stdout,
+		"schedule", "list",
+		"--address", s.Address(),
+		"--output", "jsonl",
+	)
+
+	assert.ErrorIs(s.T(), err, wantErr)
+	assert.Contains(s.T(), stderr, wantErr.Error())
+}
+
+func (s *SharedServerSuite) TestSchedule_ListFinalizesAfterItemFailureAndPreservesBothErrors() {
+	_, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+	itemErr := errors.New("stdout item failed")
+	finalizationErr := errors.New("stdout finalization also failed")
+	stdout := &failItemAndFinalizationWriter{
+		itemErr:         itemErr,
+		finalizationErr: finalizationErr,
+	}
+
+	err, stderr := s.executeWithStdout(
+		stdout,
+		"schedule", "list",
+		"--address", s.Address(),
+		"--output", "json",
+	)
+
+	assert.ErrorIs(s.T(), err, itemErr)
+	assert.ErrorIs(s.T(), err, finalizationErr)
+	assert.Contains(s.T(), stderr, itemErr.Error())
+	assert.Contains(s.T(), stderr, finalizationErr.Error())
+	assert.Equal(s.T(), 1, stdout.finalizationCalls)
+}
+
+func (s *SharedServerSuite) TestSchedule_ListFinalizesAfterRPCFailureAndPreservesPrimaryError() {
+	rpcErr := errors.New("list RPC failed")
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.ListSchedulesRequest); ok {
+				return rpcErr
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+	stdout := &failItemAndFinalizationWriter{}
+
+	err, stderr := s.executeWithStdout(
+		stdout,
+		"schedule", "list",
+		"--address", s.Address(),
+		"--output", "json",
+	)
+
+	assert.ErrorContains(s.T(), err, rpcErr.Error())
+	assert.Contains(s.T(), stderr, rpcErr.Error())
+	assert.Equal(s.T(), 1, stdout.finalizationCalls)
+}
+
+func (s *SharedServerSuite) TestSchedule_ListTextFinalizesAfterIteratorFailure() {
+	const iteratorErrMessage = "list iterator failed"
+	iteratorErr := status.Error(codes.InvalidArgument, iteratorErrMessage)
+	options := s.CommandHarness.Options
+	options.AdditionalClientGRPCDialOptions = append(
+		options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.ListSchedulesRequest); ok {
+				return iteratorErr
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+	var stdout, stderr bytes.Buffer
+	options.Stdin = &s.Stdin
+	options.Stdout = &stdout
+	options.Stderr = &stderr
+	options.Args = []string{
+		"schedule", "list",
+		"--address", s.Address(),
+	}
+	options.DeprecatedEnvConfig.DisableEnvConfig = true
+	options.DeprecatedEnvConfig.EnvConfigName = "default"
+	var commandErr error
+	options.Fail = func(err error) {
+		commandErr = err
+	}
+	cctx, cancel, err := temporalcli.NewCommandContext(s.Context, options)
+	s.NoError(err)
+	defer cancel()
+	cmd := temporalcli.NewTemporalCommand(cctx)
+	cmd.Command.SetArgs(cctx.Options.Args)
+	cmd.Command.SetOut(cctx.Options.Stdout)
+	cmd.Command.SetErr(cctx.Options.Stderr)
+
+	err = cmd.Command.ExecuteContext(cctx)
+
+	s.NoError(err)
+	s.ErrorContains(commandErr, iteratorErrMessage)
+	var restartErr error
+	s.NotPanics(func() {
+		restartErr = cctx.Printer.StartListErr()
+	})
+	s.NoError(restartErr)
+	s.NoError(cctx.Printer.EndListErr())
+}
+
+func (s *SharedServerSuite) TestSchedule_ListReturnsMiddleItemWriteFailure() {
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.ListSchedulesRequest); !ok {
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+			reply.(*workflowservice.ListSchedulesResponse).Schedules = []*schedule.ScheduleListEntry{
+				{ScheduleId: "first-item"},
+				{ScheduleId: "middle-item"},
+			}
+			return nil
+		}),
+	)
+	wantErr := errors.New("stdout middle item failed")
+	stdout := &failOnJSONItemWriter{failItem: 2, err: wantErr}
+
+	err, stderr := s.executeWithStdout(
+		stdout,
+		"schedule", "list",
+		"--address", s.Address(),
+		"--output", "jsonl",
+	)
+
+	assert.ErrorIs(s.T(), err, wantErr)
+	assert.Contains(s.T(), stderr, wantErr.Error())
+	assert.Equal(s.T(), 2, stdout.itemWrites)
+	assert.NotEmpty(s.T(), stdout.buf.String())
+}
+
+func (s *SharedServerSuite) TestSchedule_ListReturnsEveryItemSerializationFailure() {
+	var schedules []*schedule.ScheduleListEntry
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.ListSchedulesRequest); !ok {
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+			reply.(*workflowservice.ListSchedulesResponse).Schedules = schedules
+			return nil
+		}),
+	)
+
+	for _, testCase := range []struct {
+		name      string
+		schedules []*schedule.ScheduleListEntry
+		wantPrior bool
+	}{
+		{
+			name: "first item",
+			schedules: []*schedule.ScheduleListEntry{
+				{ScheduleId: string([]byte{0xff})},
+			},
+		},
+		{
+			name: "middle item",
+			schedules: []*schedule.ScheduleListEntry{
+				{ScheduleId: "valid-prior-item"},
+				{ScheduleId: string([]byte{0xff})},
+				{ScheduleId: "unreached-item"},
+			},
+			wantPrior: true,
+		},
+	} {
+		s.T().Run(testCase.name, func(t *testing.T) {
+			schedules = testCase.schedules
+			var stdout bytes.Buffer
+
+			err, stderr := s.executeWithStdout(
+				&stdout,
+				"schedule", "list",
+				"--address", s.Address(),
+				"--output", "jsonl",
+			)
+
+			assert.Error(t, err)
+			assert.Contains(t, stderr, "invalid UTF-8")
+			assert.Equal(t, testCase.wantPrior, strings.Contains(stdout.String(), "valid-prior-item"))
+			assert.NotContains(t, stdout.String(), "unreached-item")
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_ListTextReturnsItemShortWrite() {
+	_, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+	stdout := &shortWriteBuffer{}
+
+	err, stderr := s.executeWithStdout(
+		stdout,
+		"schedule", "list",
+		"--address", s.Address(),
+	)
+
+	assert.ErrorIs(s.T(), err, io.ErrShortWrite)
+	assert.Contains(s.T(), stderr, io.ErrShortWrite.Error())
+}
+
+func (s *SharedServerSuite) TestSchedule_ListReturnsFinalizationFailure() {
+	_, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+	wantErr := errors.New("stdout finalization failed")
+	stdout := &failListFinalizationWriter{err: wantErr}
+
+	err, stderr := s.executeWithStdout(
+		stdout,
+		"schedule", "list",
+		"--address", s.Address(),
+		"--output", "json",
+	)
+
+	assert.ErrorIs(s.T(), err, wantErr)
+	assert.Contains(s.T(), stderr, wantErr.Error())
+	assert.NotEmpty(s.T(), stdout.buf.String())
+}
+
+func (s *SharedServerSuite) TestSchedule_ListNoneOutputRemainsEmpty() {
+	_, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "list",
+		"--address", s.Address(),
+		"--output", "none",
+	)
+
+	s.NoError(res.Err)
+	s.Empty(res.Stdout.String())
 }
 
 func (s *SharedServerSuite) TestSchedule_Toggle() {

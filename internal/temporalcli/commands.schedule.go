@@ -380,6 +380,10 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 	return cctx.Printer.PrintStructuredErr(printable, printer.StructuredOptions{})
 }
 
+func finishScheduleList(p *printer.Printer, primaryErr error) error {
+	return errors.Join(primaryErr, p.EndListErr())
+}
+
 func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -390,8 +394,9 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	if cctx.JSONOutput {
 		// Use raw gRPC for stability
 		// This is a listing command subject to json vs jsonl rules
-		cctx.Printer.StartList()
-		defer cctx.Printer.EndList()
+		if err := cctx.Printer.StartListErr(); err != nil {
+			return err
+		}
 
 		var token []byte
 		for {
@@ -401,21 +406,23 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 				Query:         c.Query,
 			})
 			if err != nil {
-				return err
+				return finishScheduleList(cctx.Printer, err)
 			}
 			// TODO: remove this after https://github.com/temporalio/api-go/pull/154
 			noShorthand := false
 			for _, entry := range res.Schedules {
-				cctx.Printer.PrintStructured(entry, printer.StructuredOptions{
+				if err := cctx.Printer.PrintStructuredErr(entry, printer.StructuredOptions{
 					OverrideJSONPayloadShorthand: &noShorthand,
-				})
+				}); err != nil {
+					return finishScheduleList(cctx.Printer, err)
+				}
 			}
 			if token = res.NextPageToken; len(token) == 0 {
 				break
 			}
 		}
 
-		return nil
+		return finishScheduleList(cctx.Printer, nil)
 	}
 
 	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{
@@ -426,8 +433,9 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	}
 
 	// This is a listing command subject to json vs jsonl rules
-	cctx.Printer.StartList()
-	defer cctx.Printer.EndList()
+	if err := cctx.Printer.StartListErr(); err != nil {
+		return err
+	}
 
 	printOpts := printer.StructuredOptions{
 		ExcludeFields: []string{
@@ -470,18 +478,22 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	for res.HasNext() {
 		ent, err := res.Next()
 		if err != nil {
-			return err
+			return finishScheduleList(cctx.Printer, err)
 		}
 		page = append(page, listEntryToPrintable(ent))
 		if len(page) == cap(page) {
-			cctx.Printer.PrintStructured(page, printOpts)
+			if err := cctx.Printer.PrintStructuredErr(page, printOpts); err != nil {
+				return finishScheduleList(cctx.Printer, err)
+			}
 			page = page[:0]
 			printOpts.Table.NoHeader = true
 		}
 	}
-	cctx.Printer.PrintStructured(page, printOpts)
+	if err := cctx.Printer.PrintStructuredErr(page, printOpts); err != nil {
+		return finishScheduleList(cctx.Printer, err)
+	}
 
-	return nil
+	return finishScheduleList(cctx.Printer, nil)
 }
 
 func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) error {

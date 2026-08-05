@@ -259,25 +259,29 @@ func (p *Printer) write(b []byte) {
 }
 
 func (p *Printer) handleWriteErr(err error) {
+	err = preserveBrokenPipeBehavior(err)
 	if err == nil {
 		return
-	}
-	// Exit gracefully on broken pipe (terminal disconnected)
-	if isBrokenPipeError(err) {
-		os.Exit(0)
 	}
 	panic(err)
 }
 
 func (p *Printer) writeErr(b []byte) error {
 	_, err := p.Output.Write(b)
-	return err
+	return preserveBrokenPipeBehavior(err)
 }
 
 func (p *Printer) writeSafeErr(b []byte) error {
 	n, err := p.Output.Write(b)
 	if err == nil && n != len(b) {
 		return io.ErrShortWrite
+	}
+	return preserveBrokenPipeBehavior(err)
+}
+
+func preserveBrokenPipeBehavior(err error) error {
+	if isBrokenPipeError(err) {
+		os.Exit(0)
 	}
 	return err
 }
@@ -308,11 +312,7 @@ func (w shortWriteCheckingWriter) Write(p []byte) (int, error) {
 
 func (p *Printer) writef(s string, v ...any) {
 	if _, err := fmt.Fprintf(p.Output, s, v...); err != nil {
-		// Exit gracefully on broken pipe (terminal disconnected)
-		if isBrokenPipeError(err) {
-			os.Exit(0)
-		}
-		panic(err)
+		p.handleWriteErr(err)
 	}
 }
 
