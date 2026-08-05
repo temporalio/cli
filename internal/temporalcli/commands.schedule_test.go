@@ -58,6 +58,17 @@ func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId s
 	return
 }
 
+func (s *SharedServerSuite) updateSchedule(schedID, schedWorkflowID string, args ...string) *CommandResult {
+	return s.Execute(append([]string{
+		"schedule", "update",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", schedWorkflowID,
+	}, args...)...)
+}
+
 func (s *SharedServerSuite) TestSchedule_Create() {
 	_, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
@@ -634,6 +645,161 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 			j.Schedule.Action.StartWorkflow.TaskQueue.Name == "SomeOtherTq" &&
 			j.Schedule.Spec.Interval[0].Interval == "3600s"
 	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_UpdateAppliesPriorityAndFairness() {
+	var updateRequest *workflowservice.UpdateScheduleRequest
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		if request, ok := req.(*workflowservice.UpdateScheduleRequest); ok {
+			updateRequest = request
+		}
+		return handler(ctx, req)
+	})
+
+	schedID, schedWorkflowID, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+
+	res = s.updateSchedule(
+		schedID, schedWorkflowID,
+		"--interval", "1h",
+		"--priority-key", "2",
+		"--fairness-key", "tenant-a",
+		"--fairness-weight", "2.5",
+	)
+	s.NoError(res.Err)
+	if updateRequest == nil {
+		s.Fail("UpdateSchedule request was not captured")
+		return
+	}
+
+	priority := updateRequest.GetSchedule().GetAction().GetStartWorkflow().GetPriority()
+	if priority == nil {
+		s.Fail("UpdateSchedule request did not include priority")
+		return
+	}
+	s.Equal(int32(2), priority.GetPriorityKey())
+	s.Equal("tenant-a", priority.GetFairnessKey())
+	s.Equal(float32(2.5), priority.GetFairnessWeight())
+}
+
+func (s *SharedServerSuite) TestSchedule_UpdateResetsOmittedFairness() {
+	var updateRequest *workflowservice.UpdateScheduleRequest
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		if request, ok := req.(*workflowservice.UpdateScheduleRequest); ok {
+			updateRequest = request
+		}
+		return handler(ctx, req)
+	})
+
+	schedID, schedWorkflowID, res := s.createSchedule(
+		"--interval", "10d",
+		"--priority-key", "2",
+		"--fairness-key", "tenant-a",
+		"--fairness-weight", "2.5",
+	)
+	s.NoError(res.Err)
+
+	res = s.updateSchedule(
+		schedID, schedWorkflowID,
+		"--interval", "1h",
+	)
+	s.NoError(res.Err)
+	if updateRequest == nil {
+		s.Fail("UpdateSchedule request was not captured")
+		return
+	}
+
+	priority := updateRequest.GetSchedule().GetAction().GetStartWorkflow().GetPriority()
+	s.Equal(int32(0), priority.GetPriorityKey())
+	s.Equal("", priority.GetFairnessKey())
+	s.Equal(float32(0), priority.GetFairnessWeight())
+}
+
+func (s *SharedServerSuite) TestSchedule_UpdateRejectsHeadersBeforeMutation() {
+	var scheduleRequests atomic.Int32
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		switch req.(type) {
+		case *workflowservice.DescribeScheduleRequest, *workflowservice.UpdateScheduleRequest:
+			scheduleRequests.Add(1)
+		}
+		return handler(ctx, req)
+	})
+
+	schedID, schedWorkflowID, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+	scheduleRequests.Store(0)
+
+	res = s.updateSchedule(
+		schedID, schedWorkflowID,
+		"--interval", "1h",
+		"--headers", "example=123",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "headers are not supported for schedule actions")
+	s.Equal(int32(0), scheduleRequests.Load())
+}
+
+func (s *SharedServerSuite) TestSchedule_UpdateHelpExplainsFullReplacement() {
+	res := s.Execute("schedule", "update", "--help")
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "full replacement")
+	s.Contains(res.Stdout.String(), "Any options not provided will be reset to their default\nvalues")
+	s.Contains(res.Stdout.String(), "temporal schedule describe")
+}
+
+func (s *SharedServerSuite) TestSchedule_UpdateDoesNotPrompt() {
+	var updateRequests atomic.Int32
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		if _, ok := req.(*workflowservice.UpdateScheduleRequest); ok {
+			updateRequests.Add(1)
+		}
+		return handler(ctx, req)
+	})
+
+	for _, output := range []string{"text", "json"} {
+		s.T().Run(output, func(t *testing.T) {
+			schedID, schedWorkflowID, res := s.createSchedule("--interval", "10d")
+			if res.Err != nil {
+				t.Fatalf("schedule create returned an unexpected error: %v", res.Err)
+			}
+			updateRequests.Store(0)
+
+			const sentinel = "stdin must remain unread"
+			s.Stdin.Reset()
+			_, _ = s.Stdin.WriteString(sentinel)
+
+			res = s.updateSchedule(
+				schedID, schedWorkflowID,
+				"--output", output,
+				"--interval", "1h",
+			)
+			if res.Err != nil {
+				t.Fatalf("schedule update returned an unexpected error: %v", res.Err)
+			}
+			assert.Equal(t, int32(1), updateRequests.Load())
+			assert.Equal(t, sentinel, s.Stdin.String())
+		})
+	}
 }
 
 func (s *SharedServerSuite) TestSchedule_Memo_Update() {
