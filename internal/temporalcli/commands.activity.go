@@ -1015,8 +1015,9 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
 	} else {
 		updateActivitiesOperation := &batch.BatchOperationUpdateActivityOptions{
-			Identity: c.Parent.Identity,
-			Activity: &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true},
+			Identity:        c.Parent.Identity,
+			Activity:        &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true},
+			ActivityOptions: activityOptions,
 			UpdateMask: &fieldmaskpb.FieldMask{
 				Paths: updatePath,
 			},
