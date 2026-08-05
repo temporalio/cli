@@ -523,9 +523,9 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Use = "temporal"
 	s.Command.Short = "Temporal command-line interface and development server"
 	if hasHighlighting {
-		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      \x1b[1mtemporal server start-dev\x1b[0m\n* View help: pass \x1b[1m--help\x1b[0m to any command:\n      \x1b[1mtemporal activity complete --help\x1b[0m"
+		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      \x1b[1mtemporal server start-dev\x1b[0m\n* View help: pass \x1b[1m--help\x1b[0m to any command:\n      \x1b[1mtemporal activity complete --help\x1b[0m\n* Return structured output with \x1b[1m-o\x1b[0m:\n      \x1b[1mtemporal workflow list -o json\x1b[0m\n* View global and connection options:\n      \x1b[1mtemporal options\x1b[0m"
 	} else {
-		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* View help: pass `--help` to any command:\n      `temporal activity complete --help`"
+		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* View help: pass `--help` to any command:\n      `temporal activity complete --help`\n* Return structured output with `-o`:\n      `temporal workflow list -o json`\n* View global and connection options:\n      `temporal options`"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
@@ -577,6 +577,7 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalActivityUnpauseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -1104,6 +1105,7 @@ func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.AddCommand(&NewTemporalBatchListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchTerminateCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -1503,6 +1505,7 @@ func NewTemporalNexusCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalNexusOperationCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -1785,6 +1788,7 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalOperatorNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -2502,6 +2506,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -2902,6 +2907,7 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -3634,6 +3640,7 @@ func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	s.Command.AddCommand(&NewTemporalWorkerDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerListCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -4246,6 +4253,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
