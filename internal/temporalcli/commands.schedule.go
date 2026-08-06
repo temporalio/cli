@@ -13,6 +13,7 @@ import (
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	commonpb "go.temporal.io/api/common/v1"
@@ -545,24 +546,80 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 	return nil
 }
 
-type scheduleNotesPatchIntent struct {
-	set   bool
-	unset bool
-	notes string
+type schedulePatchIntent struct {
+	notesSet            bool
+	notesUnset          bool
+	notes               string
+	overlapSet          bool
+	overlap             enumspb.ScheduleOverlapPolicy
+	catchupSet          bool
+	catchup             time.Duration
+	catchupUnset        bool
+	pauseOnFailureSet   bool
+	pauseOnFailure      bool
+	pausedSet           bool
+	paused              bool
+	remainingActionsSet bool
+	remainingActions    int
 }
 
-func (i scheduleNotesPatchIntent) validate() error {
-	if !i.set && !i.unset {
-		return errors.New("one of --notes or --unset-notes is required")
+func (i schedulePatchIntent) validate() error {
+	if !i.notesSet && !i.notesUnset && !i.overlapSet && !i.catchupSet && !i.catchupUnset && !i.pauseOnFailureSet && !i.pausedSet && !i.remainingActionsSet {
+		return errors.New("at least one patch operation is required")
 	}
-	if i.set && i.unset {
+	if i.notesSet && i.notesUnset {
 		return errors.New("--notes and --unset-notes are mutually exclusive")
+	}
+	if i.catchupSet && i.catchupUnset {
+		return errors.New("--catchup-window and --unset-catchup-window are mutually exclusive")
+	}
+	if i.catchupSet && i.catchup < 10*time.Second {
+		return errors.New("catchup window must be at least 10s")
+	}
+	if i.remainingActionsSet && i.remainingActions < 0 {
+		return errors.New("remaining actions must not be negative")
 	}
 	return nil
 }
 
-func (i scheduleNotesPatchIntent) apply(schedule *schedpb.Schedule) {
-	if i.set {
+func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) {
+	if i.overlapSet || i.catchupSet || i.catchupUnset || i.pauseOnFailureSet {
+		if schedule.Policies == nil {
+			schedule.Policies = &schedpb.SchedulePolicies{}
+		}
+	}
+	if i.overlapSet {
+		schedule.Policies.OverlapPolicy = i.overlap
+	}
+	if i.catchupSet {
+		schedule.Policies.CatchupWindow = durationpb.New(i.catchup)
+	}
+	if i.catchupUnset {
+		schedule.Policies.CatchupWindow = nil
+	}
+	if i.pauseOnFailureSet {
+		schedule.Policies.PauseOnFailure = i.pauseOnFailure
+	}
+	if i.pausedSet {
+		if schedule.State == nil {
+			schedule.State = &schedpb.ScheduleState{}
+		}
+		schedule.State.Paused = i.paused
+	}
+	if i.remainingActionsSet {
+		if schedule.State == nil {
+			schedule.State = &schedpb.ScheduleState{}
+		}
+		schedule.State.RemainingActions = int64(i.remainingActions)
+		schedule.State.LimitedActions = i.remainingActions > 0
+	}
+	if !i.notesSet && !i.notesUnset {
+		return
+	}
+	if schedule.State == nil {
+		schedule.State = &schedpb.ScheduleState{}
+	}
+	if i.notesSet {
 		schedule.State.Notes = i.notes
 		return
 	}
@@ -572,10 +629,27 @@ func (i scheduleNotesPatchIntent) apply(schedule *schedpb.Schedule) {
 func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) error {
 	const maxAttempts = 3
 
-	intent := scheduleNotesPatchIntent{
-		set:   c.Command.Flags().Changed("notes"),
-		unset: c.UnsetNotes,
-		notes: c.Notes,
+	intent := schedulePatchIntent{
+		notesSet:            c.Command.Flags().Changed("notes"),
+		notesUnset:          c.UnsetNotes,
+		notes:               c.Notes,
+		overlapSet:          c.Command.Flags().Changed("overlap-policy"),
+		catchupSet:          c.Command.Flags().Changed("catchup-window"),
+		catchup:             c.CatchupWindow.Duration(),
+		catchupUnset:        c.UnsetCatchupWindow,
+		pauseOnFailureSet:   c.Command.Flags().Changed("pause-on-failure"),
+		pauseOnFailure:      c.PauseOnFailure,
+		pausedSet:           c.Command.Flags().Changed("paused"),
+		paused:              c.Paused,
+		remainingActionsSet: c.Command.Flags().Changed("remaining-actions"),
+		remainingActions:    c.RemainingActions,
+	}
+	if intent.overlapSet {
+		var err error
+		intent.overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
+		if err != nil {
+			return err
+		}
 	}
 	if err := intent.validate(); err != nil {
 		return err

@@ -2701,8 +2701,14 @@ type TemporalSchedulePatchCommand struct {
 	Parent  *TemporalScheduleCommand
 	Command cobra.Command
 	ScheduleIdOptions
-	Notes      string
-	UnsetNotes bool
+	OverlapPolicyOptions
+	CatchupWindow      cliext.FlagDuration
+	UnsetCatchupWindow bool
+	PauseOnFailure     bool
+	Notes              string
+	UnsetNotes         bool
+	Paused             bool
+	RemainingActions   int
 }
 
 func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalSchedulePatchCommand {
@@ -2713,9 +2719,16 @@ func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalSched
 	s.Command.Short = "Patch Schedule details"
 	s.Command.Long = "Update individual Schedule fields without replacing the full Schedule\nconfiguration."
 	s.Command.Args = cobra.NoArgs
+	s.CatchupWindow = 0
+	s.Command.Flags().Var(&s.CatchupWindow, "catchup-window", "Maximum catch-up time for when the Service is unavailable.")
+	s.Command.Flags().BoolVar(&s.UnsetCatchupWindow, "unset-catchup-window", false, "Restore the default catch-up window behavior.")
+	s.Command.Flags().BoolVar(&s.PauseOnFailure, "pause-on-failure", false, "Pause the Schedule after Workflow failures.")
 	s.Command.Flags().StringVar(&s.Notes, "notes", "", "Set the Schedule notes field.")
 	s.Command.Flags().BoolVar(&s.UnsetNotes, "unset-notes", false, "Clear the Schedule notes field.")
+	s.Command.Flags().BoolVar(&s.Paused, "paused", false, "Set whether the Schedule is paused.")
+	s.Command.Flags().IntVar(&s.RemainingActions, "remaining-actions", 0, "Total allowed actions. Zero means unlimited.")
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

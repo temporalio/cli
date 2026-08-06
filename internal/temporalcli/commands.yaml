@@ -3153,13 +3153,29 @@ commands:
       configuration.
     option-sets:
       - schedule-id
+      - overlap-policy
     options:
+      - name: catchup-window
+        type: duration
+        description: Maximum catch-up time for when the Service is unavailable.
+      - name: unset-catchup-window
+        type: bool
+        description: Restore the default catch-up window behavior.
+      - name: pause-on-failure
+        type: bool
+        description: Pause the Schedule after Workflow failures.
       - name: notes
         type: string
         description: Set the Schedule notes field.
       - name: unset-notes
         type: bool
         description: Clear the Schedule notes field.
+      - name: paused
+        type: bool
+        description: Set whether the Schedule is paused.
+      - name: remaining-actions
+        type: int
+        description: Total allowed actions. Zero means unlimited.
 
   - name: temporal server
     summary: Run Temporal Server

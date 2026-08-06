@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -29,6 +31,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -1274,9 +1277,15 @@ func (s *SharedServerSuite) TestSchedule_UpdateHelpExplainsFullReplacement() {
 	s.Contains(res.Stdout.String(), "temporal schedule describe")
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersNotes() {
+func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPolicyAndStateOptions() {
 	res := s.Execute("schedule", "patch", "--help")
 	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "--overlap-policy")
+	s.Contains(res.Stdout.String(), "--catchup-window")
+	s.Contains(res.Stdout.String(), "--unset-catchup-window")
+	s.Contains(res.Stdout.String(), "--pause-on-failure")
+	s.Contains(res.Stdout.String(), "--paused")
+	s.Contains(res.Stdout.String(), "--remaining-actions")
 	s.Contains(res.Stdout.String(), "--notes")
 	s.Contains(res.Stdout.String(), "--unset-notes")
 	s.NotContains(res.Stdout.String(), "--headers")
@@ -1328,7 +1337,7 @@ func (s *SharedServerSuite) TestSchedule_PatchUpdatesStoredNotes() {
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchRejectsInvalidRequestsBeforeMutation() {
+func (s *SharedServerSuite) TestSchedule_PatchRejectsInvalidArgumentsBeforeMutation() {
 	var scheduleRequests atomic.Int32
 	s.DevServer.SetServerInterceptor(func(
 		ctx context.Context,
@@ -1349,24 +1358,9 @@ func (s *SharedServerSuite) TestSchedule_PatchRejectsInvalidRequestsBeforeMutati
 		errorContains string
 	}{
 		{
-			name:          "no operation",
-			args:          []string{"schedule", "patch", "--schedule-id", "schedule-id"},
-			errorContains: "one of --notes or --unset-notes is required",
-		},
-		{
-			name:          "set and unset notes",
-			args:          []string{"schedule", "patch", "--schedule-id", "schedule-id", "--notes", "note", "--unset-notes"},
-			errorContains: "--notes and --unset-notes are mutually exclusive",
-		},
-		{
 			name:          "missing schedule ID",
 			args:          []string{"schedule", "patch", "--notes", "note"},
 			errorContains: "required flag(s) \"schedule-id\" not set",
-		},
-		{
-			name:          "empty schedule ID",
-			args:          []string{"schedule", "patch", "--address", s.Address(), "--schedule-id=", "--notes", "note"},
-			errorContains: "schedule ID is required",
 		},
 		{
 			name:          "headers",
@@ -1382,6 +1376,112 @@ func (s *SharedServerSuite) TestSchedule_PatchRejectsInvalidRequestsBeforeMutati
 	}
 }
 
+func (s *SharedServerSuite) TestSchedule_PatchSemanticValidationFailsBeforeDial() {
+	dialErr := errors.New("unexpected gRPC dial")
+
+	for _, tc := range []struct {
+		name          string
+		args          []string
+		errorContains string
+	}{
+		{
+			name:          "no operation",
+			args:          []string{"--schedule-id", "schedule-id"},
+			errorContains: "at least one patch operation is required",
+		},
+		{
+			name:          "set and unset notes",
+			args:          []string{"--schedule-id", "schedule-id", "--notes", "note", "--unset-notes"},
+			errorContains: "--notes and --unset-notes are mutually exclusive",
+		},
+		{
+			name:          "set and unset catchup window",
+			args:          []string{"--schedule-id", "schedule-id", "--catchup-window", "10s", "--unset-catchup-window"},
+			errorContains: "--catchup-window and --unset-catchup-window are mutually exclusive",
+		},
+		{
+			name:          "catchup window below minimum",
+			args:          []string{"--schedule-id", "schedule-id", "--catchup-window", "9s"},
+			errorContains: "catchup window must be at least 10s",
+		},
+		{
+			name:          "zero catchup window",
+			args:          []string{"--schedule-id", "schedule-id", "--catchup-window", "0s"},
+			errorContains: "catchup window must be at least 10s",
+		},
+		{
+			name:          "negative remaining actions",
+			args:          []string{"--schedule-id", "schedule-id", "--remaining-actions", "-1"},
+			errorContains: "remaining actions must not be negative",
+		},
+		{
+			name:          "empty schedule ID",
+			args:          []string{"--schedule-id=", "--notes", "note"},
+			errorContains: "schedule ID is required",
+		},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			var dialAttempts atomic.Int32
+			options := s.CommandHarness.Options
+			options.Args = append([]string{"schedule", "patch"}, tc.args...)
+			options.AdditionalClientGRPCDialOptions = append(
+				options.AdditionalClientGRPCDialOptions,
+				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+					dialAttempts.Add(1)
+					return nil, dialErr
+				}),
+			)
+			var commandErr error
+			options.Fail = func(err error) { commandErr = err }
+
+			temporalcli.Execute(context.Background(), options)
+
+			assert.ErrorContains(t, commandErr, tc.errorContains)
+			assert.Equal(t, int32(0), dialAttempts.Load())
+			assert.NotErrorIs(t, commandErr, dialErr)
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchMalformedPolicyAndStateFlagsFailBeforeScheduleRPC() {
+	var scheduleRequests atomic.Int32
+	s.DevServer.SetServerInterceptor(func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		switch req.(type) {
+		case *workflowservice.DescribeScheduleRequest, *workflowservice.UpdateScheduleRequest:
+			scheduleRequests.Add(1)
+		}
+		return handler(ctx, req)
+	})
+
+	for _, tc := range []struct {
+		name          string
+		args          []string
+		errorContains string
+	}{
+		{name: "enum", args: []string{"--overlap-policy=not-a-policy"}, errorContains: "invalid argument"},
+		{name: "duration", args: []string{"--catchup-window=not-a-duration"}, errorContains: "invalid duration"},
+		{name: "integer", args: []string{"--remaining-actions=not-an-int"}, errorContains: "invalid argument"},
+		{name: "boolean", args: []string{"--paused=not-a-bool"}, errorContains: "invalid argument"},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			scheduleRequests.Store(0)
+			var failures []error
+			options := s.CommandHarness.Options
+			options.Args = append([]string{"schedule", "patch", "--schedule-id", "schedule-id"}, tc.args...)
+			options.Fail = func(err error) { failures = append(failures, err) }
+			temporalcli.Execute(context.Background(), options)
+			assert.NotEmpty(t, failures)
+			assert.ErrorContains(t, failures[0], tc.errorContains)
+			assert.Equal(t, int32(0), scheduleRequests.Load())
+		})
+	}
+}
+
 func (s *SharedServerSuite) TestSchedule_PatchSetsNotesWithSingleRawUpdate() {
 	const (
 		namespace  = "patch-notes-namespace"
@@ -1390,8 +1490,18 @@ func (s *SharedServerSuite) TestSchedule_PatchSetsNotesWithSingleRawUpdate() {
 	)
 	conflictToken := []byte("patch-notes-conflict-token")
 	describedSchedule := &schedule.Schedule{
-		Spec:  &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
-		State: &schedule.ScheduleState{Notes: "existing notes"},
+		Spec: &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+		Policies: &schedule.SchedulePolicies{
+			OverlapPolicy:  enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL,
+			CatchupWindow:  durationpb.New(20 * time.Second),
+			PauseOnFailure: true,
+		},
+		State: &schedule.ScheduleState{
+			Notes:            "existing notes",
+			Paused:           true,
+			LimitedActions:   true,
+			RemainingActions: 4,
+		},
 	}
 	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
 
@@ -1488,6 +1598,369 @@ func (s *SharedServerSuite) TestSchedule_PatchSetsNotesWithSingleRawUpdate() {
 	}
 }
 
+func (s *SharedServerSuite) TestSchedule_PatchSetsOnlyOverlapPolicy() {
+	var describedSchedule *schedule.Schedule
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = []byte("overlap-token")
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name     string
+		overlap  string
+		schedule *schedule.Schedule
+	}{
+		{
+			name:    "preserves full schedule",
+			overlap: "Skip",
+			schedule: &schedule.Schedule{
+				Spec: &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+				Policies: &schedule.SchedulePolicies{
+					OverlapPolicy:  enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL,
+					CatchupWindow:  durationpb.New(30 * time.Second),
+					PauseOnFailure: true,
+				},
+				State: &schedule.ScheduleState{
+					Notes:            "preserved notes",
+					Paused:           true,
+					LimitedActions:   true,
+					RemainingActions: 4,
+				},
+			},
+		},
+		{
+			name:     "creates missing policies",
+			overlap:  "BufferAll",
+			schedule: &schedule.Schedule{State: &schedule.ScheduleState{Notes: "preserved notes"}},
+		},
+		{
+			name:    "keeps explicit same value",
+			overlap: "BufferAll",
+			schedule: &schedule.Schedule{Policies: &schedule.SchedulePolicies{
+				OverlapPolicy: enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL,
+			}},
+		},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			describedSchedule = tc.schedule
+			describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", "--overlap-policy", tc.overlap)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) != 1 {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			if expected.Policies == nil {
+				expected.Policies = &schedule.SchedulePolicies{}
+			}
+			expected.Policies.OverlapPolicy, _ = enums.ScheduleOverlapPolicyFromString(tc.overlap)
+			assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsAndUnsetsCatchupWindow() {
+	var describedSchedule *schedule.Schedule
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name          string
+		args          []string
+		schedule      *schedule.Schedule
+		catchupWindow *durationpb.Duration
+	}{
+		{
+			name: "set preserves full schedule",
+			args: []string{"--catchup-window", "10s"},
+			schedule: &schedule.Schedule{
+				Spec: &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+				Policies: &schedule.SchedulePolicies{
+					OverlapPolicy:  enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL,
+					CatchupWindow:  durationpb.New(30 * time.Second),
+					PauseOnFailure: true,
+				},
+				State: &schedule.ScheduleState{
+					Notes:            "preserved notes",
+					Paused:           true,
+					LimitedActions:   true,
+					RemainingActions: 4,
+				},
+			},
+			catchupWindow: durationpb.New(10 * time.Second),
+		},
+		{
+			name:          "set creates missing policies",
+			args:          []string{"--catchup-window", "10s"},
+			schedule:      &schedule.Schedule{State: &schedule.ScheduleState{Notes: "preserved notes"}},
+			catchupWindow: durationpb.New(10 * time.Second),
+		},
+		{
+			name:          "unset",
+			args:          []string{"--unset-catchup-window"},
+			schedule:      &schedule.Schedule{Policies: &schedule.SchedulePolicies{CatchupWindow: durationpb.New(30 * time.Second)}},
+			catchupWindow: nil,
+		},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			describedSchedule = tc.schedule
+			describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+			updateRequests = nil
+			args := append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id"}, tc.args...)
+			res := s.Execute(args...)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) == 1 {
+				expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+				if expected.Policies == nil {
+					expected.Policies = &schedule.SchedulePolicies{}
+				}
+				expected.Policies.CatchupWindow = tc.catchupWindow
+				assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+				assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+			}
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsPauseOnFailureWhenExplicit() {
+	describedSchedule := &schedule.Schedule{State: &schedule.ScheduleState{Paused: true}}
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, pauseOnFailure := range []bool{true, false} {
+		s.T().Run(strconv.FormatBool(pauseOnFailure), func(t *testing.T) {
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", "--pause-on-failure="+strconv.FormatBool(pauseOnFailure))
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) == 1 {
+				assert.Equal(t, pauseOnFailure, updateRequests[0].GetSchedule().GetPolicies().GetPauseOnFailure())
+				assert.True(t, updateRequests[0].GetSchedule().GetState().GetPaused())
+			}
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsPausedWithRawUpdate() {
+	var describedSchedule *schedule.Schedule
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name     string
+		paused   bool
+		schedule *schedule.Schedule
+	}{
+		{name: "true with nil state", paused: true, schedule: &schedule.Schedule{}},
+		{name: "false preserves notes", paused: false, schedule: &schedule.Schedule{State: &schedule.ScheduleState{Paused: true, Notes: "preserved notes"}}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			describedSchedule = tc.schedule
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", "--paused="+strconv.FormatBool(tc.paused))
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) == 1 {
+				expected := proto.Clone(tc.schedule).(*schedule.Schedule)
+				if expected.State == nil {
+					expected.State = &schedule.ScheduleState{}
+				}
+				expected.State.Paused = tc.paused
+				assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+			}
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsRemainingActions() {
+	var describedSchedule *schedule.Schedule
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name      string
+		value     string
+		schedule  *schedule.Schedule
+		limited   bool
+		remaining int64
+	}{
+		{
+			name:  "positive preserves rich state",
+			value: "3",
+			schedule: &schedule.Schedule{
+				Spec: &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+				Policies: &schedule.SchedulePolicies{
+					OverlapPolicy:  enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL,
+					CatchupWindow:  durationpb.New(20 * time.Second),
+					PauseOnFailure: true,
+				},
+				State: &schedule.ScheduleState{
+					Notes:  "preserved notes",
+					Paused: true,
+				},
+			},
+			limited:   true,
+			remaining: 3,
+		},
+		{
+			name:  "zero preserves rich state",
+			value: "0",
+			schedule: &schedule.Schedule{State: &schedule.ScheduleState{
+				Notes:            "preserved notes",
+				Paused:           true,
+				LimitedActions:   true,
+				RemainingActions: 9,
+			}},
+			limited:   false,
+			remaining: 0,
+		},
+		{
+			name:      "positive creates missing state",
+			value:     "3",
+			schedule:  &schedule.Schedule{},
+			limited:   true,
+			remaining: 3,
+		},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			describedSchedule = tc.schedule
+			describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", "--remaining-actions", tc.value)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) == 1 {
+				expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+				if expected.State == nil {
+					expected.State = &schedule.ScheduleState{}
+				}
+				expected.State.LimitedActions = tc.limited
+				expected.State.RemainingActions = tc.remaining
+				assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+				assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+			}
+		})
+	}
+}
+
 func (s *SharedServerSuite) TestSchedule_PatchRetriesExactConflictWithRefreshedState() {
 	const (
 		namespace  = "patch-conflict-namespace"
@@ -1500,16 +1973,24 @@ func (s *SharedServerSuite) TestSchedule_PatchRetriesExactConflictWithRefreshedS
 	}
 	describedSchedules := []*schedule.Schedule{
 		{
-			Spec:     &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
-			Policies: &schedule.SchedulePolicies{},
-			State:    &schedule.ScheduleState{Notes: "stale notes"},
+			Spec: &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+			Policies: &schedule.SchedulePolicies{
+				OverlapPolicy:  enums.SCHEDULE_OVERLAP_POLICY_SKIP,
+				CatchupWindow:  durationpb.New(time.Minute),
+				PauseOnFailure: true,
+			},
+			State: &schedule.ScheduleState{Notes: "stale notes"},
 		},
 		{
 			Spec: &schedule.ScheduleSpec{
 				CronString:   []string{"15 * * * *"},
 				TimezoneName: "America/New_York",
 			},
-			Policies: &schedule.SchedulePolicies{PauseOnFailure: true},
+			Policies: &schedule.SchedulePolicies{
+				OverlapPolicy:  enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL,
+				CatchupWindow:  durationpb.New(2 * time.Minute),
+				PauseOnFailure: true,
+			},
 			State: &schedule.ScheduleState{
 				Notes:            "concurrent notes",
 				Paused:           true,
@@ -1571,6 +2052,10 @@ func (s *SharedServerSuite) TestSchedule_PatchRetriesExactConflictWithRefreshedS
 		"--identity", identity,
 		"--schedule-id", scheduleID,
 		"--notes", "requested notes",
+		"--unset-catchup-window",
+		"--pause-on-failure=false",
+		"--paused=false",
+		"--remaining-actions", "0",
 	)
 	s.NoError(res.Err)
 	s.Equal("Schedule patch submitted\n", res.Stdout.String())
@@ -1603,6 +2088,11 @@ func (s *SharedServerSuite) TestSchedule_PatchRetriesExactConflictWithRefreshedS
 
 		expectedSchedule := proto.Clone(describedSchedules[i]).(*schedule.Schedule)
 		expectedSchedule.State.Notes = "requested notes"
+		expectedSchedule.Policies.CatchupWindow = nil
+		expectedSchedule.Policies.PauseOnFailure = false
+		expectedSchedule.State.Paused = false
+		expectedSchedule.State.LimitedActions = false
+		expectedSchedule.State.RemainingActions = 0
 		s.True(proto.Equal(expectedSchedule, updateRequest.GetSchedule()))
 		s.True(proto.Equal(describedScheduleSnapshots[i], describedSchedules[i]))
 	}
