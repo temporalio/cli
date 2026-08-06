@@ -2709,6 +2709,18 @@ type TemporalSchedulePatchCommand struct {
 	UnsetNotes         bool
 	Paused             bool
 	RemainingActions   int
+	Calendar           []string
+	Cron               []string
+	Interval           []string
+	CadenceClearAll    bool
+	StartTime          cliext.FlagTimestamp
+	UnsetStartTime     bool
+	EndTime            cliext.FlagTimestamp
+	UnsetEndTime       bool
+	Jitter             cliext.FlagDuration
+	UnsetJitter        bool
+	TimeZone           string
+	UnsetTimeZone      bool
 }
 
 func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalSchedulePatchCommand {
@@ -2717,7 +2729,11 @@ func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalSched
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "patch [flags]"
 	s.Command.Short = "Patch Schedule details"
-	s.Command.Long = "Update individual Schedule fields without replacing the full Schedule\nconfiguration."
+	if hasHighlighting {
+		s.Command.Long = "Update individual Schedule fields without replacing the full Schedule\nconfiguration.\n\nOmitting cadence options preserves the existing cadence. Supplying any\n\x1b[1m--calendar\x1b[0m, \x1b[1m--cron\x1b[0m, or \x1b[1m--interval\x1b[0m value replaces all existing\ncalendar, cron, and interval sources. For example, use\n\x1b[1m--cron '0 12 * * *'\x1b[0m to replace cadence, or \x1b[1m--cadence-clear-all\x1b[0m to\nclear it. Cadence clear requires the resulting Schedule to be paused;\npause explicitly with \x1b[1m--paused=true\x1b[0m when needed."
+	} else {
+		s.Command.Long = "Update individual Schedule fields without replacing the full Schedule\nconfiguration.\n\nOmitting cadence options preserves the existing cadence. Supplying any\n`--calendar`, `--cron`, or `--interval` value replaces all existing\ncalendar, cron, and interval sources. For example, use\n`--cron '0 12 * * *'` to replace cadence, or `--cadence-clear-all` to\nclear it. Cadence clear requires the resulting Schedule to be paused;\npause explicitly with `--paused=true` when needed."
+	}
 	s.Command.Args = cobra.NoArgs
 	s.CatchupWindow = 0
 	s.Command.Flags().Var(&s.CatchupWindow, "catchup-window", "Maximum catch-up time for when the Service is unavailable.")
@@ -2727,6 +2743,19 @@ func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalSched
 	s.Command.Flags().BoolVar(&s.UnsetNotes, "unset-notes", false, "Clear the Schedule notes field.")
 	s.Command.Flags().BoolVar(&s.Paused, "paused", false, "Set whether the Schedule is paused.")
 	s.Command.Flags().IntVar(&s.RemainingActions, "remaining-actions", 0, "Total allowed actions. Zero means unlimited.")
+	s.Command.Flags().StringArrayVar(&s.Calendar, "calendar", nil, "Calendar JSON specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
+	s.Command.Flags().StringArrayVar(&s.Cron, "cron", nil, "Cron expressions. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
+	s.Command.Flags().StringArrayVar(&s.Interval, "interval", nil, "Interval specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
+	s.Command.Flags().BoolVar(&s.CadenceClearAll, "cadence-clear-all", false, "Clear all cadence sources only when the resulting Schedule is paused.")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Set the Schedule start time.")
+	s.Command.Flags().BoolVar(&s.UnsetStartTime, "unset-start-time", false, "Clear the Schedule start time.")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Set the Schedule end time.")
+	s.Command.Flags().BoolVar(&s.UnsetEndTime, "unset-end-time", false, "Clear the Schedule end time.")
+	s.Jitter = 0
+	s.Command.Flags().Var(&s.Jitter, "jitter", "Set the Schedule jitter.")
+	s.Command.Flags().BoolVar(&s.UnsetJitter, "unset-jitter", false, "Clear the Schedule jitter.")
+	s.Command.Flags().StringVar(&s.TimeZone, "time-zone", "", "Set the Schedule time zone.")
+	s.Command.Flags().BoolVar(&s.UnsetTimeZone, "unset-time-zone", false, "Restore default Schedule time zone interpretation.")
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {

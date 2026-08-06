@@ -32,6 +32,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -1277,7 +1278,7 @@ func (s *SharedServerSuite) TestSchedule_UpdateHelpExplainsFullReplacement() {
 	s.Contains(res.Stdout.String(), "temporal schedule describe")
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPolicyAndStateOptions() {
+func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPatchOptions() {
 	res := s.Execute("schedule", "patch", "--help")
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "--overlap-policy")
@@ -1288,6 +1289,28 @@ func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPolicyAndStateOptions
 	s.Contains(res.Stdout.String(), "--remaining-actions")
 	s.Contains(res.Stdout.String(), "--notes")
 	s.Contains(res.Stdout.String(), "--unset-notes")
+	for _, option := range []string{
+		"--calendar",
+		"--cron",
+		"--interval",
+		"--cadence-clear-all",
+		"--start-time",
+		"--unset-start-time",
+		"--end-time",
+		"--unset-end-time",
+		"--jitter",
+		"--unset-jitter",
+		"--time-zone",
+		"--unset-time-zone",
+	} {
+		s.Contains(res.Stdout.String(), option)
+	}
+	s.Contains(res.Stdout.String(), "calendar, cron, and interval sources")
+	s.Contains(res.Stdout.String(), "Omitting cadence options preserves the existing cadence")
+	s.Contains(res.Stdout.String(), "`--cron '0 12 * * *'` to replace cadence")
+	s.Contains(res.Stdout.String(), "`--cadence-clear-all` to\nclear it")
+	s.Contains(res.Stdout.String(), "pause explicitly with `--paused=true` when needed")
+	s.Contains(res.Stdout.String(), "Clear all cadence sources only when the")
 	s.NotContains(res.Stdout.String(), "--headers")
 
 	res = s.Execute("schedule", "update", "--help")
@@ -1414,6 +1437,26 @@ func (s *SharedServerSuite) TestSchedule_PatchSemanticValidationFailsBeforeDial(
 			args:          []string{"--schedule-id", "schedule-id", "--remaining-actions", "-1"},
 			errorContains: "remaining actions must not be negative",
 		},
+		{name: "malformed calendar", args: []string{"--schedule-id", "schedule-id", "--calendar", "{"}, errorContains: "failed to parse json calendar spec"},
+		{name: "malformed interval", args: []string{"--schedule-id", "schedule-id", "--interval", "nonsense"}, errorContains: "invalid interval"},
+		{name: "interval below one second", args: []string{"--schedule-id", "schedule-id", "--interval", "500ms"}, errorContains: "interval must be at least 1s"},
+		{name: "negative interval phase", args: []string{"--schedule-id", "schedule-id", "--interval", "1h/-1s"}, errorContains: "interval phase must not be negative"},
+		{name: "interval phase too large", args: []string{"--schedule-id", "schedule-id", "--interval", "1h/1h"}, errorContains: "interval phase must be less than the interval"},
+		{name: "negative jitter", args: []string{"--schedule-id", "schedule-id", "--jitter", "-1s"}, errorContains: "jitter must not be negative"},
+		{name: "TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
+		{name: "CRON_TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "CRON_TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
+		{name: "leading space TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", " TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
+		{name: "leading tab TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "\tTZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
+		{name: "leading space CRON_TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", " CRON_TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
+		{name: "leading tab CRON_TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "\tCRON_TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
+		{name: "start timestamp before protobuf range", args: []string{"--schedule-id", "schedule-id", "--start-time", "0000-01-01T00:00:00Z"}, errorContains: "invalid start time"},
+		{name: "start timestamp normalized before protobuf range", args: []string{"--schedule-id", "schedule-id", "--start-time", "0001-01-01T00:00:00+14:00"}, errorContains: "invalid start time"},
+		{name: "end timestamp normalized after protobuf range", args: []string{"--schedule-id", "schedule-id", "--end-time", "9999-12-31T23:59:59-14:00"}, errorContains: "invalid end time"},
+		{name: "empty time zone set", args: []string{"--schedule-id", "schedule-id", "--time-zone="}, errorContains: "use --unset-time-zone"},
+		{name: "whitespace time zone set", args: []string{"--schedule-id", "schedule-id", "--time-zone", " \t "}, errorContains: "use --unset-time-zone"},
+		{name: "clear and calendar", args: []string{"--schedule-id", "schedule-id", "--cadence-clear-all", "--calendar", `{"minute":"5"}`}, errorContains: "cannot be combined"},
+		{name: "clear and cron", args: []string{"--schedule-id", "schedule-id", "--cadence-clear-all", "--cron", "0 12 * * *"}, errorContains: "cannot be combined"},
+		{name: "clear and interval", args: []string{"--schedule-id", "schedule-id", "--cadence-clear-all", "--interval", "1h"}, errorContains: "cannot be combined"},
 		{
 			name:          "empty schedule ID",
 			args:          []string{"--schedule-id=", "--notes", "note"},
@@ -1441,6 +1484,7 @@ func (s *SharedServerSuite) TestSchedule_PatchSemanticValidationFailsBeforeDial(
 			assert.NotErrorIs(t, commandErr, dialErr)
 		})
 	}
+
 }
 
 func (s *SharedServerSuite) TestSchedule_PatchMalformedPolicyAndStateFlagsFailBeforeScheduleRPC() {
@@ -1467,6 +1511,8 @@ func (s *SharedServerSuite) TestSchedule_PatchMalformedPolicyAndStateFlagsFailBe
 		{name: "duration", args: []string{"--catchup-window=not-a-duration"}, errorContains: "invalid duration"},
 		{name: "integer", args: []string{"--remaining-actions=not-an-int"}, errorContains: "invalid argument"},
 		{name: "boolean", args: []string{"--paused=not-a-bool"}, errorContains: "invalid argument"},
+		{name: "timestamp", args: []string{"--start-time=not-a-timestamp"}, errorContains: "cannot parse"},
+		{name: "jitter duration", args: []string{"--jitter=not-a-duration"}, errorContains: "invalid duration"},
 	} {
 		s.T().Run(tc.name, func(t *testing.T) {
 			scheduleRequests.Store(0)
@@ -1595,6 +1641,498 @@ func (s *SharedServerSuite) TestSchedule_PatchSetsNotesWithSingleRawUpdate() {
 			assert.True(t, proto.Equal(expectedSchedule, updateRequest.GetSchedule()))
 			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
 		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchReplacesCadenceAggregate() {
+	const scheduleID = "patch-cadence-schedule"
+	describedSchedule := &schedule.Schedule{
+		Spec: &schedule.ScheduleSpec{
+			StructuredCalendar:        []*schedule.StructuredCalendarSpec{{}},
+			Calendar:                  []*schedule.CalendarSpec{{Minute: "1"}},
+			CronString:                []string{"0 12 * * *"},
+			Interval:                  []*schedule.IntervalSpec{{Interval: durationpb.New(time.Hour)}},
+			ExcludeCalendar:           []*schedule.CalendarSpec{{Minute: "2"}},
+			ExcludeStructuredCalendar: []*schedule.StructuredCalendarSpec{{}},
+			StartTime:                 timestamppb.New(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+			EndTime:                   timestamppb.New(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)),
+			Jitter:                    durationpb.New(time.Minute),
+			TimezoneName:              "America/New_York",
+		},
+		Action:   &schedule.ScheduleAction{},
+		Policies: &schedule.SchedulePolicies{PauseOnFailure: true},
+		State:    &schedule.ScheduleState{Notes: "preserved", Paused: true},
+	}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+
+	var lock sync.Mutex
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = []byte("cadence-token")
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				lock.Unlock()
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name      string
+		args      []string
+		cron      []string
+		intervals []*schedule.IntervalSpec
+	}{
+		{name: "calendar", args: []string{"--calendar", `{"minute":"5"}`}, cron: []string{"0 5 0 * * * *"}},
+		{name: "cron", args: []string{"--cron", "0 5 * * *"}, cron: []string{"0 5 * * *"}},
+		{name: "interval", args: []string{"--interval", "2h/30m"}, intervals: []*schedule.IntervalSpec{{Interval: durationpb.New(2 * time.Hour), Phase: durationpb.New(30 * time.Minute)}}},
+		{name: "minimum interval with zero phase", args: []string{"--interval", "1s/0s"}, intervals: []*schedule.IntervalSpec{{Interval: durationpb.New(time.Second), Phase: durationpb.New(0)}}},
+		{name: "phase just below interval", args: []string{"--interval", "1s/999ms"}, intervals: []*schedule.IntervalSpec{{Interval: durationpb.New(time.Second), Phase: durationpb.New(999 * time.Millisecond)}}},
+		{name: "combined", args: []string{"--calendar", `{"minute":"5"}`, "--cron", "0 5 * * *", "--interval", "2h/30m"}, cron: []string{"0 5 0 * * * *", "0 5 * * *"}, intervals: []*schedule.IntervalSpec{{Interval: durationpb.New(2 * time.Hour), Phase: durationpb.New(30 * time.Minute)}}},
+		{name: "same value", args: []string{"--cron", "0 12 * * *"}, cron: []string{"0 12 * * *"}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			lock.Lock()
+			updateRequests = nil
+			lock.Unlock()
+
+			res := s.Execute(append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", scheduleID}, tc.args...)...)
+			assert.NoError(t, res.Err)
+
+			lock.Lock()
+			gotUpdates := append([]*workflowservice.UpdateScheduleRequest(nil), updateRequests...)
+			lock.Unlock()
+			if !assert.Len(t, gotUpdates, 1) {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			expected.Spec.StructuredCalendar = nil
+			expected.Spec.Calendar = nil
+			expected.Spec.CronString = tc.cron
+			expected.Spec.Interval = tc.intervals
+			assert.True(t, proto.Equal(expected, gotUpdates[0].GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchOmitsCadenceWithoutChangingIt() {
+	describedSchedule := &schedule.Schedule{
+		Spec: &schedule.ScheduleSpec{
+			StructuredCalendar:        []*schedule.StructuredCalendarSpec{{}},
+			Calendar:                  []*schedule.CalendarSpec{{Minute: "1"}},
+			CronString:                []string{"0 12 * * *"},
+			Interval:                  []*schedule.IntervalSpec{{Interval: durationpb.New(time.Hour)}},
+			ExcludeCalendar:           []*schedule.CalendarSpec{{Minute: "2"}},
+			ExcludeStructuredCalendar: []*schedule.StructuredCalendarSpec{{}},
+			TimezoneName:              "America/New_York",
+		},
+		State: &schedule.ScheduleState{Notes: "before"},
+	}
+	var updateRequest *workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequest = proto.Clone(request).(*workflowservice.UpdateScheduleRequest)
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-omit-cadence", "--notes", "after")
+	s.NoError(res.Err)
+	if !assert.NotNil(s.T(), updateRequest) {
+		return
+	}
+	expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+	expected.State.Notes = "after"
+	s.True(proto.Equal(expected, updateRequest.GetSchedule()))
+	describedSpec, err := proto.Marshal(describedSchedule.GetSpec())
+	s.NoError(err)
+	submittedSpec, err := proto.Marshal(updateRequest.GetSchedule().GetSpec())
+	s.NoError(err)
+	s.Equal(describedSpec, submittedSpec)
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchClearsCadenceOnlyForPausedResult() {
+	var describedSchedule *schedule.Schedule
+	var updateRequest *workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequest = proto.Clone(request).(*workflowservice.UpdateScheduleRequest)
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name   string
+		paused bool
+		args   []string
+	}{
+		{name: "already paused", paused: true},
+		{name: "same patch pauses", paused: false, args: []string{"--paused=true"}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			describedSchedule = &schedule.Schedule{
+				Spec: &schedule.ScheduleSpec{
+					StructuredCalendar:        []*schedule.StructuredCalendarSpec{{}},
+					Calendar:                  []*schedule.CalendarSpec{{Minute: "1"}},
+					CronString:                []string{"0 12 * * *"},
+					Interval:                  []*schedule.IntervalSpec{{Interval: durationpb.New(time.Hour)}},
+					ExcludeCalendar:           []*schedule.CalendarSpec{{Minute: "2"}},
+					ExcludeStructuredCalendar: []*schedule.StructuredCalendarSpec{{}},
+					StartTime:                 timestamppb.New(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+					EndTime:                   timestamppb.New(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)),
+					Jitter:                    durationpb.New(time.Minute),
+					TimezoneName:              "America/New_York",
+				},
+				State: &schedule.ScheduleState{Paused: tc.paused},
+			}
+			updateRequest = nil
+
+			args := append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-clear-cadence", "--cadence-clear-all"}, tc.args...)
+			res := s.Execute(args...)
+			assert.NoError(t, res.Err)
+			if !assert.NotNil(t, updateRequest) {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			expected.Spec.StructuredCalendar = nil
+			expected.Spec.Calendar = nil
+			expected.Spec.CronString = nil
+			expected.Spec.Interval = nil
+			if !tc.paused {
+				expected.State.Paused = true
+			}
+			assert.True(t, proto.Equal(expected, updateRequest.GetSchedule()))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchRejectsCadenceClearWhenResultIsUnpaused() {
+	var updateRequests atomic.Int32
+	var describedState *schedule.ScheduleState
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = &schedule.Schedule{State: describedState}
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests.Add(1)
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		state *schedule.ScheduleState
+		args  []string
+	}{
+		{state: &schedule.ScheduleState{Paused: false}, args: []string{"--cadence-clear-all"}},
+		{state: nil, args: []string{"--cadence-clear-all"}},
+		{state: &schedule.ScheduleState{Paused: true}, args: []string{"--cadence-clear-all", "--paused=false"}},
+	} {
+		describedState = tc.state
+		res := s.Execute(append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-unpaused-clear"}, tc.args...)...)
+		s.Error(res.Err)
+		s.ErrorContains(res.Err, "use --paused=true to pause explicitly")
+	}
+	s.Equal(int32(0), updateRequests.Load())
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchClearsPausedCadenceToManualOnly() {
+	scheduleID, workflowID, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+
+	res = s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", scheduleID, "--paused=true", "--cadence-clear-all")
+	s.NoError(res.Err)
+
+	var description struct {
+		Schedule struct {
+			Spec struct {
+				StructuredCalendar []json.RawMessage `json:"structuredCalendar"`
+				Calendar           []json.RawMessage `json:"calendar"`
+				CronString         []string          `json:"cronString"`
+				Interval           []json.RawMessage `json:"interval"`
+			} `json:"spec"`
+			State struct {
+				Paused bool `json:"paused"`
+			} `json:"state"`
+		} `json:"schedule"`
+		Info struct {
+			FutureActionTimes []json.RawMessage `json:"futureActionTimes"`
+		} `json:"info"`
+	}
+	s.Eventually(func() bool {
+		res = s.Execute("schedule", "describe", "--address", s.Address(), "--schedule-id", scheduleID, "--output", "json")
+		description = struct {
+			Schedule struct {
+				Spec struct {
+					StructuredCalendar []json.RawMessage `json:"structuredCalendar"`
+					Calendar           []json.RawMessage `json:"calendar"`
+					CronString         []string          `json:"cronString"`
+					Interval           []json.RawMessage `json:"interval"`
+				} `json:"spec"`
+				State struct {
+					Paused bool `json:"paused"`
+				} `json:"state"`
+			} `json:"schedule"`
+			Info struct {
+				FutureActionTimes []json.RawMessage `json:"futureActionTimes"`
+			} `json:"info"`
+		}{}
+		if res.Err != nil || json.Unmarshal(res.Stdout.Bytes(), &description) != nil {
+			return false
+		}
+		return description.Schedule.State.Paused && len(description.Schedule.Spec.StructuredCalendar) == 0 && len(description.Schedule.Spec.Calendar) == 0 && len(description.Schedule.Spec.CronString) == 0 && len(description.Schedule.Spec.Interval) == 0 && len(description.Info.FutureActionTimes) == 0
+	}, 10*time.Second, 100*time.Millisecond)
+
+	res = s.Execute("schedule", "trigger", "--address", s.Address(), "--schedule-id", scheduleID)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		res = s.Execute("workflow", "list", "--address", s.Address(), "-q", fmt.Sprintf(`TemporalScheduledById = "%s"`, scheduleID))
+		return res.Err == nil && AssertContainsOnSameLine(res.Stdout.String(), workflowID) == nil
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchRevalidatesCadenceClearAfterConflictRefresh() {
+	var describes int
+	var updates []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				describes++
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = &schedule.Schedule{
+					Spec:  &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}, Interval: []*schedule.IntervalSpec{{Interval: durationpb.New(time.Hour)}}},
+					State: &schedule.ScheduleState{Paused: describes == 1},
+				}
+				response.ConflictToken = []byte(fmt.Sprintf("token-%d", describes))
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updates = append(updates, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				if len(updates) == 1 {
+					return status.Error(codes.FailedPrecondition, "mismatched conflict token")
+				}
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name        string
+		args        []string
+		wantErr     string
+		wantUpdates int
+	}{
+		{name: "refreshed unpaused fails", args: []string{"--cadence-clear-all"}, wantErr: "use --paused=true to pause explicitly", wantUpdates: 1},
+		{name: "explicit pause reapplies", args: []string{"--cadence-clear-all", "--paused=true"}, wantUpdates: 2},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			describes = 0
+			updates = nil
+
+			res := s.Execute(append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-refresh-clear"}, tc.args...)...)
+			if tc.wantErr != "" {
+				assert.ErrorContains(t, res.Err, tc.wantErr)
+			} else {
+				assert.NoError(t, res.Err)
+			}
+			assert.Equal(t, 2, describes)
+			assert.Len(t, updates, tc.wantUpdates)
+			for _, update := range updates {
+				assert.True(t, update.GetSchedule().GetState().GetPaused())
+				assert.Empty(t, update.GetSchedule().GetSpec().GetStructuredCalendar())
+				assert.Empty(t, update.GetSchedule().GetSpec().GetCalendar())
+				assert.Empty(t, update.GetSchedule().GetSpec().GetCronString())
+				assert.Empty(t, update.GetSchedule().GetSpec().GetInterval())
+			}
+			if tc.wantUpdates == 2 && len(updates) == 2 {
+				assert.Equal(t, []byte("token-2"), updates[1].GetConflictToken())
+				assert.NotEqual(t, updates[0].GetRequestId(), updates[1].GetRequestId())
+			}
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsTimingFieldsIndependently() {
+	initialStart := timestamppb.New(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	initialEnd := timestamppb.New(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	describedSchedule := &schedule.Schedule{
+		Spec: &schedule.ScheduleSpec{
+			CronString:      []string{"0 12 * * *"},
+			Interval:        []*schedule.IntervalSpec{{Interval: durationpb.New(time.Hour)}},
+			ExcludeCalendar: []*schedule.CalendarSpec{{Minute: "2"}},
+			StartTime:       initialStart,
+			EndTime:         initialEnd,
+			Jitter:          durationpb.New(time.Minute),
+			TimezoneName:    "America/New_York",
+			TimezoneData:    []byte("tzif"),
+		},
+		Action:   &schedule.ScheduleAction{},
+		Policies: &schedule.SchedulePolicies{PauseOnFailure: true},
+		State:    &schedule.ScheduleState{Notes: "preserved", Paused: true},
+	}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+	var updateRequest *workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequest = proto.Clone(request).(*workflowservice.UpdateScheduleRequest)
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name  string
+		args  []string
+		apply func(*schedule.Schedule)
+	}{
+		{name: "start", args: []string{"--start-time", "2027-01-01T00:00:00Z"}, apply: func(s *schedule.Schedule) {
+			s.Spec.StartTime = timestamppb.New(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC))
+		}},
+		{name: "end", args: []string{"--end-time", "2028-01-01T00:00:00Z"}, apply: func(s *schedule.Schedule) {
+			s.Spec.EndTime = timestamppb.New(time.Date(2028, 1, 1, 0, 0, 0, 0, time.UTC))
+		}},
+		{name: "jitter", args: []string{"--jitter", "30s"}, apply: func(s *schedule.Schedule) { s.Spec.Jitter = durationpb.New(30 * time.Second) }},
+		{name: "zero jitter", args: []string{"--jitter", "0s"}, apply: func(s *schedule.Schedule) { s.Spec.Jitter = durationpb.New(0) }},
+		{name: "time zone", args: []string{"--time-zone", "Asia/Tokyo"}, apply: func(s *schedule.Schedule) { s.Spec.TimezoneName, s.Spec.TimezoneData = "Asia/Tokyo", nil }},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			updateRequest = nil
+			res := s.Execute(append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-timing"}, tc.args...)...)
+			assert.NoError(t, res.Err)
+			if !assert.NotNil(t, updateRequest) {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			tc.apply(expected)
+			assert.True(t, proto.Equal(expected, updateRequest.GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchUnsetsTimingFieldsIndependently() {
+	describedSchedule := &schedule.Schedule{Spec: &schedule.ScheduleSpec{
+		CronString:      []string{"0 12 * * *"},
+		Interval:        []*schedule.IntervalSpec{{Interval: durationpb.New(time.Hour)}},
+		ExcludeCalendar: []*schedule.CalendarSpec{{Minute: "2"}},
+		StartTime:       timestamppb.New(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		EndTime:         timestamppb.New(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)),
+		Jitter:          durationpb.New(time.Minute),
+		TimezoneName:    "America/New_York",
+		TimezoneData:    []byte("tzif"),
+	}, Action: &schedule.ScheduleAction{}, Policies: &schedule.SchedulePolicies{PauseOnFailure: true}, State: &schedule.ScheduleState{Notes: "preserved", Paused: true}}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+	var updateRequest *workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequest = proto.Clone(request).(*workflowservice.UpdateScheduleRequest)
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name  string
+		arg   string
+		apply func(*schedule.Schedule)
+	}{
+		{name: "start", arg: "--unset-start-time", apply: func(s *schedule.Schedule) { s.Spec.StartTime = nil }},
+		{name: "end", arg: "--unset-end-time", apply: func(s *schedule.Schedule) { s.Spec.EndTime = nil }},
+		{name: "jitter", arg: "--unset-jitter", apply: func(s *schedule.Schedule) { s.Spec.Jitter = nil }},
+		{name: "time zone", arg: "--unset-time-zone", apply: func(s *schedule.Schedule) { s.Spec.TimezoneName, s.Spec.TimezoneData = "", nil }},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			updateRequest = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-unset-timing", tc.arg)
+			assert.NoError(t, res.Err)
+			if !assert.NotNil(t, updateRequest) {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			tc.apply(expected)
+			assert.True(t, proto.Equal(expected, updateRequest.GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--start-time", "2027-01-01T00:00:00Z", "--unset-start-time"}, "--start-time and --unset-start-time are mutually exclusive"},
+		{[]string{"--end-time", "2027-01-01T00:00:00Z", "--unset-end-time"}, "--end-time and --unset-end-time are mutually exclusive"},
+		{[]string{"--jitter", "1s", "--unset-jitter"}, "--jitter and --unset-jitter are mutually exclusive"},
+		{[]string{"--time-zone", "UTC", "--unset-time-zone"}, "--time-zone and --unset-time-zone are mutually exclusive"},
+	} {
+		var dials atomic.Int32
+		options := s.CommandHarness.Options
+		options.Args = append([]string{"schedule", "patch", "--schedule-id", "patch-unset-timing"}, tc.args...)
+		options.AdditionalClientGRPCDialOptions = append(options.AdditionalClientGRPCDialOptions, grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			dials.Add(1)
+			return nil, errors.New("unexpected dial")
+		}))
+		var commandErr error
+		options.Fail = func(err error) { commandErr = err }
+		temporalcli.Execute(context.Background(), options)
+		assert.ErrorContains(s.T(), commandErr, tc.want)
+		assert.Zero(s.T(), dials.Load())
 	}
 }
 

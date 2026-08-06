@@ -3151,6 +3151,13 @@ commands:
     description: |
       Update individual Schedule fields without replacing the full Schedule
       configuration.
+
+      Omitting cadence options preserves the existing cadence. Supplying any
+      `--calendar`, `--cron`, or `--interval` value replaces all existing
+      calendar, cron, and interval sources. For example, use
+      `--cron '0 12 * * *'` to replace cadence, or `--cadence-clear-all` to
+      clear it. Cadence clear requires the resulting Schedule to be paused;
+      pause explicitly with `--paused=true` when needed.
     option-sets:
       - schedule-id
       - overlap-policy
@@ -3176,6 +3183,42 @@ commands:
       - name: remaining-actions
         type: int
         description: Total allowed actions. Zero means unlimited.
+      - name: calendar
+        type: string[]
+        description: Calendar JSON specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.
+      - name: cron
+        type: string[]
+        description: Cron expressions. Supplying any cadence source replaces all existing calendar, cron, and interval sources.
+      - name: interval
+        type: string[]
+        description: Interval specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.
+      - name: cadence-clear-all
+        type: bool
+        description: Clear all cadence sources only when the resulting Schedule is paused.
+      - name: start-time
+        type: timestamp
+        description: Set the Schedule start time.
+      - name: unset-start-time
+        type: bool
+        description: Clear the Schedule start time.
+      - name: end-time
+        type: timestamp
+        description: Set the Schedule end time.
+      - name: unset-end-time
+        type: bool
+        description: Clear the Schedule end time.
+      - name: jitter
+        type: duration
+        description: Set the Schedule jitter.
+      - name: unset-jitter
+        type: bool
+        description: Clear the Schedule jitter.
+      - name: time-zone
+        type: string
+        description: Set the Schedule time zone.
+      - name: unset-time-zone
+        type: bool
+        description: Restore default Schedule time zone interpretation.
 
   - name: temporal server
     summary: Run Temporal Server

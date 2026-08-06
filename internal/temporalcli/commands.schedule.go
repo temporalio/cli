@@ -561,10 +561,29 @@ type schedulePatchIntent struct {
 	paused              bool
 	remainingActionsSet bool
 	remainingActions    int
+	calendarSet         bool
+	cronSet             bool
+	intervalSet         bool
+	calendar            []string
+	cron                []string
+	interval            []*schedpb.IntervalSpec
+	cadenceClearAll     bool
+	startTimeSet        bool
+	startTimeUnset      bool
+	startTime           *timestamppb.Timestamp
+	endTimeSet          bool
+	endTimeUnset        bool
+	endTime             *timestamppb.Timestamp
+	jitterSet           bool
+	jitterUnset         bool
+	jitter              time.Duration
+	timeZoneSet         bool
+	timeZoneUnset       bool
+	timeZone            string
 }
 
 func (i schedulePatchIntent) validate() error {
-	if !i.notesSet && !i.notesUnset && !i.overlapSet && !i.catchupSet && !i.catchupUnset && !i.pauseOnFailureSet && !i.pausedSet && !i.remainingActionsSet {
+	if !i.notesSet && !i.notesUnset && !i.overlapSet && !i.catchupSet && !i.catchupUnset && !i.pauseOnFailureSet && !i.pausedSet && !i.remainingActionsSet && !i.calendarSet && !i.cronSet && !i.intervalSet && !i.cadenceClearAll && !i.startTimeSet && !i.startTimeUnset && !i.endTimeSet && !i.endTimeUnset && !i.jitterSet && !i.jitterUnset && !i.timeZoneSet && !i.timeZoneUnset {
 		return errors.New("at least one patch operation is required")
 	}
 	if i.notesSet && i.notesUnset {
@@ -578,6 +597,44 @@ func (i schedulePatchIntent) validate() error {
 	}
 	if i.remainingActionsSet && i.remainingActions < 0 {
 		return errors.New("remaining actions must not be negative")
+	}
+	if i.startTimeSet && i.startTimeUnset {
+		return errors.New("--start-time and --unset-start-time are mutually exclusive")
+	}
+	if i.startTimeSet {
+		if err := i.startTime.CheckValid(); err != nil {
+			return fmt.Errorf("invalid start time: %w", err)
+		}
+	}
+	if i.endTimeSet && i.endTimeUnset {
+		return errors.New("--end-time and --unset-end-time are mutually exclusive")
+	}
+	if i.endTimeSet {
+		if err := i.endTime.CheckValid(); err != nil {
+			return fmt.Errorf("invalid end time: %w", err)
+		}
+	}
+	if i.jitterSet && i.jitterUnset {
+		return errors.New("--jitter and --unset-jitter are mutually exclusive")
+	}
+	if i.timeZoneSet && i.timeZoneUnset {
+		return errors.New("--time-zone and --unset-time-zone are mutually exclusive")
+	}
+	if i.timeZoneSet && strings.TrimSpace(i.timeZone) == "" {
+		return errors.New("--time-zone requires a non-empty value; use --unset-time-zone to clear")
+	}
+	if i.cadenceClearAll && (i.calendarSet || i.cronSet || i.intervalSet) {
+		return errors.New("--cadence-clear-all cannot be combined with a cadence source")
+	}
+	if i.jitterSet && i.jitter < 0 {
+		return errors.New("jitter must not be negative")
+	}
+	return nil
+}
+
+func (i schedulePatchIntent) validateResult(schedule *schedpb.Schedule) error {
+	if i.cadenceClearAll && !schedule.GetState().GetPaused() {
+		return errors.New("--cadence-clear-all requires the Schedule to be paused; use --paused=true to pause explicitly")
 	}
 	return nil
 }
@@ -613,6 +670,47 @@ func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) {
 		schedule.State.RemainingActions = int64(i.remainingActions)
 		schedule.State.LimitedActions = i.remainingActions > 0
 	}
+	if i.calendarSet || i.cronSet || i.intervalSet || i.cadenceClearAll || i.startTimeSet || i.startTimeUnset || i.endTimeSet || i.endTimeUnset || i.jitterSet || i.jitterUnset || i.timeZoneSet || i.timeZoneUnset {
+		if schedule.Spec == nil {
+			schedule.Spec = &schedpb.ScheduleSpec{}
+		}
+	}
+	if i.calendarSet || i.cronSet || i.intervalSet || i.cadenceClearAll {
+		schedule.Spec.StructuredCalendar = nil
+		schedule.Spec.Calendar = nil
+		schedule.Spec.CronString = nil
+		schedule.Spec.Interval = nil
+	}
+	if i.calendarSet || i.cronSet || i.intervalSet {
+		schedule.Spec.CronString = append(append([]string(nil), i.calendar...), i.cron...)
+		schedule.Spec.Interval = append([]*schedpb.IntervalSpec(nil), i.interval...)
+	}
+	if i.startTimeSet {
+		schedule.Spec.StartTime = i.startTime
+	}
+	if i.startTimeUnset {
+		schedule.Spec.StartTime = nil
+	}
+	if i.endTimeSet {
+		schedule.Spec.EndTime = i.endTime
+	}
+	if i.endTimeUnset {
+		schedule.Spec.EndTime = nil
+	}
+	if i.jitterSet {
+		schedule.Spec.Jitter = durationpb.New(i.jitter)
+	}
+	if i.jitterUnset {
+		schedule.Spec.Jitter = nil
+	}
+	if i.timeZoneSet {
+		schedule.Spec.TimezoneName = i.timeZone
+		schedule.Spec.TimezoneData = nil
+	}
+	if i.timeZoneUnset {
+		schedule.Spec.TimezoneName = ""
+		schedule.Spec.TimezoneData = nil
+	}
 	if !i.notesSet && !i.notesUnset {
 		return
 	}
@@ -624,6 +722,48 @@ func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) {
 		return
 	}
 	schedule.State.Notes = ""
+}
+
+func schedulePatchCadence(calendar, cron, intervals []string) ([]string, []*schedpb.IntervalSpec, error) {
+	calendarCron := make([]string, 0, len(calendar))
+	for _, calendarJSON := range calendar {
+		var calendarSpec schedpb.CalendarSpec
+		if err := protojson.Unmarshal([]byte(calendarJSON), &calendarSpec); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse json calendar spec: %w", err)
+		}
+		calendarCronString, err := toCronString(&calendarSpec)
+		if err != nil {
+			return nil, nil, err
+		}
+		calendarCron = append(calendarCron, calendarCronString)
+	}
+	for _, cronString := range cron {
+		trimmedCronString := strings.TrimSpace(cronString)
+		if strings.HasPrefix(trimmedCronString, "TZ=") || strings.HasPrefix(trimmedCronString, "CRON_TZ=") {
+			return nil, nil, errors.New("cron time zones are not supported; use --time-zone")
+		}
+	}
+	intervalSpecs := make([]*schedpb.IntervalSpec, 0, len(intervals))
+	for _, intervalString := range intervals {
+		interval, err := toIntervalSpec(intervalString)
+		if err != nil {
+			return nil, nil, err
+		}
+		if interval.Every < time.Second {
+			return nil, nil, errors.New("interval must be at least 1s")
+		}
+		if interval.Offset < 0 {
+			return nil, nil, errors.New("interval phase must not be negative")
+		}
+		if interval.Offset >= interval.Every {
+			return nil, nil, errors.New("interval phase must be less than the interval")
+		}
+		intervalSpecs = append(intervalSpecs, &schedpb.IntervalSpec{
+			Interval: durationpb.New(interval.Every),
+			Phase:    durationpb.New(interval.Offset),
+		})
+	}
+	return calendarCron, intervalSpecs, nil
 }
 
 func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) error {
@@ -643,9 +783,32 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 		paused:              c.Paused,
 		remainingActionsSet: c.Command.Flags().Changed("remaining-actions"),
 		remainingActions:    c.RemainingActions,
+		calendarSet:         c.Command.Flags().Changed("calendar"),
+		cronSet:             c.Command.Flags().Changed("cron"),
+		intervalSet:         c.Command.Flags().Changed("interval"),
+		cron:                c.Cron,
+		cadenceClearAll:     c.CadenceClearAll,
+		startTimeSet:        c.Command.Flags().Changed("start-time"),
+		startTimeUnset:      c.UnsetStartTime,
+		startTime:           timestamppb.New(c.StartTime.Time()),
+		endTimeSet:          c.Command.Flags().Changed("end-time"),
+		endTimeUnset:        c.UnsetEndTime,
+		endTime:             timestamppb.New(c.EndTime.Time()),
+		jitterSet:           c.Command.Flags().Changed("jitter"),
+		jitterUnset:         c.UnsetJitter,
+		jitter:              c.Jitter.Duration(),
+		timeZoneSet:         c.Command.Flags().Changed("time-zone"),
+		timeZoneUnset:       c.UnsetTimeZone,
+		timeZone:            c.TimeZone,
+	}
+	var err error
+	if intent.calendarSet || intent.cronSet || intent.intervalSet {
+		intent.calendar, intent.interval, err = schedulePatchCadence(c.Calendar, c.Cron, c.Interval)
+		if err != nil {
+			return err
+		}
 	}
 	if intent.overlapSet {
-		var err error
 		intent.overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
 		if err != nil {
 			return err
@@ -675,7 +838,7 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 
 		schedule := proto.Clone(describeResponse.Schedule).(*schedpb.Schedule)
 		intent.apply(schedule)
-		if err := intent.validate(); err != nil {
+		if err := intent.validateResult(schedule); err != nil {
 			return err
 		}
 		_, err = cl.WorkflowService().UpdateSchedule(cctx, &workflowservice.UpdateScheduleRequest{
