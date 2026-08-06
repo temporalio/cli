@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"reflect"
 	"slices"
 	"strconv"
@@ -55,6 +56,42 @@ func (p *Printer) Println(s ...string) {
 	p.Print(append(append([]string{}, s...), "\n")...)
 }
 
+// PrintlnErr prints a line in text output and returns the first write error.
+// It is ignored during JSON output.
+func (p *Printer) PrintlnErr(s ...string) error {
+	if p.JSON {
+		return nil
+	}
+	for _, v := range append(append([]string{}, s...), "\n") {
+		if err := p.writeStrSafeErr(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PrintlnStrictErr prints a line in text output and returns the first write error.
+// Unlike PrintlnErr, it returns broken pipe errors to its caller.
+// It is ignored during JSON output.
+func (p *Printer) PrintlnStrictErr(s ...string) error {
+	if p.JSON {
+		return nil
+	}
+	sigpipe := make(chan os.Signal, 1)
+	signal.Notify(sigpipe, syscall.SIGPIPE)
+	defer signal.Stop(sigpipe)
+	for _, v := range append(append([]string{}, s...), "\n") {
+		n, err := p.Output.Write([]byte(v))
+		if err != nil {
+			return err
+		}
+		if n != len(v) {
+			return io.ErrShortWrite
+		}
+	}
+	return nil
+}
+
 // Ignored during JSON output
 func (p *Printer) Printlnf(s string, v ...any) {
 	p.Println(fmt.Sprintf(s, v...))
@@ -70,6 +107,11 @@ func (p *Printer) Printlnf(s string, v ...any) {
 // [Printer.EndList] must be called at the end. If this is called twice it will
 // panic. This and the end call are not safe for concurrent use.
 func (p *Printer) StartList() {
+	_ = p.StartListErr()
+}
+
+// StartListErr starts list output and returns any opening write error.
+func (p *Printer) StartListErr() error {
 	if p.listMode {
 		panic("already in list mode")
 	}
@@ -77,13 +119,19 @@ func (p *Printer) StartList() {
 	// Write initial bracket when non-jsonl
 	if p.JSON && p.JSONIndent != "" {
 		// Don't need newline, we count on initial object to do that
-		p.Output.Write([]byte("["))
+		return p.writeSafeErr([]byte("["))
 	}
+	return nil
 }
 
 // Must be called after [Printer.StartList] or will panic. See Godoc on that
 // function for more details.
 func (p *Printer) EndList() {
+	_ = p.EndListErr()
+}
+
+// EndListErr ends list output and returns any final write error.
+func (p *Printer) EndListErr() error {
 	if !p.listMode {
 		panic("not in list mode")
 	}
@@ -92,8 +140,9 @@ func (p *Printer) EndList() {
 	if p.JSON && p.JSONIndent != "" {
 		// We prepend a newline because non-jsonl list mode doesn't do so after each
 		// line to help with commas
-		p.Output.Write([]byte("\n]\n"))
+		return p.writeSafeErr([]byte("\n]\n"))
 	}
+	return nil
 }
 
 type StructuredOptions struct {
@@ -129,29 +178,52 @@ type TableOptions struct {
 
 // For JSON, if v is a proto message, protojson encoding is used
 func (p *Printer) PrintStructured(v any, options StructuredOptions) error {
+	err, textWriteErr := p.printStructured(v, options, false)
+	if textWriteErr {
+		p.handleWriteErr(err)
+		return nil
+	}
+	return err
+}
+
+// PrintStructuredErr prints structured output and returns serialization and
+// write errors in both text and JSON modes.
+func (p *Printer) PrintStructuredErr(v any, options StructuredOptions) error {
+	originalOutput := p.Output
+	p.Output = shortWriteCheckingWriter{Writer: originalOutput}
+	defer func() { p.Output = originalOutput }()
+	err, _ := p.printStructured(v, options, true)
+	return err
+}
+
+func (p *Printer) printStructured(
+	v any,
+	options StructuredOptions,
+	returnTextSerializationErrors bool,
+) (err error, textWriteErr bool) {
 	// JSON
 	if p.JSON {
-		return p.printJSON(v, options)
+		return p.printJSON(v, options), false
 	}
 
 	// Get data
 	cols := options.toPredefinedCols()
-	cols, rows, err := p.tableData(cols, v)
+	cols, rows, err := p.tableData(cols, v, returnTextSerializationErrors)
 	if err != nil {
-		return err
+		return err, false
 	}
 	cols = adjustColsToOptions(cols, options)
 
 	// Text table
 	if options.Table != nil {
 		p.calculateUnsetColWidths(cols, rows)
-		p.printTable(options.Table, cols, rows)
-		return nil
+		err = p.printTable(options.Table, cols, rows)
+		return err, err != nil
 	}
 
 	// Text "card"
-	p.printCards(cols, rows)
-	return nil
+	err = p.printCards(cols, rows)
+	return err, err != nil
 }
 
 type PrintStructuredIter interface {
@@ -178,17 +250,17 @@ func (p *Printer) PrintStructuredTableIter(
 	cols = adjustColsToOptions(cols, options)
 	// We're intentionally not calculating field lengths and only accepting them
 	// since this is streaming
-	p.printHeader(cols)
+	p.handleWriteErr(p.printHeader(cols))
 	for {
 		v, err := iter.Next()
 		if v == nil || err != nil {
 			return err
 		}
-		row, err := p.tableRowData(cols, v)
+		row, err := p.tableRowData(cols, v, false)
 		if err != nil {
 			return err
 		}
-		p.printRow(cols, row)
+		p.handleWriteErr(p.printRow(cols, row))
 	}
 }
 
@@ -206,26 +278,64 @@ func isBrokenPipeError(err error) bool {
 }
 
 func (p *Printer) write(b []byte) {
-	if _, err := p.Output.Write(b); err != nil {
-		// Exit gracefully on broken pipe (terminal disconnected)
-		if isBrokenPipeError(err) {
-			os.Exit(0)
-		}
-		panic(err)
+	p.handleWriteErr(p.writeErr(b))
+}
+
+func (p *Printer) handleWriteErr(err error) {
+	err = preserveBrokenPipeBehavior(err)
+	if err == nil {
+		return
 	}
+	panic(err)
+}
+
+func (p *Printer) writeErr(b []byte) error {
+	_, err := p.Output.Write(b)
+	return preserveBrokenPipeBehavior(err)
+}
+
+func (p *Printer) writeSafeErr(b []byte) error {
+	n, err := p.Output.Write(b)
+	if err == nil && n != len(b) {
+		return io.ErrShortWrite
+	}
+	return preserveBrokenPipeBehavior(err)
+}
+
+func preserveBrokenPipeBehavior(err error) error {
+	if isBrokenPipeError(err) {
+		os.Exit(0)
+	}
+	return err
 }
 
 func (p *Printer) writeStr(s string) {
 	p.write([]byte(s))
 }
 
+func (p *Printer) writeStrErr(s string) error {
+	return p.writeErr([]byte(s))
+}
+
+func (p *Printer) writeStrSafeErr(s string) error {
+	return p.writeSafeErr([]byte(s))
+}
+
+type shortWriteCheckingWriter struct {
+	io.Writer
+}
+
+func (w shortWriteCheckingWriter) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	if err == nil && n != len(p) {
+		return n, io.ErrShortWrite
+	}
+	return n, err
+}
+
 func (p *Printer) writef(s string, v ...any) {
 	if _, err := fmt.Fprintf(p.Output, s, v...); err != nil {
-		// Exit gracefully on broken pipe (terminal disconnected)
-		if isBrokenPipeError(err) {
-			os.Exit(0)
-		}
-		panic(err)
+		p.handleWriteErr(err)
 	}
 }
 
@@ -241,7 +351,7 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 		} else {
 			prepend = ",\n"
 		}
-		if _, err := p.Output.Write([]byte(prepend)); err != nil {
+		if err := p.writeErr([]byte(prepend)); err != nil {
 			return err
 		}
 	}
@@ -253,13 +363,13 @@ func (p *Printer) printJSON(v any, options StructuredOptions) error {
 	}
 	if b, err := p.jsonVal(v, p.JSONIndent, shorthandPayloads); err != nil {
 		return err
-	} else if _, err := p.Output.Write(b); err != nil {
+	} else if err := p.writeErr(b); err != nil {
 		return err
 	}
 
 	// Do not print a newline if in non-jsonl list mode
 	if !nonJSONLListMode {
-		if _, err := p.Output.Write([]byte("\n")); err != nil {
+		if err := p.writeErr([]byte("\n")); err != nil {
 			return err
 		}
 	}
@@ -349,44 +459,57 @@ func adjustColsToOptions(cols []*col, options StructuredOptions) []*col {
 	return adjusted
 }
 
-func (p *Printer) printTable(options *TableOptions, cols []*col, rows []map[string]colVal) {
+func (p *Printer) printTable(options *TableOptions, cols []*col, rows []map[string]colVal) error {
 	if !options.NoHeader {
-		p.printHeader(cols)
+		if err := p.printHeader(cols); err != nil {
+			return err
+		}
 	}
-	p.printRows(cols, rows)
+	return p.printRows(cols, rows)
 }
 
-func (p *Printer) printHeader(cols []*col) {
+func (p *Printer) printHeader(cols []*col) error {
 	colorer := p.TableHeaderColorer
 	if colorer == nil {
 		colorer = color.MagentaString
 	}
 	for _, col := range cols {
 		for i := 0; i < col.indentAmount; i++ {
-			p.writeStr(NonJSONIndent)
+			if err := p.writeStrErr(NonJSONIndent); err != nil {
+				return err
+			}
 		}
-		p.writeStr(tablewriter.Pad(colorer("%v", col.name), " ", col.width))
+		if err := p.writeStrErr(tablewriter.Pad(colorer("%v", col.name), " ", col.width)); err != nil {
+			return err
+		}
 	}
-	p.writeStr("\n")
+	return p.writeStrErr("\n")
 }
 
-func (p *Printer) printRows(cols []*col, rows []map[string]colVal) {
+func (p *Printer) printRows(cols []*col, rows []map[string]colVal) error {
 	for _, row := range rows {
-		p.printRow(cols, row)
+		if err := p.printRow(cols, row); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (p *Printer) printRow(cols []*col, row map[string]colVal) {
+func (p *Printer) printRow(cols []*col, row map[string]colVal) error {
 	for _, col := range cols {
 		for i := 0; i < col.indentAmount; i++ {
-			p.writeStr(NonJSONIndent)
+			if err := p.writeStrErr(NonJSONIndent); err != nil {
+				return err
+			}
 		}
-		p.printCol(col, row[col.name].text)
+		if err := p.printCol(col, row[col.name].text); err != nil {
+			return err
+		}
 	}
-	p.writeStr("\n")
+	return p.writeStrErr("\n")
 }
 
-func (p *Printer) printCol(col *col, data string) {
+func (p *Printer) printCol(col *col, data string) error {
 	switch col.align {
 	case AlignCenter:
 		data = tablewriter.Pad(data, " ", col.width)
@@ -395,20 +518,25 @@ func (p *Printer) printCol(col *col, data string) {
 	default:
 		data = tablewriter.PadRight(data, " ", col.width)
 	}
-	p.writeStr(data)
+	return p.writeStrErr(data)
 }
 
-func (p *Printer) printCards(cols []*col, rows []map[string]colVal) {
+func (p *Printer) printCards(cols []*col, rows []map[string]colVal) error {
 	for i, row := range rows {
 		// Extra newline between cards
 		if i > 0 {
-			p.writeStr("\n")
+			if err := p.writeStrErr("\n"); err != nil {
+				return err
+			}
 		}
-		p.printCard(cols, row)
+		if err := p.printCard(cols, row); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (p *Printer) printCard(cols []*col, row map[string]colVal) {
+func (p *Printer) printCard(cols []*col, row map[string]colVal) error {
 	nameValueRows := make([]map[string]colVal, 0, len(cols))
 	indentAmount := 1
 	// Since this option applies to everything in a structured print, there should be
@@ -432,30 +560,33 @@ func (p *Printer) printCard(cols []*col, row map[string]colVal) {
 		{name: "Value", width: 1, indentAmount: indentAmount},
 	}
 	p.calculateUnsetColWidths(nameValueCols, nameValueRows)
-	p.printRows(nameValueCols, nameValueRows)
+	return p.printRows(nameValueCols, nameValueRows)
 }
 
 var jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
 
-func (p *Printer) textVal(v any) string {
+func (p *Printer) textVal(v any, returnSerializationErrors bool) (string, error) {
 	if ref := reflect.Indirect(reflect.ValueOf(v)); ref.IsValid() {
 		if ref.Type() == reflect.TypeOf(time.Time{}) {
 			if ref.IsZero() {
-				return ""
+				return "", nil
 			}
 			if p.FormatTime == nil {
-				return ref.Interface().(time.Time).Format(time.RFC3339)
+				return ref.Interface().(time.Time).Format(time.RFC3339), nil
 			}
-			return p.FormatTime(ref.Interface().(time.Time))
+			return p.FormatTime(ref.Interface().(time.Time)), nil
 		} else if (ref.Kind() == reflect.Struct && ref.CanInterface()) || ref.Type().Implements(jsonMarshalerType) {
 			b, err := p.jsonVal(v, "", true)
 			if err != nil {
-				return fmt.Sprintf("<failed converting to string: %v>", err)
+				if !returnSerializationErrors {
+					return fmt.Sprintf("<failed converting to string: %v>", err), nil
+				}
+				return "", err
 			}
-			return string(b)
+			return string(b), nil
 		} else if ref.Kind() == reflect.Slice && ref.Type().Elem().Kind() == reflect.Uint8 {
 			b, _ := ref.Interface().([]byte)
-			return "bytes(" + base64.StdEncoding.EncodeToString(b) + ")"
+			return "bytes(" + base64.StdEncoding.EncodeToString(b) + ")", nil
 		} else if ref.Kind() == reflect.Slice {
 			// We don't want to reimplement all of fmt.Sprintf, but expanding one level of
 			// slice helps format lists more consistently.
@@ -465,16 +596,24 @@ func (p *Printer) textVal(v any) string {
 				if i > 0 {
 					sb.WriteString(", ")
 				}
-				sb.WriteString(p.textVal(ref.Index(i).Interface()))
+				text, err := p.textVal(ref.Index(i).Interface(), returnSerializationErrors)
+				if err != nil {
+					return "", err
+				}
+				sb.WriteString(text)
 			}
 			sb.WriteString("]")
-			return sb.String()
+			return sb.String(), nil
 		}
 	}
-	return fmt.Sprintf("%v", v)
+	return fmt.Sprintf("%v", v), nil
 }
 
-func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []map[string]colVal, err error) {
+func (p *Printer) tableData(
+	predefinedCols []*col,
+	v any,
+	returnTextSerializationErrors bool,
+) (cols []*col, rows []map[string]colVal, err error) {
 	singleItemType := reflect.TypeOf(v)
 	if singleItemType.Kind() == reflect.Slice {
 		singleItemType = singleItemType.Elem()
@@ -505,7 +644,9 @@ func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []m
 		row := make(map[string]colVal, len(cols))
 		for _, col := range cols {
 			colVal := colVal{val: colValGetter(col, itemVal)}
-			colVal.text = p.textVal(colVal.val)
+			if colVal.text, err = p.textVal(colVal.val, returnTextSerializationErrors); err != nil {
+				return nil, nil, err
+			}
 			row[col.name] = colVal
 		}
 		rows[i] = row
@@ -513,7 +654,11 @@ func (p *Printer) tableData(predefinedCols []*col, v any) (cols []*col, rows []m
 	return
 }
 
-func (p *Printer) tableRowData(cols []*col, v any) (map[string]colVal, error) {
+func (p *Printer) tableRowData(
+	cols []*col,
+	v any,
+	returnTextSerializationErrors bool,
+) (map[string]colVal, error) {
 	colValGetter, err := colValGetterForType(reflect.TypeOf(v))
 	if err != nil {
 		return nil, err
@@ -522,7 +667,10 @@ func (p *Printer) tableRowData(cols []*col, v any) (map[string]colVal, error) {
 	itemVal := reflect.ValueOf(v)
 	for _, col := range cols {
 		colVal := colVal{val: colValGetter(col, itemVal)}
-		colVal.text = p.textVal(colVal.val)
+		colVal.text, err = p.textVal(colVal.val, returnTextSerializationErrors)
+		if err != nil {
+			return nil, err
+		}
 		row[col.name] = colVal
 	}
 	return row, nil
