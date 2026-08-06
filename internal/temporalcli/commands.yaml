@@ -3219,6 +3219,56 @@ commands:
       - name: unset-time-zone
         type: bool
         description: Restore default Schedule time zone interpretation.
+      - name: workflow-id
+        type: string
+        short: w
+        description: Set the Workflow ID. An empty value is invalid.
+      - name: type
+        type: string
+        description: Set the Workflow Type name. An empty value is invalid.
+        aliases:
+          - name
+      - name: task-queue
+        type: string
+        short: t
+        description: Set the Workflow Task queue. An empty value is invalid.
+      - name: execution-timeout
+        type: duration
+        description: Set the Workflow Execution timeout.
+      - name: unset-execution-timeout
+        type: bool
+        description: Remove the explicit Workflow Execution timeout.
+      - name: run-timeout
+        type: duration
+        description: Set the Workflow Run timeout.
+      - name: unset-run-timeout
+        type: bool
+        description: Restore the inherited Workflow Run timeout.
+      - name: task-timeout
+        type: duration
+        default: 10s
+        description: Set the Workflow Task timeout.
+      - name: unset-task-timeout
+        type: bool
+        description: Restore the 10-second default Workflow Task timeout.
+      - name: static-summary
+        type: string
+        experimental: true
+        description: |
+          Set the static Workflow summary for human consumption in UIs.
+          Uses Temporal Markdown formatting, should be a single line.
+      - name: unset-static-summary
+        type: bool
+        description: Remove the static Workflow summary.
+      - name: static-details
+        type: string
+        experimental: true
+        description: |
+          Set the static Workflow details for human consumption in UIs.
+          Uses Temporal Markdown formatting, may be multiple lines.
+      - name: unset-static-details
+        type: bool
+        description: Remove the static Workflow details.
 
   - name: temporal server
     summary: Run Temporal Server

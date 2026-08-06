@@ -19,7 +19,9 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
+	sdkpb "go.temporal.io/api/sdk/v1"
 	"go.temporal.io/api/serviceerror"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/proto"
@@ -547,43 +549,64 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 }
 
 type schedulePatchIntent struct {
-	notesSet            bool
-	notesUnset          bool
-	notes               string
-	overlapSet          bool
-	overlap             enumspb.ScheduleOverlapPolicy
-	catchupSet          bool
-	catchup             time.Duration
-	catchupUnset        bool
-	pauseOnFailureSet   bool
-	pauseOnFailure      bool
-	pausedSet           bool
-	paused              bool
-	remainingActionsSet bool
-	remainingActions    int
-	calendarSet         bool
-	cronSet             bool
-	intervalSet         bool
-	calendar            []string
-	cron                []string
-	interval            []*schedpb.IntervalSpec
-	cadenceClearAll     bool
-	startTimeSet        bool
-	startTimeUnset      bool
-	startTime           *timestamppb.Timestamp
-	endTimeSet          bool
-	endTimeUnset        bool
-	endTime             *timestamppb.Timestamp
-	jitterSet           bool
-	jitterUnset         bool
-	jitter              time.Duration
-	timeZoneSet         bool
-	timeZoneUnset       bool
-	timeZone            string
+	notesSet              bool
+	notesUnset            bool
+	notes                 string
+	overlapSet            bool
+	overlap               enumspb.ScheduleOverlapPolicy
+	catchupSet            bool
+	catchup               time.Duration
+	catchupUnset          bool
+	pauseOnFailureSet     bool
+	pauseOnFailure        bool
+	pausedSet             bool
+	paused                bool
+	remainingActionsSet   bool
+	remainingActions      int
+	calendarSet           bool
+	cronSet               bool
+	intervalSet           bool
+	calendar              []string
+	cron                  []string
+	interval              []*schedpb.IntervalSpec
+	cadenceClearAll       bool
+	startTimeSet          bool
+	startTimeUnset        bool
+	startTime             *timestamppb.Timestamp
+	endTimeSet            bool
+	endTimeUnset          bool
+	endTime               *timestamppb.Timestamp
+	jitterSet             bool
+	jitterUnset           bool
+	jitter                time.Duration
+	timeZoneSet           bool
+	timeZoneUnset         bool
+	timeZone              string
+	workflowIDSet         bool
+	workflowID            string
+	workflowTypeSet       bool
+	workflowType          string
+	taskQueueSet          bool
+	taskQueue             string
+	executionTimeoutSet   bool
+	executionTimeoutUnset bool
+	executionTimeout      time.Duration
+	runTimeoutSet         bool
+	runTimeoutUnset       bool
+	runTimeout            time.Duration
+	taskTimeoutSet        bool
+	taskTimeoutUnset      bool
+	taskTimeout           time.Duration
+	staticSummarySet      bool
+	staticSummaryUnset    bool
+	staticSummary         *commonpb.Payload
+	staticDetailsSet      bool
+	staticDetailsUnset    bool
+	staticDetails         *commonpb.Payload
 }
 
 func (i schedulePatchIntent) validate() error {
-	if !i.notesSet && !i.notesUnset && !i.overlapSet && !i.catchupSet && !i.catchupUnset && !i.pauseOnFailureSet && !i.pausedSet && !i.remainingActionsSet && !i.calendarSet && !i.cronSet && !i.intervalSet && !i.cadenceClearAll && !i.startTimeSet && !i.startTimeUnset && !i.endTimeSet && !i.endTimeUnset && !i.jitterSet && !i.jitterUnset && !i.timeZoneSet && !i.timeZoneUnset {
+	if !i.notesSet && !i.notesUnset && !i.overlapSet && !i.catchupSet && !i.catchupUnset && !i.pauseOnFailureSet && !i.pausedSet && !i.remainingActionsSet && !i.calendarSet && !i.cronSet && !i.intervalSet && !i.cadenceClearAll && !i.startTimeSet && !i.startTimeUnset && !i.endTimeSet && !i.endTimeUnset && !i.jitterSet && !i.jitterUnset && !i.timeZoneSet && !i.timeZoneUnset && !i.workflowIDSet && !i.workflowTypeSet && !i.taskQueueSet && !i.executionTimeoutSet && !i.executionTimeoutUnset && !i.runTimeoutSet && !i.runTimeoutUnset && !i.taskTimeoutSet && !i.taskTimeoutUnset && !i.staticSummarySet && !i.staticSummaryUnset && !i.staticDetailsSet && !i.staticDetailsUnset {
 		return errors.New("at least one patch operation is required")
 	}
 	if i.notesSet && i.notesUnset {
@@ -623,6 +646,39 @@ func (i schedulePatchIntent) validate() error {
 	if i.timeZoneSet && strings.TrimSpace(i.timeZone) == "" {
 		return errors.New("--time-zone requires a non-empty value; use --unset-time-zone to clear")
 	}
+	if i.workflowIDSet && i.workflowID == "" {
+		return errors.New("workflow ID must not be empty")
+	}
+	if i.workflowTypeSet && i.workflowType == "" {
+		return errors.New("workflow type must not be empty")
+	}
+	if i.taskQueueSet && i.taskQueue == "" {
+		return errors.New("task queue must not be empty")
+	}
+	if i.executionTimeoutSet && i.executionTimeoutUnset {
+		return errors.New("--execution-timeout and --unset-execution-timeout are mutually exclusive")
+	}
+	if i.executionTimeoutSet && i.executionTimeout < 0 {
+		return errors.New("execution timeout must not be negative")
+	}
+	if i.runTimeoutSet && i.runTimeoutUnset {
+		return errors.New("--run-timeout and --unset-run-timeout are mutually exclusive")
+	}
+	if i.runTimeoutSet && i.runTimeout < 0 {
+		return errors.New("run timeout must not be negative")
+	}
+	if i.taskTimeoutSet && i.taskTimeoutUnset {
+		return errors.New("--task-timeout and --unset-task-timeout are mutually exclusive")
+	}
+	if i.taskTimeoutSet && i.taskTimeout < 0 {
+		return errors.New("task timeout must not be negative")
+	}
+	if i.staticSummarySet && i.staticSummaryUnset {
+		return errors.New("--static-summary and --unset-static-summary are mutually exclusive")
+	}
+	if i.staticDetailsSet && i.staticDetailsUnset {
+		return errors.New("--static-details and --unset-static-details are mutually exclusive")
+	}
 	if i.cadenceClearAll && (i.calendarSet || i.cronSet || i.intervalSet) {
 		return errors.New("--cadence-clear-all cannot be combined with a cadence source")
 	}
@@ -639,7 +695,7 @@ func (i schedulePatchIntent) validateResult(schedule *schedpb.Schedule) error {
 	return nil
 }
 
-func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) {
+func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) error {
 	if i.overlapSet || i.catchupSet || i.catchupUnset || i.pauseOnFailureSet {
 		if schedule.Policies == nil {
 			schedule.Policies = &schedpb.SchedulePolicies{}
@@ -711,17 +767,74 @@ func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) {
 		schedule.Spec.TimezoneName = ""
 		schedule.Spec.TimezoneData = nil
 	}
+	if i.workflowIDSet || i.workflowTypeSet || i.taskQueueSet || i.executionTimeoutSet || i.executionTimeoutUnset || i.runTimeoutSet || i.runTimeoutUnset || i.taskTimeoutSet || i.taskTimeoutUnset || i.staticSummarySet || i.staticSummaryUnset || i.staticDetailsSet || i.staticDetailsUnset {
+		startWorkflow := schedule.GetAction().GetStartWorkflow()
+		if startWorkflow == nil {
+			return errors.New("Schedule action does not contain a StartWorkflow action")
+		}
+		if i.workflowIDSet {
+			startWorkflow.WorkflowId = i.workflowID
+		}
+		if i.workflowTypeSet {
+			if startWorkflow.WorkflowType == nil {
+				startWorkflow.WorkflowType = &commonpb.WorkflowType{}
+			}
+			startWorkflow.WorkflowType.Name = i.workflowType
+		}
+		if i.taskQueueSet {
+			if startWorkflow.TaskQueue == nil {
+				startWorkflow.TaskQueue = &taskqueuepb.TaskQueue{}
+			}
+			startWorkflow.TaskQueue.Name = i.taskQueue
+		}
+		if i.executionTimeoutSet {
+			startWorkflow.WorkflowExecutionTimeout = durationpb.New(i.executionTimeout)
+		}
+		if i.executionTimeoutUnset {
+			startWorkflow.WorkflowExecutionTimeout = nil
+		}
+		if i.runTimeoutSet {
+			startWorkflow.WorkflowRunTimeout = durationpb.New(i.runTimeout)
+		}
+		if i.runTimeoutUnset {
+			startWorkflow.WorkflowRunTimeout = nil
+		}
+		if i.taskTimeoutSet {
+			startWorkflow.WorkflowTaskTimeout = durationpb.New(i.taskTimeout)
+		}
+		if i.taskTimeoutUnset {
+			startWorkflow.WorkflowTaskTimeout = durationpb.New(10 * time.Second)
+		}
+		if i.staticSummarySet || i.staticDetailsSet {
+			if startWorkflow.UserMetadata == nil {
+				startWorkflow.UserMetadata = &sdkpb.UserMetadata{}
+			}
+		}
+		if i.staticSummarySet {
+			startWorkflow.UserMetadata.Summary = i.staticSummary
+		}
+		if i.staticDetailsSet {
+			startWorkflow.UserMetadata.Details = i.staticDetails
+		}
+		if i.staticSummaryUnset && startWorkflow.UserMetadata != nil {
+			startWorkflow.UserMetadata.Summary = nil
+		}
+		if i.staticDetailsUnset && startWorkflow.UserMetadata != nil {
+			startWorkflow.UserMetadata.Details = nil
+		}
+	}
 	if !i.notesSet && !i.notesUnset {
-		return
+		return nil
 	}
 	if schedule.State == nil {
 		schedule.State = &schedpb.ScheduleState{}
 	}
 	if i.notesSet {
 		schedule.State.Notes = i.notes
-		return
+		return nil
 	}
 	schedule.State.Notes = ""
+	return nil
 }
 
 func schedulePatchCadence(calendar, cron, intervals []string) ([]string, []*schedpb.IntervalSpec, error) {
@@ -769,39 +882,70 @@ func schedulePatchCadence(calendar, cron, intervals []string) ([]string, []*sche
 func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) error {
 	const maxAttempts = 3
 
-	intent := schedulePatchIntent{
-		notesSet:            c.Command.Flags().Changed("notes"),
-		notesUnset:          c.UnsetNotes,
-		notes:               c.Notes,
-		overlapSet:          c.Command.Flags().Changed("overlap-policy"),
-		catchupSet:          c.Command.Flags().Changed("catchup-window"),
-		catchup:             c.CatchupWindow.Duration(),
-		catchupUnset:        c.UnsetCatchupWindow,
-		pauseOnFailureSet:   c.Command.Flags().Changed("pause-on-failure"),
-		pauseOnFailure:      c.PauseOnFailure,
-		pausedSet:           c.Command.Flags().Changed("paused"),
-		paused:              c.Paused,
-		remainingActionsSet: c.Command.Flags().Changed("remaining-actions"),
-		remainingActions:    c.RemainingActions,
-		calendarSet:         c.Command.Flags().Changed("calendar"),
-		cronSet:             c.Command.Flags().Changed("cron"),
-		intervalSet:         c.Command.Flags().Changed("interval"),
-		cron:                c.Cron,
-		cadenceClearAll:     c.CadenceClearAll,
-		startTimeSet:        c.Command.Flags().Changed("start-time"),
-		startTimeUnset:      c.UnsetStartTime,
-		startTime:           timestamppb.New(c.StartTime.Time()),
-		endTimeSet:          c.Command.Flags().Changed("end-time"),
-		endTimeUnset:        c.UnsetEndTime,
-		endTime:             timestamppb.New(c.EndTime.Time()),
-		jitterSet:           c.Command.Flags().Changed("jitter"),
-		jitterUnset:         c.UnsetJitter,
-		jitter:              c.Jitter.Duration(),
-		timeZoneSet:         c.Command.Flags().Changed("time-zone"),
-		timeZoneUnset:       c.UnsetTimeZone,
-		timeZone:            c.TimeZone,
-	}
 	var err error
+	intent := schedulePatchIntent{
+		notesSet:              c.Command.Flags().Changed("notes"),
+		notesUnset:            c.UnsetNotes,
+		notes:                 c.Notes,
+		overlapSet:            c.Command.Flags().Changed("overlap-policy"),
+		catchupSet:            c.Command.Flags().Changed("catchup-window"),
+		catchup:               c.CatchupWindow.Duration(),
+		catchupUnset:          c.UnsetCatchupWindow,
+		pauseOnFailureSet:     c.Command.Flags().Changed("pause-on-failure"),
+		pauseOnFailure:        c.PauseOnFailure,
+		pausedSet:             c.Command.Flags().Changed("paused"),
+		paused:                c.Paused,
+		remainingActionsSet:   c.Command.Flags().Changed("remaining-actions"),
+		remainingActions:      c.RemainingActions,
+		calendarSet:           c.Command.Flags().Changed("calendar"),
+		cronSet:               c.Command.Flags().Changed("cron"),
+		intervalSet:           c.Command.Flags().Changed("interval"),
+		cron:                  c.Cron,
+		cadenceClearAll:       c.CadenceClearAll,
+		startTimeSet:          c.Command.Flags().Changed("start-time"),
+		startTimeUnset:        c.UnsetStartTime,
+		startTime:             timestamppb.New(c.StartTime.Time()),
+		endTimeSet:            c.Command.Flags().Changed("end-time"),
+		endTimeUnset:          c.UnsetEndTime,
+		endTime:               timestamppb.New(c.EndTime.Time()),
+		jitterSet:             c.Command.Flags().Changed("jitter"),
+		jitterUnset:           c.UnsetJitter,
+		jitter:                c.Jitter.Duration(),
+		timeZoneSet:           c.Command.Flags().Changed("time-zone"),
+		timeZoneUnset:         c.UnsetTimeZone,
+		timeZone:              c.TimeZone,
+		workflowIDSet:         c.Command.Flags().Changed("workflow-id"),
+		workflowID:            c.WorkflowId,
+		workflowTypeSet:       c.Command.Flags().Changed("type"),
+		workflowType:          c.Type,
+		taskQueueSet:          c.Command.Flags().Changed("task-queue"),
+		taskQueue:             c.TaskQueue,
+		executionTimeoutSet:   c.Command.Flags().Changed("execution-timeout"),
+		executionTimeoutUnset: c.UnsetExecutionTimeout,
+		executionTimeout:      c.ExecutionTimeout.Duration(),
+		runTimeoutSet:         c.Command.Flags().Changed("run-timeout"),
+		runTimeoutUnset:       c.UnsetRunTimeout,
+		runTimeout:            c.RunTimeout.Duration(),
+		taskTimeoutSet:        c.Command.Flags().Changed("task-timeout"),
+		taskTimeoutUnset:      c.UnsetTaskTimeout,
+		taskTimeout:           c.TaskTimeout.Duration(),
+		staticSummarySet:      c.Command.Flags().Changed("static-summary"),
+		staticSummaryUnset:    c.UnsetStaticSummary,
+		staticDetailsSet:      c.Command.Flags().Changed("static-details"),
+		staticDetailsUnset:    c.UnsetStaticDetails,
+	}
+	if intent.staticSummarySet {
+		intent.staticSummary, err = DataConverterWithRawValue.ToPayload(c.StaticSummary)
+		if err != nil {
+			return fmt.Errorf("failed to encode static summary: %w", err)
+		}
+	}
+	if intent.staticDetailsSet {
+		intent.staticDetails, err = DataConverterWithRawValue.ToPayload(c.StaticDetails)
+		if err != nil {
+			return fmt.Errorf("failed to encode static details: %w", err)
+		}
+	}
 	if intent.calendarSet || intent.cronSet || intent.intervalSet {
 		intent.calendar, intent.interval, err = schedulePatchCadence(c.Calendar, c.Cron, c.Interval)
 		if err != nil {
@@ -837,7 +981,9 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 		}
 
 		schedule := proto.Clone(describeResponse.Schedule).(*schedpb.Schedule)
-		intent.apply(schedule)
+		if err := intent.apply(schedule); err != nil {
+			return err
+		}
 		if err := intent.validateResult(schedule); err != nil {
 			return err
 		}

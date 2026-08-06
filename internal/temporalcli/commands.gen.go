@@ -2702,25 +2702,38 @@ type TemporalSchedulePatchCommand struct {
 	Command cobra.Command
 	ScheduleIdOptions
 	OverlapPolicyOptions
-	CatchupWindow      cliext.FlagDuration
-	UnsetCatchupWindow bool
-	PauseOnFailure     bool
-	Notes              string
-	UnsetNotes         bool
-	Paused             bool
-	RemainingActions   int
-	Calendar           []string
-	Cron               []string
-	Interval           []string
-	CadenceClearAll    bool
-	StartTime          cliext.FlagTimestamp
-	UnsetStartTime     bool
-	EndTime            cliext.FlagTimestamp
-	UnsetEndTime       bool
-	Jitter             cliext.FlagDuration
-	UnsetJitter        bool
-	TimeZone           string
-	UnsetTimeZone      bool
+	CatchupWindow         cliext.FlagDuration
+	UnsetCatchupWindow    bool
+	PauseOnFailure        bool
+	Notes                 string
+	UnsetNotes            bool
+	Paused                bool
+	RemainingActions      int
+	Calendar              []string
+	Cron                  []string
+	Interval              []string
+	CadenceClearAll       bool
+	StartTime             cliext.FlagTimestamp
+	UnsetStartTime        bool
+	EndTime               cliext.FlagTimestamp
+	UnsetEndTime          bool
+	Jitter                cliext.FlagDuration
+	UnsetJitter           bool
+	TimeZone              string
+	UnsetTimeZone         bool
+	WorkflowId            string
+	Type                  string
+	TaskQueue             string
+	ExecutionTimeout      cliext.FlagDuration
+	UnsetExecutionTimeout bool
+	RunTimeout            cliext.FlagDuration
+	UnsetRunTimeout       bool
+	TaskTimeout           cliext.FlagDuration
+	UnsetTaskTimeout      bool
+	StaticSummary         string
+	UnsetStaticSummary    bool
+	StaticDetails         string
+	UnsetStaticDetails    bool
 }
 
 func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalSchedulePatchCommand {
@@ -2756,8 +2769,27 @@ func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalSched
 	s.Command.Flags().BoolVar(&s.UnsetJitter, "unset-jitter", false, "Clear the Schedule jitter.")
 	s.Command.Flags().StringVar(&s.TimeZone, "time-zone", "", "Set the Schedule time zone.")
 	s.Command.Flags().BoolVar(&s.UnsetTimeZone, "unset-time-zone", false, "Restore default Schedule time zone interpretation.")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Set the Workflow ID. An empty value is invalid.")
+	s.Command.Flags().StringVar(&s.Type, "type", "", "Set the Workflow Type name. An empty value is invalid. Aliased as \"--name\".")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Set the Workflow Task queue. An empty value is invalid.")
+	s.ExecutionTimeout = 0
+	s.Command.Flags().Var(&s.ExecutionTimeout, "execution-timeout", "Set the Workflow Execution timeout.")
+	s.Command.Flags().BoolVar(&s.UnsetExecutionTimeout, "unset-execution-timeout", false, "Remove the explicit Workflow Execution timeout.")
+	s.RunTimeout = 0
+	s.Command.Flags().Var(&s.RunTimeout, "run-timeout", "Set the Workflow Run timeout.")
+	s.Command.Flags().BoolVar(&s.UnsetRunTimeout, "unset-run-timeout", false, "Restore the inherited Workflow Run timeout.")
+	s.TaskTimeout = cliext.MustParseFlagDuration("10s")
+	s.Command.Flags().Var(&s.TaskTimeout, "task-timeout", "Set the Workflow Task timeout.")
+	s.Command.Flags().BoolVar(&s.UnsetTaskTimeout, "unset-task-timeout", false, "Restore the 10-second default Workflow Task timeout.")
+	s.Command.Flags().StringVar(&s.StaticSummary, "static-summary", "", "Set the static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
+	s.Command.Flags().BoolVar(&s.UnsetStaticSummary, "unset-static-summary", false, "Remove the static Workflow summary.")
+	s.Command.Flags().StringVar(&s.StaticDetails, "static-details", "", "Set the static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
+	s.Command.Flags().BoolVar(&s.UnsetStaticDetails, "unset-static-details", false, "Remove the static Workflow details.")
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"name": "type",
+	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

@@ -21,10 +21,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/internal/temporalcli"
+	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/schedule/v1"
+	sdkpb "go.temporal.io/api/sdk/v1"
 	"go.temporal.io/api/serviceerror"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
@@ -1281,6 +1285,9 @@ func (s *SharedServerSuite) TestSchedule_UpdateHelpExplainsFullReplacement() {
 func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPatchOptions() {
 	res := s.Execute("schedule", "patch", "--help")
 	s.NoError(res.Err)
+	normalizedHelp := strings.Join(strings.Fields(res.Stdout.String()), " ")
+	s.Regexp(`--static-summary string Set the static Workflow summary for human consumption in UIs\. Uses Temporal Markdown formatting, should be a single line\. EXPERIMENTAL\.`, normalizedHelp)
+	s.Regexp(`--static-details string Set the static Workflow details for human consumption in UIs\. Uses Temporal Markdown formatting, may be multiple lines\. EXPERIMENTAL\.`, normalizedHelp)
 	s.Contains(res.Stdout.String(), "--overlap-policy")
 	s.Contains(res.Stdout.String(), "--catchup-window")
 	s.Contains(res.Stdout.String(), "--unset-catchup-window")
@@ -1302,16 +1309,44 @@ func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPatchOptions() {
 		"--unset-jitter",
 		"--time-zone",
 		"--unset-time-zone",
+		"--workflow-id",
+		"--type",
+		"--task-queue",
+		"--execution-timeout",
+		"--unset-execution-timeout",
+		"--run-timeout",
+		"--unset-run-timeout",
+		"--task-timeout",
+		"--unset-task-timeout",
+		"--static-summary",
+		"--unset-static-summary",
+		"--static-details",
+		"--unset-static-details",
 	} {
 		s.Contains(res.Stdout.String(), option)
 	}
+	s.Contains(res.Stdout.String(), "Aliased as \"--name\"")
+	s.Contains(res.Stdout.String(), "Remove the explicit Workflow")
+	s.Contains(res.Stdout.String(), "Restore the inherited Workflow Run")
+	s.Contains(res.Stdout.String(), "Restore the 10-second default")
+	s.Contains(res.Stdout.String(), "Remove the static Workflow summary")
+	s.Contains(res.Stdout.String(), "Remove the static Workflow details")
 	s.Contains(res.Stdout.String(), "calendar, cron, and interval sources")
 	s.Contains(res.Stdout.String(), "Omitting cadence options preserves the existing cadence")
 	s.Contains(res.Stdout.String(), "`--cron '0 12 * * *'` to replace cadence")
 	s.Contains(res.Stdout.String(), "`--cadence-clear-all` to\nclear it")
 	s.Contains(res.Stdout.String(), "pause explicitly with `--paused=true` when needed")
-	s.Contains(res.Stdout.String(), "Clear all cadence sources only when the")
+	s.Contains(res.Stdout.String(), "Clear all cadence sources only when")
 	s.NotContains(res.Stdout.String(), "--headers")
+	s.NotContains(res.Stdout.String(), "--memo")
+	s.NotContains(res.Stdout.String(), "--search-attribute")
+	s.NotContains(res.Stdout.String(), "--input")
+	s.NotContains(res.Stdout.String(), "--priority-key")
+	s.NotContains(res.Stdout.String(), "--fairness-key")
+	s.NotContains(res.Stdout.String(), "--fairness-weight")
+	s.NotContains(res.Stdout.String(), "--unset-workflow-id")
+	s.NotContains(res.Stdout.String(), "--unset-type")
+	s.NotContains(res.Stdout.String(), "--unset-task-queue")
 
 	res = s.Execute("schedule", "update", "--help")
 	s.NoError(res.Err)
@@ -1642,6 +1677,726 @@ func (s *SharedServerSuite) TestSchedule_PatchSetsNotesWithSingleRawUpdate() {
 			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
 		})
 	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsWorkflowIdentityIndependently() {
+	describedSchedule := &schedule.Schedule{
+		Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{
+			StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+				WorkflowId:   "existing-workflow-id",
+				WorkflowType: &commonpb.WorkflowType{Name: "ExistingWorkflow"},
+				TaskQueue: &taskqueuepb.TaskQueue{
+					Name:       "existing-task-queue",
+					Kind:       enums.TASK_QUEUE_KIND_STICKY,
+					NormalName: "existing-normal-name",
+				},
+				WorkflowExecutionTimeout: durationpb.New(time.Hour),
+				WorkflowRunTimeout:       durationpb.New(30 * time.Minute),
+				WorkflowTaskTimeout:      durationpb.New(5 * time.Second),
+			},
+		}},
+		Spec:  &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+		State: &schedule.ScheduleState{Notes: "preserved notes"},
+	}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+	var describeCount int
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				describeCount++
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				response.ConflictToken = []byte("identity-conflict-token")
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name  string
+		args  []string
+		apply func(*workflowpb.NewWorkflowExecutionInfo)
+	}{
+		{name: "workflow ID", args: []string{"--workflow-id", "updated-workflow-id"}, apply: func(action *workflowpb.NewWorkflowExecutionInfo) { action.WorkflowId = "updated-workflow-id" }},
+		{name: "workflow type", args: []string{"--type", "UpdatedWorkflow"}, apply: func(action *workflowpb.NewWorkflowExecutionInfo) { action.WorkflowType.Name = "UpdatedWorkflow" }},
+		{name: "workflow type name alias", args: []string{"--name", "AliasedWorkflow"}, apply: func(action *workflowpb.NewWorkflowExecutionInfo) { action.WorkflowType.Name = "AliasedWorkflow" }},
+		{name: "task queue", args: []string{"--task-queue", "updated-task-queue"}, apply: func(action *workflowpb.NewWorkflowExecutionInfo) { action.TaskQueue.Name = "updated-task-queue" }},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			describeCount = 0
+			updateRequests = nil
+			res := s.Execute(append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id"}, tc.args...)...)
+			assert.NoError(t, res.Err)
+			assert.Equal(t, 1, describeCount)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) != 1 {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			tc.apply(expected.GetAction().GetStartWorkflow())
+			assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+
+	describedSchedule = &schedule.Schedule{Spec: &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}}}
+	describeCount = 0
+	updateRequests = nil
+	res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", "--workflow-id", "updated-workflow-id")
+	s.ErrorContains(res.Err, "Schedule action does not contain a StartWorkflow action")
+	s.Equal(1, describeCount)
+	s.Empty(updateRequests)
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchRejectsExactlyEmptyIdentityAndPreservesWhitespace() {
+	dialErr := errors.New("unexpected gRPC dial")
+	for _, tc := range []struct {
+		name          string
+		args          []string
+		errorContains string
+	}{
+		{name: "empty workflow ID", args: []string{"--workflow-id="}, errorContains: "workflow ID must not be empty"},
+		{name: "empty workflow type", args: []string{"--type="}, errorContains: "workflow type must not be empty"},
+		{name: "empty task queue", args: []string{"--task-queue="}, errorContains: "task queue must not be empty"},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			var dialAttempts atomic.Int32
+			options := s.CommandHarness.Options
+			options.Args = append([]string{"schedule", "patch", "--schedule-id", "schedule-id"}, tc.args...)
+			options.AdditionalClientGRPCDialOptions = append(
+				options.AdditionalClientGRPCDialOptions,
+				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+					dialAttempts.Add(1)
+					return nil, dialErr
+				}),
+			)
+			var commandErr error
+			options.Fail = func(err error) { commandErr = err }
+
+			temporalcli.Execute(context.Background(), options)
+
+			assert.ErrorContains(t, commandErr, tc.errorContains)
+			assert.Equal(t, int32(0), dialAttempts.Load())
+			assert.NotErrorIs(t, commandErr, dialErr)
+		})
+	}
+
+	describedSchedule := &schedule.Schedule{Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{
+		StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+			WorkflowId:   "existing-workflow-id",
+			WorkflowType: &commonpb.WorkflowType{Name: "ExistingWorkflow"},
+			TaskQueue:    &taskqueuepb.TaskQueue{Name: "existing-task-queue"},
+		},
+	}}}
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				reply.(*workflowservice.DescribeScheduleResponse).Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name  string
+		args  []string
+		value func(*workflowpb.NewWorkflowExecutionInfo) string
+	}{
+		{name: "workflow ID whitespace", args: []string{"--workflow-id", " \t "}, value: func(action *workflowpb.NewWorkflowExecutionInfo) string { return action.GetWorkflowId() }},
+		{name: "workflow type whitespace", args: []string{"--type", " \t "}, value: func(action *workflowpb.NewWorkflowExecutionInfo) string { return action.GetWorkflowType().GetName() }},
+		{name: "task queue whitespace", args: []string{"--task-queue", " \t "}, value: func(action *workflowpb.NewWorkflowExecutionInfo) string { return action.GetTaskQueue().GetName() }},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			updateRequests = nil
+			res := s.Execute(append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id"}, tc.args...)...)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) == 1 {
+				assert.Equal(t, " \t ", tc.value(updateRequests[0].GetSchedule().GetAction().GetStartWorkflow()))
+			}
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsPositiveWorkflowTimeoutsIndependently() {
+	describedSchedule := &schedule.Schedule{
+		Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{
+			StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+				WorkflowId:               "workflow-id",
+				WorkflowType:             &commonpb.WorkflowType{Name: "Workflow"},
+				TaskQueue:                &taskqueuepb.TaskQueue{Name: "task-queue"},
+				WorkflowExecutionTimeout: durationpb.New(time.Hour),
+				WorkflowRunTimeout:       durationpb.New(30 * time.Minute),
+				WorkflowTaskTimeout:      durationpb.New(5 * time.Second),
+			},
+		}},
+		Spec:  &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+		State: &schedule.ScheduleState{Notes: "preserved notes"},
+	}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				reply.(*workflowservice.DescribeScheduleResponse).Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name  string
+		flag  string
+		value time.Duration
+		apply func(*workflowpb.NewWorkflowExecutionInfo, *durationpb.Duration)
+	}{
+		{name: "execution timeout", flag: "--execution-timeout", value: 2 * time.Hour, apply: func(action *workflowpb.NewWorkflowExecutionInfo, value *durationpb.Duration) {
+			action.WorkflowExecutionTimeout = value
+		}},
+		{name: "run timeout", flag: "--run-timeout", value: 45 * time.Minute, apply: func(action *workflowpb.NewWorkflowExecutionInfo, value *durationpb.Duration) {
+			action.WorkflowRunTimeout = value
+		}},
+		{name: "task timeout", flag: "--task-timeout", value: 7 * time.Second, apply: func(action *workflowpb.NewWorkflowExecutionInfo, value *durationpb.Duration) {
+			action.WorkflowTaskTimeout = value
+		}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", tc.flag, tc.value.String())
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) != 1 {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			tc.apply(expected.GetAction().GetStartWorkflow(), durationpb.New(tc.value))
+			assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsExplicitZeroWorkflowTimeoutsAsPresent() {
+	describedSchedule := &schedule.Schedule{Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{
+		StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+			WorkflowId:   "workflow-id",
+			WorkflowType: &commonpb.WorkflowType{Name: "Workflow"},
+			TaskQueue:    &taskqueuepb.TaskQueue{Name: "task-queue"},
+		},
+	}}}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				reply.(*workflowservice.DescribeScheduleResponse).Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name string
+		flag string
+		get  func(*workflowpb.NewWorkflowExecutionInfo) *durationpb.Duration
+	}{
+		{name: "execution timeout", flag: "--execution-timeout", get: func(action *workflowpb.NewWorkflowExecutionInfo) *durationpb.Duration {
+			return action.GetWorkflowExecutionTimeout()
+		}},
+		{name: "run timeout", flag: "--run-timeout", get: func(action *workflowpb.NewWorkflowExecutionInfo) *durationpb.Duration {
+			return action.GetWorkflowRunTimeout()
+		}},
+		{name: "task timeout", flag: "--task-timeout", get: func(action *workflowpb.NewWorkflowExecutionInfo) *durationpb.Duration {
+			return action.GetWorkflowTaskTimeout()
+		}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", tc.flag, "0s")
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) != 1 {
+				return
+			}
+			got := tc.get(updateRequests[0].GetSchedule().GetAction().GetStartWorkflow())
+			assert.NotNil(t, got)
+			if got != nil {
+				assert.Equal(t, time.Duration(0), got.AsDuration())
+			}
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchResetsWorkflowTimeoutsToDistinctDefaults() {
+	describedSchedule := &schedule.Schedule{
+		Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{
+			StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+				WorkflowId:               "workflow-id",
+				WorkflowType:             &commonpb.WorkflowType{Name: "Workflow"},
+				TaskQueue:                &taskqueuepb.TaskQueue{Name: "task-queue"},
+				WorkflowExecutionTimeout: durationpb.New(time.Hour),
+				WorkflowRunTimeout:       durationpb.New(30 * time.Minute),
+				WorkflowTaskTimeout:      durationpb.New(5 * time.Second),
+			},
+		}},
+		State: &schedule.ScheduleState{Notes: "preserved notes"},
+	}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				reply.(*workflowservice.DescribeScheduleResponse).Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name  string
+		flag  string
+		apply func(*workflowpb.NewWorkflowExecutionInfo)
+	}{
+		{name: "execution timeout", flag: "--unset-execution-timeout", apply: func(action *workflowpb.NewWorkflowExecutionInfo) { action.WorkflowExecutionTimeout = nil }},
+		{name: "run timeout", flag: "--unset-run-timeout", apply: func(action *workflowpb.NewWorkflowExecutionInfo) { action.WorkflowRunTimeout = nil }},
+		{name: "task timeout", flag: "--unset-task-timeout", apply: func(action *workflowpb.NewWorkflowExecutionInfo) {
+			action.WorkflowTaskTimeout = durationpb.New(10 * time.Second)
+		}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", tc.flag)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) != 1 {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			tc.apply(expected.GetAction().GetStartWorkflow())
+			assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchRejectsTimeoutConflictsAndNegativesBeforeDial() {
+	dialErr := errors.New("unexpected gRPC dial")
+	for _, tc := range []struct {
+		name          string
+		args          []string
+		errorContains string
+	}{
+		{name: "execution timeout conflict", args: []string{"--execution-timeout", "1s", "--unset-execution-timeout"}, errorContains: "--execution-timeout and --unset-execution-timeout are mutually exclusive"},
+		{name: "run timeout conflict", args: []string{"--run-timeout", "1s", "--unset-run-timeout"}, errorContains: "--run-timeout and --unset-run-timeout are mutually exclusive"},
+		{name: "task timeout conflict", args: []string{"--task-timeout", "1s", "--unset-task-timeout"}, errorContains: "--task-timeout and --unset-task-timeout are mutually exclusive"},
+		{name: "negative execution timeout", args: []string{"--execution-timeout", "-1s"}, errorContains: "execution timeout must not be negative"},
+		{name: "negative run timeout", args: []string{"--run-timeout", "-1s"}, errorContains: "run timeout must not be negative"},
+		{name: "negative task timeout", args: []string{"--task-timeout", "-1s"}, errorContains: "task timeout must not be negative"},
+		{name: "static summary conflict", args: []string{"--static-summary", "summary", "--unset-static-summary"}, errorContains: "--static-summary and --unset-static-summary are mutually exclusive"},
+		{name: "static details conflict", args: []string{"--static-details", "details", "--unset-static-details"}, errorContains: "--static-details and --unset-static-details are mutually exclusive"},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			var dialAttempts atomic.Int32
+			options := s.CommandHarness.Options
+			options.Args = append([]string{"schedule", "patch", "--schedule-id", "schedule-id"}, tc.args...)
+			options.AdditionalClientGRPCDialOptions = append(
+				options.AdditionalClientGRPCDialOptions,
+				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+					dialAttempts.Add(1)
+					return nil, dialErr
+				}),
+			)
+			var commandErr error
+			options.Fail = func(err error) { commandErr = err }
+
+			temporalcli.Execute(context.Background(), options)
+
+			assert.ErrorContains(t, commandErr, tc.errorContains)
+			assert.Equal(t, int32(0), dialAttempts.Load())
+			assert.NotErrorIs(t, commandErr, dialErr)
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchSetsStaticMetadataIndependently() {
+	existingSummary, err := temporalcli.DataConverterWithRawValue.ToPayload("existing summary")
+	s.NoError(err)
+	existingDetails, err := temporalcli.DataConverterWithRawValue.ToPayload("existing details")
+	s.NoError(err)
+	metadata := &sdkpb.UserMetadata{Summary: existingSummary, Details: existingDetails}
+	metadata.ProtoReflect().SetUnknown([]byte{0xa0, 0x06, 0x01})
+	describedSchedule := &schedule.Schedule{Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{
+		StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+			WorkflowId:   "workflow-id",
+			WorkflowType: &commonpb.WorkflowType{Name: "Workflow"},
+			TaskQueue:    &taskqueuepb.TaskQueue{Name: "task-queue"},
+			UserMetadata: metadata,
+		},
+	}}}
+	describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				reply.(*workflowservice.DescribeScheduleResponse).Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name  string
+		flag  string
+		value string
+		apply func(*sdkpb.UserMetadata, *commonpb.Payload)
+	}{
+		{name: "summary", flag: "--static-summary", value: "updated summary", apply: func(metadata *sdkpb.UserMetadata, value *commonpb.Payload) { metadata.Summary = value }},
+		{name: "details", flag: "--static-details", value: "updated details", apply: func(metadata *sdkpb.UserMetadata, value *commonpb.Payload) { metadata.Details = value }},
+		{name: "explicit empty summary", flag: "--static-summary", value: "", apply: func(metadata *sdkpb.UserMetadata, value *commonpb.Payload) { metadata.Summary = value }},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", tc.flag, tc.value)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) != 1 {
+				return
+			}
+			expectedPayload, payloadErr := temporalcli.DataConverterWithRawValue.ToPayload(tc.value)
+			assert.NoError(t, payloadErr)
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			tc.apply(expected.GetAction().GetStartWorkflow().GetUserMetadata(), expectedPayload)
+			assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+			actualMetadata := updateRequests[0].GetSchedule().GetAction().GetStartWorkflow().GetUserMetadata()
+			assert.True(t, bytes.Equal([]byte{0xa0, 0x06, 0x01}, actualMetadata.ProtoReflect().GetUnknown()))
+			if tc.value == "" {
+				assert.Equal(t, "json/plain", string(expectedPayload.GetMetadata()["encoding"]))
+				assert.Equal(t, []byte(`""`), expectedPayload.GetData())
+			}
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchUnsetsStaticMetadataIndependently() {
+	existingSummary, err := temporalcli.DataConverterWithRawValue.ToPayload("existing summary")
+	s.NoError(err)
+	existingDetails, err := temporalcli.DataConverterWithRawValue.ToPayload("existing details")
+	s.NoError(err)
+	var describedSchedule *schedule.Schedule
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				reply.(*workflowservice.DescribeScheduleResponse).Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name     string
+		flag     string
+		metadata *sdkpb.UserMetadata
+		apply    func(*sdkpb.UserMetadata)
+	}{
+		{name: "summary", flag: "--unset-static-summary", metadata: &sdkpb.UserMetadata{Summary: existingSummary, Details: existingDetails}, apply: func(metadata *sdkpb.UserMetadata) { metadata.Summary = nil }},
+		{name: "details", flag: "--unset-static-details", metadata: &sdkpb.UserMetadata{Summary: existingSummary, Details: existingDetails}, apply: func(metadata *sdkpb.UserMetadata) { metadata.Details = nil }},
+		{name: "absent metadata", flag: "--unset-static-summary", metadata: nil, apply: func(*sdkpb.UserMetadata) {}},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			if tc.metadata != nil {
+				tc.metadata.ProtoReflect().SetUnknown([]byte{0xa0, 0x06, 0x01})
+			}
+			describedSchedule = &schedule.Schedule{Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{
+				StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+					WorkflowId:   "workflow-id",
+					WorkflowType: &commonpb.WorkflowType{Name: "Workflow"},
+					TaskQueue:    &taskqueuepb.TaskQueue{Name: "task-queue"},
+					UserMetadata: tc.metadata,
+				},
+			}}}
+			describedScheduleSnapshot := proto.Clone(describedSchedule).(*schedule.Schedule)
+			updateRequests = nil
+
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", tc.flag)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) != 1 {
+				return
+			}
+			expected := proto.Clone(describedSchedule).(*schedule.Schedule)
+			tc.apply(expected.GetAction().GetStartWorkflow().GetUserMetadata())
+			assert.True(t, proto.Equal(expected, updateRequests[0].GetSchedule()))
+			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchReappliesStaticSummaryAfterConflictRefresh() {
+	staleSummary, err := temporalcli.DataConverterWithRawValue.ToPayload("stale summary")
+	s.NoError(err)
+	staleDetails, err := temporalcli.DataConverterWithRawValue.ToPayload("stale details")
+	s.NoError(err)
+	refreshedSummary, err := temporalcli.DataConverterWithRawValue.ToPayload("refreshed summary")
+	s.NoError(err)
+	refreshedDetails, err := temporalcli.DataConverterWithRawValue.ToPayload("refreshed details")
+	s.NoError(err)
+	describedSchedules := []*schedule.Schedule{
+		{Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+			WorkflowId:   "stale-workflow-id",
+			WorkflowType: &commonpb.WorkflowType{Name: "StaleWorkflow"},
+			TaskQueue:    &taskqueuepb.TaskQueue{Name: "stale-task-queue"},
+			UserMetadata: &sdkpb.UserMetadata{Summary: staleSummary, Details: staleDetails},
+		}}}},
+		{Action: &schedule.ScheduleAction{Action: &schedule.ScheduleAction_StartWorkflow{StartWorkflow: &workflowpb.NewWorkflowExecutionInfo{
+			WorkflowId:   "refreshed-workflow-id",
+			WorkflowType: &commonpb.WorkflowType{Name: "RefreshedWorkflow"},
+			TaskQueue:    &taskqueuepb.TaskQueue{Name: "refreshed-task-queue"},
+			UserMetadata: &sdkpb.UserMetadata{Summary: refreshedSummary, Details: refreshedDetails},
+		}}}},
+	}
+	describedScheduleSnapshots := []*schedule.Schedule{
+		proto.Clone(describedSchedules[0]).(*schedule.Schedule),
+		proto.Clone(describedSchedules[1]).(*schedule.Schedule),
+	}
+	conflictTokens := [][]byte{[]byte("stale-token"), []byte("refreshed-token")}
+	var describeCount int
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedules[describeCount]).(*schedule.Schedule)
+				response.ConflictToken = append([]byte(nil), conflictTokens[describeCount]...)
+				describeCount++
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				if len(updateRequests) == 1 {
+					return status.Error(codes.FailedPrecondition, "mismatched conflict token")
+				}
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "schedule-id", "--static-summary", "requested summary")
+	s.NoError(res.Err)
+	s.Equal(2, describeCount)
+	s.Len(updateRequests, 2)
+	if len(updateRequests) != 2 {
+		return
+	}
+	requestedSummary, err := temporalcli.DataConverterWithRawValue.ToPayload("requested summary")
+	s.NoError(err)
+	for index, request := range updateRequests {
+		expected := proto.Clone(describedSchedules[index]).(*schedule.Schedule)
+		expected.GetAction().GetStartWorkflow().UserMetadata.Summary = requestedSummary
+		s.True(proto.Equal(expected, request.GetSchedule()))
+		s.Equal(conflictTokens[index], request.GetConflictToken())
+		s.NotEmpty(request.GetRequestId())
+		s.True(proto.Equal(describedScheduleSnapshots[index], describedSchedules[index]))
+	}
+	s.NotEqual(updateRequests[0].GetRequestId(), updateRequests[1].GetRequestId())
+	s.Equal("refreshed-task-queue", updateRequests[1].GetSchedule().GetAction().GetStartWorkflow().GetTaskQueue().GetName())
+	s.True(proto.Equal(refreshedDetails, updateRequests[1].GetSchedule().GetAction().GetStartWorkflow().GetUserMetadata().GetDetails()))
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchWorkflowActionLifecycleOnSharedServer() {
+	scheduleID, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--schedule-id", scheduleID,
+		"--workflow-id", "patched-workflow-id",
+		"--type", "PatchedWorkflow",
+		"--task-queue", "patched-task-queue",
+		"--execution-timeout", "2h",
+		"--run-timeout", "1h",
+		"--task-timeout", "7s",
+		"--static-summary", "patched summary",
+		"--static-details", "patched details",
+	)
+	s.NoError(res.Err)
+
+	expectedSummary, err := temporalcli.DataConverterWithRawValue.ToPayload("patched summary")
+	s.NoError(err)
+	expectedDetails, err := temporalcli.DataConverterWithRawValue.ToPayload("patched details")
+	s.NoError(err)
+	s.Eventually(func() bool {
+		res = s.Execute("schedule", "describe", "--address", s.Address(), "--schedule-id", scheduleID, "--output", "json")
+		if res.Err != nil {
+			return false
+		}
+		var description workflowservice.DescribeScheduleResponse
+		if err := temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &description, true); err != nil {
+			return false
+		}
+		action := description.GetSchedule().GetAction().GetStartWorkflow()
+		return action.GetWorkflowId() == "patched-workflow-id" &&
+			action.GetWorkflowType().GetName() == "PatchedWorkflow" &&
+			action.GetTaskQueue().GetName() == "patched-task-queue" &&
+			action.GetWorkflowExecutionTimeout().AsDuration() == 2*time.Hour &&
+			action.GetWorkflowRunTimeout().AsDuration() == time.Hour &&
+			action.GetWorkflowTaskTimeout().AsDuration() == 7*time.Second &&
+			proto.Equal(expectedSummary, action.GetUserMetadata().GetSummary()) &&
+			proto.Equal(expectedDetails, action.GetUserMetadata().GetDetails())
+	}, 10*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--schedule-id", scheduleID,
+		"--unset-execution-timeout",
+		"--unset-run-timeout",
+		"--unset-task-timeout",
+		"--unset-static-summary",
+		"--unset-static-details",
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		res = s.Execute("schedule", "describe", "--address", s.Address(), "--schedule-id", scheduleID, "--output", "json")
+		if res.Err != nil {
+			return false
+		}
+		var description workflowservice.DescribeScheduleResponse
+		if err := temporalcli.UnmarshalProtoJSONWithOptions(res.Stdout.Bytes(), &description, true); err != nil {
+			return false
+		}
+		action := description.GetSchedule().GetAction().GetStartWorkflow()
+		return action.GetWorkflowId() == "patched-workflow-id" &&
+			action.GetWorkflowType().GetName() == "PatchedWorkflow" &&
+			action.GetTaskQueue().GetName() == "patched-task-queue" &&
+			action.GetWorkflowExecutionTimeout() == nil &&
+			action.GetWorkflowRunTimeout() == nil &&
+			action.GetWorkflowTaskTimeout().AsDuration() == 10*time.Second &&
+			action.GetUserMetadata().GetSummary() == nil &&
+			action.GetUserMetadata().GetDetails() == nil
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestSchedule_PatchReplacesCadenceAggregate() {
