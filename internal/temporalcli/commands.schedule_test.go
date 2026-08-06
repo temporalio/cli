@@ -22,12 +22,14 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/schedule/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type failAfterWriter struct {
@@ -1484,6 +1486,427 @@ func (s *SharedServerSuite) TestSchedule_PatchSetsNotesWithSingleRawUpdate() {
 			assert.True(t, proto.Equal(describedScheduleSnapshot, describedSchedule))
 		})
 	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchRetriesExactConflictWithRefreshedState() {
+	const (
+		namespace  = "patch-conflict-namespace"
+		scheduleID = "patch-conflict-schedule"
+		identity   = "patch-conflict-identity"
+	)
+	conflictTokens := [][]byte{
+		[]byte("stale-conflict-token"),
+		[]byte("refreshed-conflict-token"),
+	}
+	describedSchedules := []*schedule.Schedule{
+		{
+			Spec:     &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+			Policies: &schedule.SchedulePolicies{},
+			State:    &schedule.ScheduleState{Notes: "stale notes"},
+		},
+		{
+			Spec: &schedule.ScheduleSpec{
+				CronString:   []string{"15 * * * *"},
+				TimezoneName: "America/New_York",
+			},
+			Policies: &schedule.SchedulePolicies{PauseOnFailure: true},
+			State: &schedule.ScheduleState{
+				Notes:            "concurrent notes",
+				Paused:           true,
+				LimitedActions:   true,
+				RemainingActions: 7,
+			},
+		},
+	}
+	describedScheduleSnapshots := []*schedule.Schedule{
+		proto.Clone(describedSchedules[0]).(*schedule.Schedule),
+		proto.Clone(describedSchedules[1]).(*schedule.Schedule),
+	}
+
+	var lock sync.Mutex
+	var describeRequests []*workflowservice.DescribeScheduleRequest
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests = append(describeRequests, proto.Clone(request).(*workflowservice.DescribeScheduleRequest))
+				describeIndex := len(describeRequests) - 1
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = proto.Clone(describedSchedules[describeIndex]).(*schedule.Schedule)
+				response.ConflictToken = append([]byte(nil), conflictTokens[describeIndex]...)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				updateAttempt := len(updateRequests)
+				lock.Unlock()
+				if updateAttempt == 1 {
+					// Additional dial interceptors run inside the SDK error interceptor, so return
+					// the wire status it converts to *serviceerror.FailedPrecondition for the command.
+					return status.Error(codes.FailedPrecondition, "mismatched conflict token")
+				}
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	res := s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--namespace", namespace,
+		"--identity", identity,
+		"--schedule-id", scheduleID,
+		"--notes", "requested notes",
+	)
+	s.NoError(res.Err)
+	s.Equal("Schedule patch submitted\n", res.Stdout.String())
+	s.Empty(res.Stderr.String())
+
+	lock.Lock()
+	gotDescribeRequests := append([]*workflowservice.DescribeScheduleRequest(nil), describeRequests...)
+	gotUpdateRequests := append([]*workflowservice.UpdateScheduleRequest(nil), updateRequests...)
+	lock.Unlock()
+	s.Len(gotDescribeRequests, 2)
+	s.Len(gotUpdateRequests, 2)
+	if len(gotDescribeRequests) != 2 || len(gotUpdateRequests) != 2 {
+		return
+	}
+
+	requestIDs := map[string]struct{}{}
+	for i := range 2 {
+		s.Equal(namespace, gotDescribeRequests[i].GetNamespace())
+		s.Equal(scheduleID, gotDescribeRequests[i].GetScheduleId())
+
+		updateRequest := gotUpdateRequests[i]
+		s.Equal(namespace, updateRequest.GetNamespace())
+		s.Equal(scheduleID, updateRequest.GetScheduleId())
+		s.Equal(conflictTokens[i], updateRequest.GetConflictToken())
+		s.Equal(identity, updateRequest.GetIdentity())
+		s.NotEmpty(updateRequest.GetRequestId())
+		_, exists := requestIDs[updateRequest.GetRequestId()]
+		s.False(exists)
+		requestIDs[updateRequest.GetRequestId()] = struct{}{}
+
+		expectedSchedule := proto.Clone(describedSchedules[i]).(*schedule.Schedule)
+		expectedSchedule.State.Notes = "requested notes"
+		s.True(proto.Equal(expectedSchedule, updateRequest.GetSchedule()))
+		s.True(proto.Equal(describedScheduleSnapshots[i], describedSchedules[i]))
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchStopsAfterThreeExactConflicts() {
+	const conflictMessage = "mismatched conflict token"
+	conflictErrors := make([]error, 3)
+	for i := range conflictErrors {
+		conflictStatus, err := status.New(codes.FailedPrecondition, conflictMessage).WithDetails(
+			wrapperspb.String(fmt.Sprintf("attempt-%d", i+1)),
+		)
+		if err != nil {
+			s.T().Fatalf("failed to construct conflict status: %v", err)
+		}
+		conflictErrors[i] = conflictStatus.Err()
+	}
+
+	var lock sync.Mutex
+	describeRequests := 0
+	updateRequests := 0
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests++
+				describeAttempt := describeRequests
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = &schedule.Schedule{State: &schedule.ScheduleState{Notes: "existing notes"}}
+				response.ConflictToken = []byte(fmt.Sprintf("conflict-token-%d", describeAttempt))
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests++
+				updateAttempt := updateRequests
+				lock.Unlock()
+				return conflictErrors[updateAttempt-1]
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	res := s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--schedule-id", "patch-repeated-conflict-schedule",
+		"--notes", "requested notes",
+	)
+	s.Error(res.Err)
+	s.NotContains(res.Stdout.String(), "Schedule patch submitted")
+	s.NotContains(res.Stderr.String(), "Schedule patch may already have been submitted")
+
+	conflictErr, ok := res.Err.(*serviceerror.FailedPrecondition)
+	if !assert.True(s.T(), ok) {
+		return
+	}
+	s.Equal(conflictMessage, conflictErr.Message)
+	details := conflictErr.Status().Details()
+	if !assert.Len(s.T(), details, 1) {
+		return
+	}
+	marker, ok := details[0].(*wrapperspb.StringValue)
+	if !assert.True(s.T(), ok) {
+		return
+	}
+	s.Equal("attempt-3", marker.GetValue())
+
+	lock.Lock()
+	gotDescribeRequests := describeRequests
+	gotUpdateRequests := updateRequests
+	lock.Unlock()
+	s.Equal(3, gotDescribeRequests)
+	s.Equal(3, gotUpdateRequests)
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchDoesNotRetryOtherTypedFailedPreconditions() {
+	var lock sync.Mutex
+	describeRequests := 0
+	updateRequests := 0
+	updateError := error(nil)
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests++
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = &schedule.Schedule{State: &schedule.ScheduleState{Notes: "existing notes"}}
+				response.ConflictToken = []byte("conflict-token")
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests++
+				err := updateError
+				lock.Unlock()
+				return err
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name    string
+		message string
+	}{
+		{name: "near-miss message", message: "mismatched conflict token "},
+		{name: "unrelated failure", message: "schedule is paused"},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			lock.Lock()
+			describeRequests = 0
+			updateRequests = 0
+			// The inner status is converted by the SDK to the concrete service error
+			// whose message the command must compare exactly.
+			updateError = status.Error(codes.FailedPrecondition, tc.message)
+			lock.Unlock()
+
+			res := s.Execute(
+				"schedule", "patch",
+				"--address", s.Address(),
+				"--schedule-id", "patch-other-precondition-schedule",
+				"--notes", "requested notes",
+			)
+			assert.Error(t, res.Err)
+			assert.NotContains(t, res.Stdout.String(), "Schedule patch submitted")
+			assert.NotContains(t, res.Stderr.String(), "Schedule patch may already have been submitted")
+			conflictErr, ok := res.Err.(*serviceerror.FailedPrecondition)
+			if assert.True(t, ok) {
+				assert.Equal(t, tc.message, conflictErr.Message)
+			}
+
+			lock.Lock()
+			gotDescribeRequests := describeRequests
+			gotUpdateRequests := updateRequests
+			lock.Unlock()
+			assert.Equal(t, 1, gotDescribeRequests)
+			assert.Equal(t, 1, gotUpdateRequests)
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchDoesNotRetryBroadOrAmbiguousErrors() {
+	var lock sync.Mutex
+	describeRequests := 0
+	updateRequests := 0
+	updateError := error(nil)
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		// WithUnaryInterceptor is prepended outside the SDK error interceptor. This
+		// lets the broad status case reach the command without typed conversion.
+		grpc.WithUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests++
+				lock.Unlock()
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = &schedule.Schedule{State: &schedule.ScheduleState{Notes: "existing notes"}}
+				response.ConflictToken = []byte("conflict-token")
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests++
+				err := updateError
+				lock.Unlock()
+				return err
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, tc := range []struct {
+		name string
+		err  error
+	}{
+		{
+			name: "broad status with exact conflict text",
+			err:  status.Error(codes.FailedPrecondition, "mismatched conflict token"),
+		},
+		{name: "deadline", err: context.DeadlineExceeded},
+		{name: "unavailable", err: status.Error(codes.Unavailable, "service unavailable")},
+		{name: "transport", err: io.ErrUnexpectedEOF},
+		{name: "ordinary", err: errors.New("ordinary update failure")},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			lock.Lock()
+			describeRequests = 0
+			updateRequests = 0
+			updateError = tc.err
+			lock.Unlock()
+
+			res := s.Execute(
+				"schedule", "patch",
+				"--address", s.Address(),
+				"--schedule-id", "patch-ambiguous-error-schedule",
+				"--notes", "requested notes",
+			)
+			assert.ErrorIs(t, res.Err, tc.err)
+			assert.NotContains(t, res.Stdout.String(), "Schedule patch submitted")
+			assert.NotContains(t, res.Stderr.String(), "Schedule patch may already have been submitted")
+
+			lock.Lock()
+			gotDescribeRequests := describeRequests
+			gotUpdateRequests := updateRequests
+			lock.Unlock()
+			assert.Equal(t, 1, gotDescribeRequests)
+			assert.Equal(t, 1, gotUpdateRequests)
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_PatchCommandDeadlineStopsDuringRefreshedDescribe() {
+	var lock sync.Mutex
+	describeRequests := 0
+	updateRequests := 0
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				lock.Lock()
+				describeRequests++
+				describeAttempt := describeRequests
+				lock.Unlock()
+				if describeAttempt == 2 {
+					<-ctx.Done()
+					return status.FromContextError(ctx.Err()).Err()
+				}
+				response := reply.(*workflowservice.DescribeScheduleResponse)
+				response.Schedule = &schedule.Schedule{State: &schedule.ScheduleState{Notes: "existing notes"}}
+				response.ConflictToken = []byte("stale-conflict-token")
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				lock.Lock()
+				updateRequests++
+				lock.Unlock()
+				return status.Error(codes.FailedPrecondition, "mismatched conflict token")
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	res := s.Execute(
+		"schedule", "patch",
+		"--address", s.Address(),
+		"--command-timeout", "500ms",
+		"--schedule-id", "patch-deadline-schedule",
+		"--notes", "requested notes",
+	)
+	s.Error(res.Err)
+	deadlineErr, ok := res.Err.(*serviceerror.DeadlineExceeded)
+	if assert.True(s.T(), ok) {
+		s.Equal(context.DeadlineExceeded.Error(), deadlineErr.Message)
+	}
+	s.NotContains(res.Stdout.String(), "Schedule patch submitted")
+	s.NotContains(res.Stderr.String(), "Schedule patch may already have been submitted")
+
+	lock.Lock()
+	gotDescribeRequests := describeRequests
+	gotUpdateRequests := updateRequests
+	lock.Unlock()
+	s.Equal(2, gotDescribeRequests)
+	s.Equal(1, gotUpdateRequests)
 }
 
 func (s *SharedServerSuite) TestSchedule_PatchUnsetsNotesWithSingleRawUpdate() {

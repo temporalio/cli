@@ -18,6 +18,7 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/proto"
@@ -569,6 +570,8 @@ func (i scheduleNotesPatchIntent) apply(schedule *schedpb.Schedule) {
 }
 
 func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) error {
+	const maxAttempts = 3
+
 	intent := scheduleNotesPatchIntent{
 		set:   c.Command.Flags().Changed("notes"),
 		unset: c.UnsetNotes,
@@ -587,26 +590,35 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	describeResponse, err := cl.WorkflowService().DescribeSchedule(cctx, &workflowservice.DescribeScheduleRequest{
-		Namespace:  c.Parent.Namespace,
-		ScheduleId: c.ScheduleId,
-	})
-	if err != nil {
-		return err
-	}
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		describeResponse, err := cl.WorkflowService().DescribeSchedule(cctx, &workflowservice.DescribeScheduleRequest{
+			Namespace:  c.Parent.Namespace,
+			ScheduleId: c.ScheduleId,
+		})
+		if err != nil {
+			return err
+		}
 
-	schedule := proto.Clone(describeResponse.Schedule).(*schedpb.Schedule)
-	intent.apply(schedule)
-	_, err = cl.WorkflowService().UpdateSchedule(cctx, &workflowservice.UpdateScheduleRequest{
-		Namespace:     c.Parent.Namespace,
-		ScheduleId:    c.ScheduleId,
-		Schedule:      schedule,
-		ConflictToken: describeResponse.ConflictToken,
-		Identity:      c.Parent.Identity,
-		RequestId:     uuid.NewString(),
-	})
-	if err != nil {
-		return err
+		schedule := proto.Clone(describeResponse.Schedule).(*schedpb.Schedule)
+		intent.apply(schedule)
+		if err := intent.validate(); err != nil {
+			return err
+		}
+		_, err = cl.WorkflowService().UpdateSchedule(cctx, &workflowservice.UpdateScheduleRequest{
+			Namespace:     c.Parent.Namespace,
+			ScheduleId:    c.ScheduleId,
+			Schedule:      schedule,
+			ConflictToken: describeResponse.ConflictToken,
+			Identity:      c.Parent.Identity,
+			RequestId:     uuid.NewString(),
+		})
+		if err == nil {
+			break
+		}
+		conflictErr, ok := err.(*serviceerror.FailedPrecondition)
+		if !ok || conflictErr.Message != "mismatched conflict token" || attempt == maxAttempts-1 {
+			return err
+		}
 	}
 	if err := cctx.Printer.PrintlnStrictErr("Schedule patch submitted"); err != nil {
 		fmt.Fprintln(cctx.Options.Stderr, "Schedule patch may already have been submitted")
