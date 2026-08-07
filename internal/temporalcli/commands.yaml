@@ -435,13 +435,15 @@ commands:
 
       Either `--activity-id` or `--query` must be specified.
 
-      Activity options can be updated in bulk with a visibility query list filter:
+      Workflow Activity options can be updated in bulk with a visibility query list filter:
 
       ```
       temporal activity update-options \
           --query 'WorkflowType="YourWorkflow"' \
           --task-queue NewTaskQueueName
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -608,12 +610,14 @@ commands:
           --reset-heartbeats
       ```
 
-      Activities can be unpaused in bulk via a visibility Query list filter:
+      Workflow Activities can be unpaused in bulk via a visibility Query list filter:
 
       ```
       temporal activity unpause \
           --query 'TemporalPauseInfo IS NOT NULL'
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -682,12 +686,14 @@ commands:
           --keep-paused
       ```
 
-      Activities can be reset in bulk with a visibility query list filter:
+      Workflow Activities can be reset in bulk with a visibility query list filter:
 
       ```
       temporal activity reset \
           --query 'WorkflowType="YourWorkflow"'
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
