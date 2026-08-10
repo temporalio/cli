@@ -10,7 +10,7 @@ import (
 
 func TestToScheduleActionAppliesPriorityKey(t *testing.T) {
 	action, err := toScheduleAction(&SharedWorkflowStartOptions{
-		PriorityKey: 2,
+		PriorityKey: 42,
 	}, &PayloadInputOptions{})
 	if err != nil {
 		t.Fatalf("toScheduleAction returned an unexpected error: %v", err)
@@ -20,8 +20,8 @@ func TestToScheduleActionAppliesPriorityKey(t *testing.T) {
 	if !ok {
 		t.Fatalf("toScheduleAction returned %T, want *client.ScheduleWorkflowAction", action)
 	}
-	if scheduleAction.Priority.PriorityKey != 2 {
-		t.Errorf("PriorityKey = %d, want 2", scheduleAction.Priority.PriorityKey)
+	if scheduleAction.Priority.PriorityKey != 42 {
+		t.Errorf("PriorityKey = %d, want 42", scheduleAction.Priority.PriorityKey)
 	}
 }
 
@@ -57,9 +57,10 @@ func TestToScheduleActionValidatesPriorityAndFairness(t *testing.T) {
 	}{
 		{name: "default priority and fairness", options: SharedWorkflowStartOptions{}},
 		{name: "minimum priority", options: SharedWorkflowStartOptions{PriorityKey: 1}},
-		{name: "maximum priority", options: SharedWorkflowStartOptions{PriorityKey: 5}},
+		{name: "server configured priority", options: SharedWorkflowStartOptions{PriorityKey: 6}},
+		{name: "maximum representable priority", options: SharedWorkflowStartOptions{PriorityKey: math.MaxInt32}},
 		{name: "negative priority", options: SharedWorkflowStartOptions{PriorityKey: -1}, wantErr: true},
-		{name: "priority above maximum", options: SharedWorkflowStartOptions{PriorityKey: 6}, wantErr: true},
+		{name: "priority above int32 maximum", options: SharedWorkflowStartOptions{PriorityKey: math.MaxInt32 + 1}, wantErr: true},
 		{name: "empty fairness key and zero weight", options: SharedWorkflowStartOptions{}},
 		{name: "64 byte fairness key", options: SharedWorkflowStartOptions{FairnessKey: strings.Repeat("a", 64)}},
 		{name: "65 byte fairness key", options: SharedWorkflowStartOptions{FairnessKey: strings.Repeat("a", 65)}, wantErr: true},

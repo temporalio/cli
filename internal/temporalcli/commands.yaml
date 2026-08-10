@@ -3147,10 +3147,22 @@ commands:
       - payload-input
 
   - name: temporal schedule patch
-    summary: Patch Schedule details
+    summary: Change selected Schedule fields
     description: |
-      Update individual Schedule fields without replacing the full Schedule
-      configuration.
+      Change selected fields on an existing Schedule while preserving
+      unspecified fields.
+
+      For example:
+
+      ```
+      temporal schedule patch \
+          --schedule-id "YourScheduleId" \
+          --notes "Runs every hour" \
+          --interval "1h"
+      ```
+
+      A successful command confirms that the patch was submitted, not that it
+      has been applied on every backend.
 
       Omitting cadence options preserves the existing cadence. Supplying any
       `--calendar`, `--cron`, or `--interval` value replaces all existing
@@ -3185,13 +3197,22 @@ commands:
         description: Total allowed actions. Zero means unlimited.
       - name: calendar
         type: string[]
-        description: Calendar JSON specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.
+        description: |
+          Calendar JSON specification. May be passed multiple times.
+          Supplying any cadence source replaces all existing calendar, cron,
+          and interval sources.
       - name: cron
         type: string[]
-        description: Cron expressions. Supplying any cadence source replaces all existing calendar, cron, and interval sources.
+        description: |
+          Cron expression. May be passed multiple times.
+          Supplying any cadence source replaces all existing calendar, cron,
+          and interval sources.
       - name: interval
         type: string[]
-        description: Interval specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.
+        description: |
+          Interval specification. May be passed multiple times.
+          Supplying any cadence source replaces all existing calendar, cron,
+          and interval sources.
       - name: cadence-clear-all
         type: bool
         description: Clear all cadence sources only when the resulting Schedule is paused.
@@ -5626,9 +5647,9 @@ option-sets:
       - name: priority-key
         type: int
         description: |
-          Priority key (1-5, lower numbers = higher priority).
-          Tasks in a queue should be processed in close-to-priority-order.
-          Default is 3 when not specified.
+          Priority key. Positive values are interpreted according to the
+          server-configured priority range. Lower values have higher priority.
+          Zero uses the server-configured default.
       - name: fairness-key
         type: string
         description: |

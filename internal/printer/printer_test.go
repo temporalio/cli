@@ -115,15 +115,6 @@ func TestPrinter_JSON(t *testing.T) {
 	require.Equal(t, "{\"foo\":\"bar\"}\n", buf.String())
 }
 
-func TestPrinter_PrintlnErrReturnsWriteFailure(t *testing.T) {
-	wantErr := errors.New("write failed")
-	p := printer.Printer{Output: writerFunc(func([]byte) (int, error) {
-		return 0, wantErr
-	})}
-
-	require.ErrorIs(t, p.PrintlnErr("not printed"), wantErr)
-}
-
 func TestPrinter_PrintlnStrictErrReturnsAcknowledgementWriteFailures(t *testing.T) {
 	const helperEnv = "TEMPORAL_CLI_PRINTER_STRICT_ACKNOWLEDGEMENT_EPIPE"
 	if os.Getenv(helperEnv) != "" {
@@ -209,6 +200,30 @@ func TestPrinter_StartListErrReturnsWriteFailure(t *testing.T) {
 	}
 
 	require.ErrorIs(t, p.StartListErr(), wantErr)
+}
+
+func TestPrinter_StartListErrCanStartNewListAfterWriteFailure(t *testing.T) {
+	wantErr := errors.New("write failed")
+	p := printer.Printer{
+		Output: writerFunc(func([]byte) (int, error) {
+			return 0, wantErr
+		}),
+		JSON:       true,
+		JSONIndent: "  ",
+	}
+	require.ErrorIs(t, p.StartListErr(), wantErr)
+
+	var output bytes.Buffer
+	p.Output = &output
+	require.NoError(t, p.StartListErr())
+	require.NoError(t, p.PrintStructured(map[string]string{"key": "value"}, printer.StructuredOptions{}))
+	require.NoError(t, p.EndListErr())
+	require.Equal(t, `[
+{
+  "key": "value"
+}
+]
+`, output.String())
 }
 
 func TestPrinter_EndListErrReturnsWriteFailure(t *testing.T) {
@@ -374,9 +389,6 @@ func TestPrinter_ErrorReturningMethodsExitSuccessfullyOnBrokenPipe(t *testing.T)
 		})
 		var err error
 		switch method {
-		case "println":
-			p := printer.Printer{Output: brokenPipeOutput}
-			err = p.PrintlnErr("not printed")
 		case "start-list":
 			p := printer.Printer{Output: brokenPipeOutput, JSON: true, JSONIndent: "  "}
 			err = p.StartListErr()
@@ -397,7 +409,7 @@ func TestPrinter_ErrorReturningMethodsExitSuccessfullyOnBrokenPipe(t *testing.T)
 		os.Exit(11)
 	}
 
-	for _, method := range []string{"println", "start-list", "print-structured", "end-list"} {
+	for _, method := range []string{"start-list", "print-structured", "end-list"} {
 		t.Run(method, func(t *testing.T) {
 			cmd := exec.Command(os.Args[0], "-test.run=^TestPrinter_ErrorReturningMethodsExitSuccessfullyOnBrokenPipe$")
 			cmd.Env = append(os.Environ(), helperEnv+"="+method)

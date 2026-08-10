@@ -247,7 +247,7 @@ func (v *SharedWorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringArrayVar(&v.Memo, "memo", nil, "Memo using 'KEY=\"VALUE\"' pairs. Use JSON values.")
 	f.StringVar(&v.StaticSummary, "static-summary", "", "Static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
 	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
-	f.IntVar(&v.PriorityKey, "priority-key", 0, "Priority key (1-5, lower numbers = higher priority). Tasks in a queue should be processed in close-to-priority-order. Default is 3 when not specified.")
+	f.IntVar(&v.PriorityKey, "priority-key", 0, "Priority key. Positive values are interpreted according to the server-configured priority range. Lower values have higher priority. Zero uses the server-configured default.")
 	f.StringVar(&v.FairnessKey, "fairness-key", "", "Fairness key (max 64 bytes) for proportional task dispatch. Tasks with same key share capacity based on their weight.")
 	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight [0.001-1000] for this fairness key. Keys are dispatched proportionally to their weights.")
 }
@@ -2741,11 +2741,11 @@ func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalSched
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "patch [flags]"
-	s.Command.Short = "Patch Schedule details"
+	s.Command.Short = "Change selected Schedule fields"
 	if hasHighlighting {
-		s.Command.Long = "Update individual Schedule fields without replacing the full Schedule\nconfiguration.\n\nOmitting cadence options preserves the existing cadence. Supplying any\n\x1b[1m--calendar\x1b[0m, \x1b[1m--cron\x1b[0m, or \x1b[1m--interval\x1b[0m value replaces all existing\ncalendar, cron, and interval sources. For example, use\n\x1b[1m--cron '0 12 * * *'\x1b[0m to replace cadence, or \x1b[1m--cadence-clear-all\x1b[0m to\nclear it. Cadence clear requires the resulting Schedule to be paused;\npause explicitly with \x1b[1m--paused=true\x1b[0m when needed."
+		s.Command.Long = "Change selected fields on an existing Schedule while preserving\nunspecified fields.\n\nFor example:\n\n\x1b[1mtemporal schedule patch \\\n    --schedule-id \"YourScheduleId\" \\\n    --notes \"Runs every hour\" \\\n    --interval \"1h\"\x1b[0m\n\nA successful command confirms that the patch was submitted, not that it\nhas been applied on every backend.\n\nOmitting cadence options preserves the existing cadence. Supplying any\n\x1b[1m--calendar\x1b[0m, \x1b[1m--cron\x1b[0m, or \x1b[1m--interval\x1b[0m value replaces all existing\ncalendar, cron, and interval sources. For example, use\n\x1b[1m--cron '0 12 * * *'\x1b[0m to replace cadence, or \x1b[1m--cadence-clear-all\x1b[0m to\nclear it. Cadence clear requires the resulting Schedule to be paused;\npause explicitly with \x1b[1m--paused=true\x1b[0m when needed."
 	} else {
-		s.Command.Long = "Update individual Schedule fields without replacing the full Schedule\nconfiguration.\n\nOmitting cadence options preserves the existing cadence. Supplying any\n`--calendar`, `--cron`, or `--interval` value replaces all existing\ncalendar, cron, and interval sources. For example, use\n`--cron '0 12 * * *'` to replace cadence, or `--cadence-clear-all` to\nclear it. Cadence clear requires the resulting Schedule to be paused;\npause explicitly with `--paused=true` when needed."
+		s.Command.Long = "Change selected fields on an existing Schedule while preserving\nunspecified fields.\n\nFor example:\n\n```\ntemporal schedule patch \\\n    --schedule-id \"YourScheduleId\" \\\n    --notes \"Runs every hour\" \\\n    --interval \"1h\"\n```\n\nA successful command confirms that the patch was submitted, not that it\nhas been applied on every backend.\n\nOmitting cadence options preserves the existing cadence. Supplying any\n`--calendar`, `--cron`, or `--interval` value replaces all existing\ncalendar, cron, and interval sources. For example, use\n`--cron '0 12 * * *'` to replace cadence, or `--cadence-clear-all` to\nclear it. Cadence clear requires the resulting Schedule to be paused;\npause explicitly with `--paused=true` when needed."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.CatchupWindow = 0
@@ -2756,9 +2756,9 @@ func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalSched
 	s.Command.Flags().BoolVar(&s.UnsetNotes, "unset-notes", false, "Clear the Schedule notes field.")
 	s.Command.Flags().BoolVar(&s.Paused, "paused", false, "Set whether the Schedule is paused.")
 	s.Command.Flags().IntVar(&s.RemainingActions, "remaining-actions", 0, "Total allowed actions. Zero means unlimited.")
-	s.Command.Flags().StringArrayVar(&s.Calendar, "calendar", nil, "Calendar JSON specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
-	s.Command.Flags().StringArrayVar(&s.Cron, "cron", nil, "Cron expressions. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
-	s.Command.Flags().StringArrayVar(&s.Interval, "interval", nil, "Interval specifications. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
+	s.Command.Flags().StringArrayVar(&s.Calendar, "calendar", nil, "Calendar JSON specification. May be passed multiple times. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
+	s.Command.Flags().StringArrayVar(&s.Cron, "cron", nil, "Cron expression. May be passed multiple times. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
+	s.Command.Flags().StringArrayVar(&s.Interval, "interval", nil, "Interval specification. May be passed multiple times. Supplying any cadence source replaces all existing calendar, cron, and interval sources.")
 	s.Command.Flags().BoolVar(&s.CadenceClearAll, "cadence-clear-all", false, "Clear all cadence sources only when the resulting Schedule is paused.")
 	s.Command.Flags().Var(&s.StartTime, "start-time", "Set the Schedule start time.")
 	s.Command.Flags().BoolVar(&s.UnsetStartTime, "unset-start-time", false, "Clear the Schedule start time.")

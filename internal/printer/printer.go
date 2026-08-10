@@ -56,22 +56,8 @@ func (p *Printer) Println(s ...string) {
 	p.Print(append(append([]string{}, s...), "\n")...)
 }
 
-// PrintlnErr prints a line in text output and returns the first write error.
-// It is ignored during JSON output.
-func (p *Printer) PrintlnErr(s ...string) error {
-	if p.JSON {
-		return nil
-	}
-	for _, v := range append(append([]string{}, s...), "\n") {
-		if err := p.writeStrSafeErr(v); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // PrintlnStrictErr prints a line in text output and returns the first write error.
-// Unlike PrintlnErr, it returns broken pipe errors to its caller.
+// It returns broken pipe errors to its caller.
 // It is ignored during JSON output.
 func (p *Printer) PrintlnStrictErr(s ...string) error {
 	if p.JSON {
@@ -119,7 +105,10 @@ func (p *Printer) StartListErr() error {
 	// Write initial bracket when non-jsonl
 	if p.JSON && p.JSONIndent != "" {
 		// Don't need newline, we count on initial object to do that
-		return p.writeSafeErr([]byte("["))
+		if err := p.writeSafeErr([]byte("[")); err != nil {
+			p.listMode, p.listModeFirstJSON = false, false
+			return err
+		}
 	}
 	return nil
 }
@@ -315,10 +304,6 @@ func (p *Printer) writeStr(s string) {
 
 func (p *Printer) writeStrErr(s string) error {
 	return p.writeErr([]byte(s))
-}
-
-func (p *Printer) writeStrSafeErr(s string) error {
-	return p.writeSafeErr([]byte(s))
 }
 
 type shortWriteCheckingWriter struct {

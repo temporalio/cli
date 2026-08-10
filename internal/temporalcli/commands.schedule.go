@@ -263,8 +263,8 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 	if len(sw.Headers) > 0 {
 		return nil, fmt.Errorf("headers are not supported for schedule actions")
 	}
-	if sw.PriorityKey < 0 || sw.PriorityKey > 5 {
-		return nil, fmt.Errorf("priority key must be between 0 and 5")
+	if sw.PriorityKey < 0 || sw.PriorityKey > math.MaxInt32 {
+		return nil, fmt.Errorf("priority key must be between 0 and %d", math.MaxInt32)
 	}
 	if len(sw.FairnessKey) > 64 {
 		return nil, fmt.Errorf("fairness key must be at most 64 bytes")
@@ -605,8 +605,35 @@ type schedulePatchIntent struct {
 	staticDetails         *commonpb.Payload
 }
 
+func (i schedulePatchIntent) hasAnyPatch() bool {
+	return i.notesSet || i.notesUnset || i.hasPolicyPatch() || i.pausedSet ||
+		i.remainingActionsSet || i.hasSpecPatch() || i.hasWorkflowActionPatch()
+}
+
+func (i schedulePatchIntent) hasPolicyPatch() bool {
+	return i.overlapSet || i.catchupSet || i.catchupUnset || i.pauseOnFailureSet
+}
+
+func (i schedulePatchIntent) hasSpecPatch() bool {
+	return i.hasCadenceSourcePatch() || i.cadenceClearAll || i.startTimeSet ||
+		i.startTimeUnset || i.endTimeSet || i.endTimeUnset || i.jitterSet ||
+		i.jitterUnset || i.timeZoneSet || i.timeZoneUnset
+}
+
+func (i schedulePatchIntent) hasCadenceSourcePatch() bool {
+	return i.calendarSet || i.cronSet || i.intervalSet
+}
+
+func (i schedulePatchIntent) hasWorkflowActionPatch() bool {
+	return i.workflowIDSet || i.workflowTypeSet || i.taskQueueSet ||
+		i.executionTimeoutSet || i.executionTimeoutUnset || i.runTimeoutSet ||
+		i.runTimeoutUnset || i.taskTimeoutSet || i.taskTimeoutUnset ||
+		i.staticSummarySet || i.staticSummaryUnset || i.staticDetailsSet ||
+		i.staticDetailsUnset
+}
+
 func (i schedulePatchIntent) validate() error {
-	if !i.notesSet && !i.notesUnset && !i.overlapSet && !i.catchupSet && !i.catchupUnset && !i.pauseOnFailureSet && !i.pausedSet && !i.remainingActionsSet && !i.calendarSet && !i.cronSet && !i.intervalSet && !i.cadenceClearAll && !i.startTimeSet && !i.startTimeUnset && !i.endTimeSet && !i.endTimeUnset && !i.jitterSet && !i.jitterUnset && !i.timeZoneSet && !i.timeZoneUnset && !i.workflowIDSet && !i.workflowTypeSet && !i.taskQueueSet && !i.executionTimeoutSet && !i.executionTimeoutUnset && !i.runTimeoutSet && !i.runTimeoutUnset && !i.taskTimeoutSet && !i.taskTimeoutUnset && !i.staticSummarySet && !i.staticSummaryUnset && !i.staticDetailsSet && !i.staticDetailsUnset {
+	if !i.hasAnyPatch() {
 		return errors.New("at least one patch operation is required")
 	}
 	if i.notesSet && i.notesUnset {
@@ -679,7 +706,7 @@ func (i schedulePatchIntent) validate() error {
 	if i.staticDetailsSet && i.staticDetailsUnset {
 		return errors.New("--static-details and --unset-static-details are mutually exclusive")
 	}
-	if i.cadenceClearAll && (i.calendarSet || i.cronSet || i.intervalSet) {
+	if i.cadenceClearAll && i.hasCadenceSourcePatch() {
 		return errors.New("--cadence-clear-all cannot be combined with a cadence source")
 	}
 	if i.jitterSet && i.jitter < 0 {
@@ -696,7 +723,7 @@ func (i schedulePatchIntent) validateResult(schedule *schedpb.Schedule) error {
 }
 
 func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) error {
-	if i.overlapSet || i.catchupSet || i.catchupUnset || i.pauseOnFailureSet {
+	if i.hasPolicyPatch() {
 		if schedule.Policies == nil {
 			schedule.Policies = &schedpb.SchedulePolicies{}
 		}
@@ -726,18 +753,18 @@ func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) error {
 		schedule.State.RemainingActions = int64(i.remainingActions)
 		schedule.State.LimitedActions = i.remainingActions > 0
 	}
-	if i.calendarSet || i.cronSet || i.intervalSet || i.cadenceClearAll || i.startTimeSet || i.startTimeUnset || i.endTimeSet || i.endTimeUnset || i.jitterSet || i.jitterUnset || i.timeZoneSet || i.timeZoneUnset {
+	if i.hasSpecPatch() {
 		if schedule.Spec == nil {
 			schedule.Spec = &schedpb.ScheduleSpec{}
 		}
 	}
-	if i.calendarSet || i.cronSet || i.intervalSet || i.cadenceClearAll {
+	if i.hasCadenceSourcePatch() || i.cadenceClearAll {
 		schedule.Spec.StructuredCalendar = nil
 		schedule.Spec.Calendar = nil
 		schedule.Spec.CronString = nil
 		schedule.Spec.Interval = nil
 	}
-	if i.calendarSet || i.cronSet || i.intervalSet {
+	if i.hasCadenceSourcePatch() {
 		schedule.Spec.CronString = append(append([]string(nil), i.calendar...), i.cron...)
 		schedule.Spec.Interval = append([]*schedpb.IntervalSpec(nil), i.interval...)
 	}
@@ -767,10 +794,10 @@ func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) error {
 		schedule.Spec.TimezoneName = ""
 		schedule.Spec.TimezoneData = nil
 	}
-	if i.workflowIDSet || i.workflowTypeSet || i.taskQueueSet || i.executionTimeoutSet || i.executionTimeoutUnset || i.runTimeoutSet || i.runTimeoutUnset || i.taskTimeoutSet || i.taskTimeoutUnset || i.staticSummarySet || i.staticSummaryUnset || i.staticDetailsSet || i.staticDetailsUnset {
+	if i.hasWorkflowActionPatch() {
 		startWorkflow := schedule.GetAction().GetStartWorkflow()
 		if startWorkflow == nil {
-			return errors.New("Schedule action does not contain a StartWorkflow action")
+			return errors.New("schedule action does not contain a StartWorkflow action")
 		}
 		if i.workflowIDSet {
 			startWorkflow.WorkflowId = i.workflowID
@@ -946,7 +973,7 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 			return fmt.Errorf("failed to encode static details: %w", err)
 		}
 	}
-	if intent.calendarSet || intent.cronSet || intent.intervalSet {
+	if intent.hasCadenceSourcePatch() {
 		intent.calendar, intent.interval, err = schedulePatchCadence(c.Calendar, c.Cron, c.Interval)
 		if err != nil {
 			return err
@@ -978,6 +1005,9 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 		})
 		if err != nil {
 			return err
+		}
+		if describeResponse.GetSchedule() == nil {
+			return fmt.Errorf("DescribeSchedule response for Schedule %q did not contain a Schedule", c.ScheduleId)
 		}
 
 		schedule := proto.Clone(describeResponse.Schedule).(*schedpb.Schedule)
