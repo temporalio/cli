@@ -73,10 +73,10 @@ func registerExtensionCommands(cmd *cobra.Command) {
 	// Shorter command paths first ensures the paths shown in the short description of placeholder commands
 	// point to the closest match
 	slices.SortFunc(extensionKeys, func(a, b string) int {
-		return cmp.Compare(strings.Count(a, " "), strings.Count(b, " "))
+		return cmp.Compare(strings.Count(a, "/"), strings.Count(b, "/"))
 	})
 	for _, extKey := range extensionKeys {
-		ext := strings.Split(extKey, " ")
+		ext := strings.Split(extKey, "/")
 		// Extension must be deeper than current command and share the same prefix
 		if len(ext) <= len(cmdPath) || !slices.Equal(ext[:len(cmdPath)], cmdPath) {
 			continue

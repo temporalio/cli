@@ -106,8 +106,8 @@ func TestHelp_AllFlag_ShowsExtensions(t *testing.T) {
 		require.NoError(t, os.Rename(fooPath, fooPath+".bak"))
 		require.NoError(t, os.Rename(fooBarPath, fooBarPath+".bak"))
 	} else {
-		require.NoError(t, os.Chmod(fooPath, 0644))
-		require.NoError(t, os.Chmod(fooBarPath, 0644))
+		require.NoError(t, os.Chmod(fooPath, 0o644))
+		require.NoError(t, os.Chmod(fooBarPath, 0o644))
 	}
 	res = h.Execute("help", "--all")
 	assert.NotContains(t, res.Stdout.String(), "foo")
@@ -140,4 +140,33 @@ func TestHelp_AllFlag_FirstInPathWins(t *testing.T) {
 	res := h.Execute("foo")
 	assert.Equal(t, "first\n", res.Stdout.String())
 	assert.NoError(t, res.Err)
+}
+
+func TestHelp_AllFlag_ShorterCommandPathWinsi(t *testing.T) {
+	// bin1/temporal-foo
+	// bin2/temporal-foo-bar
+	// bin1/something-nested
+	// bin2/something
+	// bin1/uncommon-prefix
+	h := newExtensionHarness(t)
+	binDir1 := h.binDir
+	binDir2 := t.TempDir()
+
+	// Set PATH with binDir1 before binDir2
+	oldPath := os.Getenv("PATH")
+	os.Setenv("PATH", binDir1+string(os.PathListSeparator)+binDir2+string(os.PathListSeparator)+oldPath)
+	t.Cleanup(func() { os.Setenv("PATH", oldPath) })
+
+	h.createExtension("temporal-foo", codeEchoArgs)
+	h.createExtension("temporal-something-nested", codeEchoArgs)
+	h.createExtension("temporal-sharedprefix-one", codeEchoArgs)
+	h.binDir = binDir2
+	h.createExtension("temporal-foo-bar", codeEchoArgs)
+	h.createExtension("temporal-something", codeEchoArgs)
+	h.createExtension("temporal-sharedprefix-two", codeEchoArgs)
+
+	res := h.Execute("help", "--all")
+	assert.Regexp(t, `foo\s+An extension command located at .*[\\/]temporal-foo`, res.Stdout.String())
+	assert.Regexp(t, `something\s+An extension command located at .*[\\/]temporal-something`, res.Stdout.String())
+	assert.Contains(t, res.Stdout.String(), "Extension commands under temporal sharedprefix")
 }

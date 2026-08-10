@@ -122,6 +122,8 @@ func tryExecuteExtension(cctx *CommandContext, tcmd *TemporalCommand) (error, bo
 // splitDelegatedCommands separates out commands that should be delegated to an extension
 // from the rest of the args given. These commands are inherently position-dependent, so they're
 // only treated specially when they're at the start of the list of arguments.
+//
+// The resulting slices should be treated as read-only. Do not append to or otherwise mutate them.
 func splitDelegatedCommands(args []string) ([]string, []string) {
 	if len(args) == 0 {
 		return args, args
@@ -283,7 +285,7 @@ func discoverExtensions() map[string]string {
 			}
 
 			path := extensionBinaryToCommandPath(baseName)
-			key := strings.Join(path, " ")
+			key := strings.Join(path, "/")
 			if extensions[key] != "" {
 				continue
 			}
