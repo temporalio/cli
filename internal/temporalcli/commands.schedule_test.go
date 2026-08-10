@@ -129,6 +129,27 @@ func (s *SharedServerSuite) executeWithStdout(stdout io.Writer, args ...string) 
 	return commandErr, stderr.String()
 }
 
+func (s *SharedServerSuite) stubScheduleListResponse(entries ...*schedule.ScheduleListEntry) {
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.ListSchedulesRequest); !ok {
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+			reply.(*workflowservice.ListSchedulesResponse).Schedules = entries
+			return nil
+		}),
+	)
+}
+
 func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId string, res *CommandResult) {
 	schedId = fmt.Sprintf("sched-%x", rand.Uint32())
 	schedWfId = fmt.Sprintf("my-wf-id-%x", rand.Uint32())
@@ -736,8 +757,7 @@ func (s *SharedServerSuite) TestSchedule_ListReturnsOpeningFailure() {
 }
 
 func (s *SharedServerSuite) TestSchedule_ListReturnsFirstItemWriteFailure() {
-	_, _, res := s.createSchedule("--interval", "10d")
-	s.NoError(res.Err)
+	s.stubScheduleListResponse(&schedule.ScheduleListEntry{ScheduleId: "first-item"})
 	wantErr := errors.New("stdout first item failed")
 	stdout := &failAfterWriter{err: wantErr}
 
@@ -753,8 +773,7 @@ func (s *SharedServerSuite) TestSchedule_ListReturnsFirstItemWriteFailure() {
 }
 
 func (s *SharedServerSuite) TestSchedule_ListFinalizesAfterItemFailureAndPreservesBothErrors() {
-	_, _, res := s.createSchedule("--interval", "10d")
-	s.NoError(res.Err)
+	s.stubScheduleListResponse(&schedule.ScheduleListEntry{ScheduleId: "first-item"})
 	itemErr := errors.New("stdout item failed")
 	finalizationErr := errors.New("stdout finalization also failed")
 	stdout := &failItemAndFinalizationWriter{
@@ -865,26 +884,9 @@ func (s *SharedServerSuite) TestSchedule_ListTextFinalizesAfterIteratorFailure()
 }
 
 func (s *SharedServerSuite) TestSchedule_ListReturnsMiddleItemWriteFailure() {
-	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
-		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
-		grpc.WithChainUnaryInterceptor(func(
-			ctx context.Context,
-			method string,
-			req any,
-			reply any,
-			cc *grpc.ClientConn,
-			invoker grpc.UnaryInvoker,
-			opts ...grpc.CallOption,
-		) error {
-			if _, ok := req.(*workflowservice.ListSchedulesRequest); !ok {
-				return invoker(ctx, method, req, reply, cc, opts...)
-			}
-			reply.(*workflowservice.ListSchedulesResponse).Schedules = []*schedule.ScheduleListEntry{
-				{ScheduleId: "first-item"},
-				{ScheduleId: "middle-item"},
-			}
-			return nil
-		}),
+	s.stubScheduleListResponse(
+		&schedule.ScheduleListEntry{ScheduleId: "first-item"},
+		&schedule.ScheduleListEntry{ScheduleId: "middle-item"},
 	)
 	wantErr := errors.New("stdout middle item failed")
 	stdout := &failOnJSONItemWriter{failItem: 2, err: wantErr}
@@ -903,25 +905,7 @@ func (s *SharedServerSuite) TestSchedule_ListReturnsMiddleItemWriteFailure() {
 }
 
 func (s *SharedServerSuite) TestSchedule_ListReturnsEveryItemSerializationFailure() {
-	var schedules []*schedule.ScheduleListEntry
-	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
-		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
-		grpc.WithChainUnaryInterceptor(func(
-			ctx context.Context,
-			method string,
-			req any,
-			reply any,
-			cc *grpc.ClientConn,
-			invoker grpc.UnaryInvoker,
-			opts ...grpc.CallOption,
-		) error {
-			if _, ok := req.(*workflowservice.ListSchedulesRequest); !ok {
-				return invoker(ctx, method, req, reply, cc, opts...)
-			}
-			reply.(*workflowservice.ListSchedulesResponse).Schedules = schedules
-			return nil
-		}),
-	)
+	dialOptions := s.CommandHarness.Options.AdditionalClientGRPCDialOptions
 
 	for _, testCase := range []struct {
 		name      string
@@ -945,7 +929,8 @@ func (s *SharedServerSuite) TestSchedule_ListReturnsEveryItemSerializationFailur
 		},
 	} {
 		s.T().Run(testCase.name, func(t *testing.T) {
-			schedules = testCase.schedules
+			s.CommandHarness.Options.AdditionalClientGRPCDialOptions = dialOptions
+			s.stubScheduleListResponse(testCase.schedules...)
 			var stdout bytes.Buffer
 
 			err, stderr := s.executeWithStdout(
@@ -964,8 +949,12 @@ func (s *SharedServerSuite) TestSchedule_ListReturnsEveryItemSerializationFailur
 }
 
 func (s *SharedServerSuite) TestSchedule_ListTextReturnsItemShortWrite() {
-	_, _, res := s.createSchedule("--interval", "10d")
-	s.NoError(res.Err)
+	s.stubScheduleListResponse(&schedule.ScheduleListEntry{
+		ScheduleId: "first-item",
+		Info: &schedule.ScheduleListInfo{
+			Spec: &schedule.ScheduleSpec{},
+		},
+	})
 	stdout := &shortWriteBuffer{}
 
 	err, stderr := s.executeWithStdout(
