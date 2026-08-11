@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/cliext"
@@ -95,6 +96,96 @@ func TestClientOptionsBuilder_NamespaceReplacementInAddress(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "my-namespace.api.temporal.io:7233", opts.HostPort)
+}
+
+// TestClientOptionsBuilder_TLSFlags asserts that every --tls-* flag is applied
+// whenever TLS is on, including when TLS is only implicitly enabled by --api-key.
+func TestClientOptionsBuilder_TLSFlags(t *testing.T) {
+	tests := []struct {
+		name   string
+		args   []string
+		verify func(*testing.T, client.Options)
+	}{
+		{
+			name: "server name with TLS implied by API key",
+			args: []string{"--api-key", "my-api-key", "--tls-server-name", "my-server-name"},
+			verify: func(t *testing.T, opts client.Options) {
+				require.NotNil(t, opts.ConnectionOptions.TLS)
+				assert.Equal(t, "my-server-name", opts.ConnectionOptions.TLS.ServerName)
+			},
+		},
+		{
+			name: "disable host verification with TLS implied by API key",
+			args: []string{"--api-key", "my-api-key", "--tls-disable-host-verification"},
+			verify: func(t *testing.T, opts client.Options) {
+				require.NotNil(t, opts.ConnectionOptions.TLS)
+				assert.True(t, opts.ConnectionOptions.TLS.InsecureSkipVerify)
+			},
+		},
+		{
+			name: "server name alone implies TLS",
+			args: []string{"--tls-server-name", "my-server-name"},
+			verify: func(t *testing.T, opts client.Options) {
+				require.NotNil(t, opts.ConnectionOptions.TLS)
+				assert.False(t, opts.ConnectionOptions.TLSDisabled)
+				assert.Equal(t, "my-server-name", opts.ConnectionOptions.TLS.ServerName)
+			},
+		},
+		{
+			name: "disable host verification alone implies TLS",
+			args: []string{"--tls-disable-host-verification"},
+			verify: func(t *testing.T, opts client.Options) {
+				require.NotNil(t, opts.ConnectionOptions.TLS)
+				assert.False(t, opts.ConnectionOptions.TLSDisabled)
+				assert.True(t, opts.ConnectionOptions.TLS.InsecureSkipVerify)
+			},
+		},
+		{
+			name: "server name with explicit TLS",
+			args: []string{"--tls", "--tls-server-name", "my-server-name"},
+			verify: func(t *testing.T, opts client.Options) {
+				require.NotNil(t, opts.ConnectionOptions.TLS)
+				assert.Equal(t, "my-server-name", opts.ConnectionOptions.TLS.ServerName)
+			},
+		},
+		{
+			name: "API key alone leaves server name unset",
+			args: []string{"--api-key", "my-api-key"},
+			verify: func(t *testing.T, opts client.Options) {
+				require.NotNil(t, opts.ConnectionOptions.TLS)
+				assert.Empty(t, opts.ConnectionOptions.TLS.ServerName)
+			},
+		},
+		{
+			name: "explicitly disabled TLS wins over server name",
+			args: []string{"--api-key", "my-api-key", "--tls-server-name", "my-server-name", "--tls=false"},
+			verify: func(t *testing.T, opts client.Options) {
+				assert.Nil(t, opts.ConnectionOptions.TLS)
+				assert.True(t, opts.ConnectionOptions.TLSDisabled)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var clientOptions cliext.ClientOptions
+			flags := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			clientOptions.BuildFlags(flags)
+			require.NoError(t, flags.Parse(tc.args))
+
+			builder := &cliext.ClientOptionsBuilder{
+				CommonOptions: cliext.CommonOptions{
+					DisableConfigFile: true,
+					DisableConfigEnv:  true,
+				},
+				ClientOptions: clientOptions,
+			}
+			opts, err := builder.Build(t.Context())
+
+			require.NoError(t, err)
+			tc.verify(t, opts)
+		})
+	}
 }
 
 func TestClientOptionsBuilder_OAuth_ValidToken(t *testing.T) {

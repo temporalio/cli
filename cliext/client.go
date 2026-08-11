@@ -156,7 +156,8 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 	// via envconfig.
 	if cfg.Tls ||
 		cfg.TlsCertPath != "" || cfg.TlsKeyPath != "" || cfg.TlsCaPath != "" ||
-		cfg.TlsCertData != "" || cfg.TlsKeyData != "" || cfg.TlsCaData != "" {
+		cfg.TlsCertData != "" || cfg.TlsKeyData != "" || cfg.TlsCaData != "" ||
+		cfg.TlsServerName != "" || cfg.TlsDisableHostVerification {
 		if profile.TLS == nil {
 			profile.TLS = &envconfig.ClientConfigTLS{}
 		}

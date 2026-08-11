@@ -171,11 +171,15 @@ option-sets:
         implied-env: TEMPORAL_TLS_SERVER_CA_CERT_DATA
       - name: tls-disable-host-verification
         type: bool
-        description: Disable TLS host-name verification.
+        description: |
+          Disable TLS host-name verification.
+          Enables TLS if it is not already enabled.
         implied-env: TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
       - name: tls-server-name
         type: string
-        description: Override target TLS server name.
+        description: |
+          Override target TLS server name.
+          Enables TLS if it is not already enabled.
         implied-env: TEMPORAL_TLS_SERVER_NAME
       - name: codec-endpoint
         type: string
