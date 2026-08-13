@@ -413,8 +413,8 @@ github.com/temporalio/sqlparser v0.0.0-20260722001706-17d16cfe1da5/go.mod h1:143
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tchannel-go v1.22.1-0.20260129151045-8706a1ab5f61 h1:v9EBEMJggmXGbVcIAjGQpKgEB+a9E/Q0brJ6fGWJvhQ=
 github.com/temporalio/tchannel-go v1.22.1-0.20260129151045-8706a1ab5f61/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
-github.com/temporalio/ui-server/v2 v2.53.1 h1:8qzE2AqhRjiDQHWJ6SNIB7cuPawzHS/U9UgUeDnm97I=
-github.com/temporalio/ui-server/v2 v2.53.1/go.mod h1:VQ+gPJiSMoOtKZo6JPAbGYT7MbuepdnzAJSfV6mHSbM=
+github.com/temporalio/ui-server/v2 v2.53.3 h1:93j28Rf6Nf24CzWSfpES394byllitRCtae3KcBFsDjw=
+github.com/temporalio/ui-server/v2 v2.53.3/go.mod h1:6fXawkDMr/cwBVa55MWhQdyZ0pQ9m6/3Hrtt4xu8AcA=
 github.com/tidwall/btree v1.8.1 h1:27ehoXvm5AG/g+1VxLS1SD3vRhp/H7LuEfwNvddEdmA=
 github.com/tidwall/btree v1.8.1/go.mod h1:jBbTdUWhSZClZWoDg54VnvV7/54modSOzDN7VXftj1A=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
@@ -475,8 +475,8 @@ go.opentelemetry.io/otel/trace v1.44.0 h1:jxF5CsGYCe74MCRx2X4g7WsY/VBKRqqpNvXlX/
 go.opentelemetry.io/otel/trace v1.44.0/go.mod h1:oLl1jrMQAVo6v3GAggN+1VH9VIz9iUSvW53sW1Q8PIE=
 go.opentelemetry.io/proto/otlp v1.10.0 h1:IQRWgT5srOCYfiWnpqUYz9CVmbO8bFmKcwYxpuCSL2g=
 go.opentelemetry.io/proto/otlp v1.10.0/go.mod h1:/CV4QoCR/S9yaPj8utp3lvQPoqMtxXdzn7ozvvozVqk=
-go.temporal.io/api v1.63.4 h1:p4dVIAP3dJop0MfcyH9QSzjU7+V/ttLDhxFhSRUar58=
-go.temporal.io/api v1.63.4/go.mod h1:SrlW2JMwVlDP4nRWSNznUFqnSHd+YeMDS1BkYo63HCQ=
+go.temporal.io/api v1.63.5 h1:c11+kPYHkXXL3UiShPdbMD+xtvqGsbTibUA9ypmiCa4=
+go.temporal.io/api v1.63.5/go.mod h1:SrlW2JMwVlDP4nRWSNznUFqnSHd+YeMDS1BkYo63HCQ=
 go.temporal.io/auto-scaled-workers v0.0.0-20260706201056-4320b34799ee h1:y6A65Iml06cR3CpxW2Zn8FQLjniPDTnN4jtr69UZxXI=
 go.temporal.io/auto-scaled-workers v0.0.0-20260706201056-4320b34799ee/go.mod h1:hhHijO9XRPIkAflLJJHix61M9FzbRPqk8fSydkcLkqw=
 go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab h1:iF9QRS220GeFyNWdiKx+jvQl6LAvZdXGStRCWnU5pZw=
