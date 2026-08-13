@@ -263,17 +263,8 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 	if len(sw.Headers) > 0 {
 		return nil, fmt.Errorf("headers are not supported for schedule actions")
 	}
-	if sw.PriorityKey < 0 || sw.PriorityKey > math.MaxInt32 {
-		return nil, fmt.Errorf("priority key must be between 0 and %d", math.MaxInt32)
-	}
-	if len(sw.FairnessKey) > 64 {
-		return nil, fmt.Errorf("fairness key must be at most 64 bytes")
-	}
-	if math.IsNaN(float64(sw.FairnessWeight)) ||
-		sw.FairnessWeight < 0 ||
-		(sw.FairnessWeight > 0 && sw.FairnessWeight < 0.001) ||
-		sw.FairnessWeight > 1000 {
-		return nil, fmt.Errorf("fairness weight must be between 0.001 and 1000")
+	if sw.PriorityKey < math.MinInt32 || sw.PriorityKey > math.MaxInt32 {
+		return nil, fmt.Errorf("priority key must be between %d and %d", math.MinInt32, math.MaxInt32)
 	}
 
 	opts, err := buildStartOptions(sw, &WorkflowStartOptions{})
@@ -569,7 +560,7 @@ type schedulePatchIntent struct {
 	calendar              []string
 	cron                  []string
 	interval              []*schedpb.IntervalSpec
-	cadenceClearAll       bool
+	specClearAll          bool
 	startTimeSet          bool
 	startTimeUnset        bool
 	startTime             *timestamppb.Timestamp
@@ -615,12 +606,12 @@ func (i schedulePatchIntent) hasPolicyPatch() bool {
 }
 
 func (i schedulePatchIntent) hasSpecPatch() bool {
-	return i.hasCadenceSourcePatch() || i.cadenceClearAll || i.startTimeSet ||
+	return i.hasScheduleSpecSourcePatch() || i.specClearAll || i.startTimeSet ||
 		i.startTimeUnset || i.endTimeSet || i.endTimeUnset || i.jitterSet ||
 		i.jitterUnset || i.timeZoneSet || i.timeZoneUnset
 }
 
-func (i schedulePatchIntent) hasCadenceSourcePatch() bool {
+func (i schedulePatchIntent) hasScheduleSpecSourcePatch() bool {
 	return i.calendarSet || i.cronSet || i.intervalSet
 }
 
@@ -706,8 +697,8 @@ func (i schedulePatchIntent) validate() error {
 	if i.staticDetailsSet && i.staticDetailsUnset {
 		return errors.New("--static-details and --unset-static-details are mutually exclusive")
 	}
-	if i.cadenceClearAll && i.hasCadenceSourcePatch() {
-		return errors.New("--cadence-clear-all cannot be combined with a cadence source")
+	if i.specClearAll && i.hasScheduleSpecSourcePatch() {
+		return errors.New("--spec-clear-all cannot be combined with --calendar, --cron, or --interval")
 	}
 	if i.jitterSet && i.jitter < 0 {
 		return errors.New("jitter must not be negative")
@@ -716,8 +707,8 @@ func (i schedulePatchIntent) validate() error {
 }
 
 func (i schedulePatchIntent) validateResult(schedule *schedpb.Schedule) error {
-	if i.cadenceClearAll && !schedule.GetState().GetPaused() {
-		return errors.New("--cadence-clear-all requires the Schedule to be paused; use --paused=true to pause explicitly")
+	if i.specClearAll && !schedule.GetState().GetPaused() {
+		return errors.New("--spec-clear-all requires the Schedule to be paused; use --paused=true to pause explicitly")
 	}
 	return nil
 }
@@ -758,13 +749,13 @@ func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) error {
 			schedule.Spec = &schedpb.ScheduleSpec{}
 		}
 	}
-	if i.hasCadenceSourcePatch() || i.cadenceClearAll {
+	if i.hasScheduleSpecSourcePatch() || i.specClearAll {
 		schedule.Spec.StructuredCalendar = nil
 		schedule.Spec.Calendar = nil
 		schedule.Spec.CronString = nil
 		schedule.Spec.Interval = nil
 	}
-	if i.hasCadenceSourcePatch() {
+	if i.hasScheduleSpecSourcePatch() {
 		schedule.Spec.CronString = append(append([]string(nil), i.calendar...), i.cron...)
 		schedule.Spec.Interval = append([]*schedpb.IntervalSpec(nil), i.interval...)
 	}
@@ -864,7 +855,7 @@ func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) error {
 	return nil
 }
 
-func schedulePatchCadence(calendar, cron, intervals []string) ([]string, []*schedpb.IntervalSpec, error) {
+func parseScheduleSpecSources(calendar, cron, intervals []string) ([]string, []*schedpb.IntervalSpec, error) {
 	calendarCron := make([]string, 0, len(calendar))
 	for _, calendarJSON := range calendar {
 		var calendarSpec schedpb.CalendarSpec
@@ -876,12 +867,6 @@ func schedulePatchCadence(calendar, cron, intervals []string) ([]string, []*sche
 			return nil, nil, err
 		}
 		calendarCron = append(calendarCron, calendarCronString)
-	}
-	for _, cronString := range cron {
-		trimmedCronString := strings.TrimSpace(cronString)
-		if strings.HasPrefix(trimmedCronString, "TZ=") || strings.HasPrefix(trimmedCronString, "CRON_TZ=") {
-			return nil, nil, errors.New("cron time zones are not supported; use --time-zone")
-		}
 	}
 	intervalSpecs := make([]*schedpb.IntervalSpec, 0, len(intervals))
 	for _, intervalString := range intervals {
@@ -928,7 +913,7 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 		cronSet:               c.Command.Flags().Changed("cron"),
 		intervalSet:           c.Command.Flags().Changed("interval"),
 		cron:                  c.Cron,
-		cadenceClearAll:       c.CadenceClearAll,
+		specClearAll:          c.SpecClearAll,
 		startTimeSet:          c.Command.Flags().Changed("start-time"),
 		startTimeUnset:        c.UnsetStartTime,
 		startTime:             timestamppb.New(c.StartTime.Time()),
@@ -973,8 +958,8 @@ func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) 
 			return fmt.Errorf("failed to encode static details: %w", err)
 		}
 	}
-	if intent.hasCadenceSourcePatch() {
-		intent.calendar, intent.interval, err = schedulePatchCadence(c.Calendar, c.Cron, c.Interval)
+	if intent.hasScheduleSpecSourcePatch() {
+		intent.calendar, intent.interval, err = parseScheduleSpecSources(c.Calendar, c.Cron, c.Interval)
 		if err != nil {
 			return err
 		}

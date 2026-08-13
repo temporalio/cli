@@ -3170,12 +3170,13 @@ commands:
       A successful command confirms that the patch was submitted, not that it
       has been applied on every backend.
 
-      Omitting cadence options preserves the existing cadence. Supplying any
-      `--calendar`, `--cron`, or `--interval` value replaces all existing
-      calendar, cron, and interval sources. For example, use
-      `--cron '0 12 * * *'` to replace cadence, or `--cadence-clear-all` to
-      clear it. Cadence clear requires the resulting Schedule to be paused;
-      pause explicitly with `--paused=true` when needed.
+      When none of `--calendar`, `--cron`, or `--interval` is supplied,
+      existing calendar, cron, and interval specifications are preserved.
+      Supplying any of them replaces all existing calendar, cron, and interval
+      specifications. `--spec-clear-all` removes all existing calendar, cron,
+      and interval specifications.
+      Exclusion calendars, start time, end time, jitter, and time zone are
+      preserved unless separately changed.
     option-sets:
       - schedule-id
       - overlap-policy
@@ -3205,23 +3206,23 @@ commands:
         type: string[]
         description: |
           Calendar JSON specification. May be passed multiple times.
-          Supplying any cadence source replaces all existing calendar, cron,
-          and interval sources.
+          Supplying any calendar, cron, or interval value replaces all existing
+          calendar, cron, and interval specifications.
       - name: cron
         type: string[]
         description: |
           Cron expression. May be passed multiple times.
-          Supplying any cadence source replaces all existing calendar, cron,
-          and interval sources.
+          Supplying any calendar, cron, or interval value replaces all existing
+          calendar, cron, and interval specifications.
       - name: interval
         type: string[]
         description: |
           Interval specification. May be passed multiple times.
-          Supplying any cadence source replaces all existing calendar, cron,
-          and interval sources.
-      - name: cadence-clear-all
+          Supplying any calendar, cron, or interval value replaces all existing
+          calendar, cron, and interval specifications.
+      - name: spec-clear-all
         type: bool
-        description: Clear all cadence sources only when the resulting Schedule is paused.
+        description: Clear all calendar, cron, and interval specifications from the Schedule Spec. Exclusion calendars and other Schedule Spec fields are preserved. Requires the resulting Schedule to be paused.
       - name: start-time
         type: timestamp
         description: Set the Schedule start time.
@@ -5653,18 +5654,17 @@ option-sets:
       - name: priority-key
         type: int
         description: |
-          Priority key. Positive values are interpreted according to the
-          server-configured priority range. Lower values have higher priority.
+          Priority key passed to the server. Lower values have higher priority.
           Zero uses the server-configured default.
       - name: fairness-key
         type: string
         description: |
-          Fairness key (max 64 bytes) for proportional task dispatch.
+          Fairness key for proportional task dispatch.
           Tasks with same key share capacity based on their weight.
       - name: fairness-weight
         type: float
         description: |
-          Weight [0.001-1000] for this fairness key.
+          Weight for this fairness key.
           Keys are dispatched proportionally to their weights.
 
   - name: workflow-start

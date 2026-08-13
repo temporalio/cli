@@ -63,7 +63,7 @@ func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPatchOptions() {
 		"--calendar",
 		"--cron",
 		"--interval",
-		"--cadence-clear-all",
+		"--spec-clear-all",
 		"--start-time",
 		"--unset-start-time",
 		"--end-time",
@@ -94,12 +94,12 @@ func (s *SharedServerSuite) TestSchedule_PatchHelpRegistersPatchOptions() {
 	s.Contains(res.Stdout.String(), "Restore the 10-second default")
 	s.Contains(res.Stdout.String(), "Remove the static Workflow summary")
 	s.Contains(res.Stdout.String(), "Remove the static Workflow details")
-	s.Contains(res.Stdout.String(), "calendar, cron, and interval sources")
-	s.Contains(res.Stdout.String(), "Omitting cadence options preserves the existing cadence")
-	s.Contains(res.Stdout.String(), "`--cron '0 12 * * *'` to replace cadence")
-	s.Contains(normalizedHelp, "`--cadence-clear-all` to clear it")
-	s.Contains(res.Stdout.String(), "pause explicitly with `--paused=true` when needed")
-	s.Contains(res.Stdout.String(), "Clear all cadence sources only when")
+	s.Contains(normalizedHelp, "When none of `--calendar`, `--cron`, or `--interval` is supplied, existing calendar, cron, and interval specifications are preserved.")
+	s.Contains(normalizedHelp, "Supplying any of them replaces all existing calendar, cron, and interval specifications.")
+	s.Contains(normalizedHelp, "`--spec-clear-all` removes all existing calendar, cron, and interval specifications.")
+	s.Contains(normalizedHelp, "Exclusion calendars, start time, end time, jitter, and time zone are preserved unless separately changed.")
+	s.Contains(normalizedHelp, "Clear all calendar, cron, and interval specifications from the Schedule Spec. Exclusion calendars and other Schedule Spec fields are preserved. Requires the resulting Schedule to be paused.")
+	s.NotContains(strings.ToLower(res.Stdout.String()), "cadence")
 	s.NotContains(res.Stdout.String(), "--headers")
 	s.NotContains(res.Stdout.String(), "--memo")
 	s.NotContains(res.Stdout.String(), "--search-attribute")
@@ -197,6 +197,49 @@ func (s *SharedServerSuite) TestSchedule_PatchRejectsInvalidArgumentsBeforeMutat
 	}
 }
 
+func (s *SharedServerSuite) TestSchedule_PatchForwardsCronTimeZonePrefixesUnchanged() {
+	describedSchedule := &schedule.Schedule{
+		Spec:  &schedule.ScheduleSpec{CronString: []string{"0 12 * * *"}},
+		State: &schedule.ScheduleState{},
+	}
+	var updateRequests []*workflowservice.UpdateScheduleRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string,
+			req any,
+			reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			switch request := req.(type) {
+			case *workflowservice.DescribeScheduleRequest:
+				reply.(*workflowservice.DescribeScheduleResponse).Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
+				return nil
+			case *workflowservice.UpdateScheduleRequest:
+				updateRequests = append(updateRequests, proto.Clone(request).(*workflowservice.UpdateScheduleRequest))
+				return nil
+			default:
+				return invoker(ctx, method, req, reply, cc, opts...)
+			}
+		}),
+	)
+
+	for _, cron := range []string{"TZ=UTC 0 12 * * *", "CRON_TZ=UTC 0 12 * * *"} {
+		s.T().Run(cron, func(t *testing.T) {
+			updateRequests = nil
+			res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "time-zone-prefix", "--cron", cron)
+			assert.NoError(t, res.Err)
+			assert.Len(t, updateRequests, 1)
+			if len(updateRequests) == 1 {
+				assert.Equal(t, []string{cron}, updateRequests[0].GetSchedule().GetSpec().GetCronString())
+			}
+		})
+	}
+}
+
 func (s *SharedServerSuite) TestSchedule_PatchSemanticValidationFailsBeforeDial() {
 	dialErr := errors.New("unexpected gRPC dial")
 
@@ -241,20 +284,14 @@ func (s *SharedServerSuite) TestSchedule_PatchSemanticValidationFailsBeforeDial(
 		{name: "negative interval phase", args: []string{"--schedule-id", "schedule-id", "--interval", "1h/-1s"}, errorContains: "interval phase must not be negative"},
 		{name: "interval phase too large", args: []string{"--schedule-id", "schedule-id", "--interval", "1h/1h"}, errorContains: "interval phase must be less than the interval"},
 		{name: "negative jitter", args: []string{"--schedule-id", "schedule-id", "--jitter", "-1s"}, errorContains: "jitter must not be negative"},
-		{name: "TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
-		{name: "CRON_TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "CRON_TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
-		{name: "leading space TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", " TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
-		{name: "leading tab TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "\tTZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
-		{name: "leading space CRON_TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", " CRON_TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
-		{name: "leading tab CRON_TZ cron time zone", args: []string{"--schedule-id", "schedule-id", "--cron", "\tCRON_TZ=UTC 0 12 * * *"}, errorContains: "use --time-zone"},
 		{name: "start timestamp before protobuf range", args: []string{"--schedule-id", "schedule-id", "--start-time", "0000-01-01T00:00:00Z"}, errorContains: "invalid start time"},
 		{name: "start timestamp normalized before protobuf range", args: []string{"--schedule-id", "schedule-id", "--start-time", "0001-01-01T00:00:00+14:00"}, errorContains: "invalid start time"},
 		{name: "end timestamp normalized after protobuf range", args: []string{"--schedule-id", "schedule-id", "--end-time", "9999-12-31T23:59:59-14:00"}, errorContains: "invalid end time"},
 		{name: "empty time zone set", args: []string{"--schedule-id", "schedule-id", "--time-zone="}, errorContains: "use --unset-time-zone"},
 		{name: "whitespace time zone set", args: []string{"--schedule-id", "schedule-id", "--time-zone", " \t "}, errorContains: "use --unset-time-zone"},
-		{name: "clear and calendar", args: []string{"--schedule-id", "schedule-id", "--cadence-clear-all", "--calendar", `{"minute":"5"}`}, errorContains: "cannot be combined"},
-		{name: "clear and cron", args: []string{"--schedule-id", "schedule-id", "--cadence-clear-all", "--cron", "0 12 * * *"}, errorContains: "cannot be combined"},
-		{name: "clear and interval", args: []string{"--schedule-id", "schedule-id", "--cadence-clear-all", "--interval", "1h"}, errorContains: "cannot be combined"},
+		{name: "clear and calendar", args: []string{"--schedule-id", "schedule-id", "--spec-clear-all", "--calendar", `{"minute":"5"}`}, errorContains: "cannot be combined"},
+		{name: "clear and cron", args: []string{"--schedule-id", "schedule-id", "--spec-clear-all", "--cron", "0 12 * * *"}, errorContains: "cannot be combined"},
+		{name: "clear and interval", args: []string{"--schedule-id", "schedule-id", "--spec-clear-all", "--interval", "1h"}, errorContains: "cannot be combined"},
 		{
 			name:          "empty schedule ID",
 			args:          []string{"--schedule-id=", "--notes", "note"},
@@ -1183,8 +1220,8 @@ func (s *SharedServerSuite) TestSchedule_PatchSetsWorkflowFieldsAndRestoresOptio
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchReplacesCadenceAggregate() {
-	const scheduleID = "patch-cadence-schedule"
+func (s *SharedServerSuite) TestSchedule_PatchReplacesScheduleSpecSourceGroups() {
+	const scheduleID = "patch-spec-sources-schedule"
 	describedSchedule := &schedule.Schedule{
 		Spec: &schedule.ScheduleSpec{
 			StructuredCalendar:        []*schedule.StructuredCalendarSpec{{}},
@@ -1211,7 +1248,7 @@ func (s *SharedServerSuite) TestSchedule_PatchReplacesCadenceAggregate() {
 			case *workflowservice.DescribeScheduleRequest:
 				response := reply.(*workflowservice.DescribeScheduleResponse)
 				response.Schedule = proto.Clone(describedSchedule).(*schedule.Schedule)
-				response.ConflictToken = []byte("cadence-token")
+				response.ConflictToken = []byte("spec-sources-token")
 				return nil
 			case *workflowservice.UpdateScheduleRequest:
 				lock.Lock()
@@ -1262,7 +1299,7 @@ func (s *SharedServerSuite) TestSchedule_PatchReplacesCadenceAggregate() {
 	}
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchOmitsCadenceWithoutChangingIt() {
+func (s *SharedServerSuite) TestSchedule_PatchPreservesScheduleSpecSourceGroupsWhenOmitted() {
 	describedSchedule := &schedule.Schedule{
 		Spec: &schedule.ScheduleSpec{
 			StructuredCalendar:        []*schedule.StructuredCalendarSpec{{}},
@@ -1293,7 +1330,7 @@ func (s *SharedServerSuite) TestSchedule_PatchOmitsCadenceWithoutChangingIt() {
 		}),
 	)
 
-	res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-omit-cadence", "--notes", "after")
+	res := s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-omit-spec-sources", "--notes", "after")
 	s.NoError(res.Err)
 	if !assert.NotNil(s.T(), updateRequest) {
 		return
@@ -1308,7 +1345,7 @@ func (s *SharedServerSuite) TestSchedule_PatchOmitsCadenceWithoutChangingIt() {
 	s.Equal(describedSpec, submittedSpec)
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchClearsCadenceOnlyForPausedResult() {
+func (s *SharedServerSuite) TestSchedule_PatchClearsScheduleSpecSourcesOnlyForPausedResult() {
 	var describedSchedule *schedule.Schedule
 	var updateRequest *workflowservice.UpdateScheduleRequest
 	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
@@ -1354,7 +1391,7 @@ func (s *SharedServerSuite) TestSchedule_PatchClearsCadenceOnlyForPausedResult()
 			}
 			updateRequest = nil
 
-			args := append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-clear-cadence", "--cadence-clear-all"}, tc.args...)
+			args := append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-clear-spec-sources", "--spec-clear-all"}, tc.args...)
 			res := s.Execute(args...)
 			assert.NoError(t, res.Err)
 			if !assert.NotNil(t, updateRequest) {
@@ -1373,7 +1410,7 @@ func (s *SharedServerSuite) TestSchedule_PatchClearsCadenceOnlyForPausedResult()
 	}
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchRejectsCadenceClearWhenResultIsUnpaused() {
+func (s *SharedServerSuite) TestSchedule_PatchRejectsScheduleSpecClearWhenResultIsUnpaused() {
 	var updateRequests atomic.Int32
 	var describedState *schedule.ScheduleState
 	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
@@ -1398,9 +1435,9 @@ func (s *SharedServerSuite) TestSchedule_PatchRejectsCadenceClearWhenResultIsUnp
 		state *schedule.ScheduleState
 		args  []string
 	}{
-		{name: "schedule is active", state: &schedule.ScheduleState{Paused: false}, args: []string{"--cadence-clear-all"}},
-		{name: "schedule state is absent", state: nil, args: []string{"--cadence-clear-all"}},
-		{name: "patch explicitly unpauses", state: &schedule.ScheduleState{Paused: true}, args: []string{"--cadence-clear-all", "--paused=false"}},
+		{name: "schedule is active", state: &schedule.ScheduleState{Paused: false}, args: []string{"--spec-clear-all"}},
+		{name: "schedule state is absent", state: nil, args: []string{"--spec-clear-all"}},
+		{name: "patch explicitly unpauses", state: &schedule.ScheduleState{Paused: true}, args: []string{"--spec-clear-all", "--paused=false"}},
 	} {
 		describedState = tc.state
 		res := s.Execute(append([]string{"schedule", "patch", "--address", s.Address(), "--schedule-id", "patch-unpaused-clear"}, tc.args...)...)
@@ -1410,11 +1447,11 @@ func (s *SharedServerSuite) TestSchedule_PatchRejectsCadenceClearWhenResultIsUnp
 	s.Equal(int32(0), updateRequests.Load())
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchClearsPausedCadenceToManualOnly() {
+func (s *SharedServerSuite) TestSchedule_PatchClearsPausedScheduleSpecSourcesToManualOnly() {
 	scheduleID, workflowID, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 
-	res = s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", scheduleID, "--paused=true", "--cadence-clear-all")
+	res = s.Execute("schedule", "patch", "--address", s.Address(), "--schedule-id", scheduleID, "--paused=true", "--spec-clear-all")
 	s.NoError(res.Err)
 
 	var description struct {
@@ -1465,7 +1502,7 @@ func (s *SharedServerSuite) TestSchedule_PatchClearsPausedCadenceToManualOnly() 
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
-func (s *SharedServerSuite) TestSchedule_PatchRevalidatesCadenceClearAfterConflictRefresh() {
+func (s *SharedServerSuite) TestSchedule_PatchRevalidatesScheduleSpecClearAfterConflictRefresh() {
 	var describes int
 	var updates []*workflowservice.UpdateScheduleRequest
 	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
@@ -1499,8 +1536,8 @@ func (s *SharedServerSuite) TestSchedule_PatchRevalidatesCadenceClearAfterConfli
 		wantErr     string
 		wantUpdates int
 	}{
-		{name: "refreshed unpaused fails", args: []string{"--cadence-clear-all"}, wantErr: "use --paused=true to pause explicitly", wantUpdates: 1},
-		{name: "explicit pause reapplies", args: []string{"--cadence-clear-all", "--paused=true"}, wantUpdates: 2},
+		{name: "refreshed unpaused fails", args: []string{"--spec-clear-all"}, wantErr: "use --paused=true to pause explicitly", wantUpdates: 1},
+		{name: "explicit pause reapplies", args: []string{"--spec-clear-all", "--paused=true"}, wantUpdates: 2},
 	} {
 		s.T().Run(tc.name, func(t *testing.T) {
 			describes = 0

@@ -8,10 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"math/rand"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -221,7 +219,7 @@ func (s *SharedServerSuite) TestSchedule_CreateRejectsHeadersBeforeMutation() {
 	s.Equal(int32(0), createRequests.Load())
 }
 
-func (s *SharedServerSuite) TestSchedule_CreateAppliesPriorityAndFairness() {
+func (s *SharedServerSuite) TestSchedule_CreateForwardsPriorityAndFairnessPolicyValues() {
 	var createRequest *workflowservice.CreateScheduleRequest
 	s.DevServer.SetServerInterceptor(func(
 		ctx context.Context,
@@ -231,15 +229,16 @@ func (s *SharedServerSuite) TestSchedule_CreateAppliesPriorityAndFairness() {
 	) (any, error) {
 		if request, ok := req.(*workflowservice.CreateScheduleRequest); ok {
 			createRequest = request
+			return &workflowservice.CreateScheduleResponse{}, nil
 		}
 		return handler(ctx, req)
 	})
 
 	_, _, res := s.createSchedule(
 		"--interval", "10d",
-		"--priority-key", "42",
-		"--fairness-key", "tenant-a",
-		"--fairness-weight", "2.5",
+		"--priority-key", "-1",
+		"--fairness-key", strings.Repeat("a", 65),
+		"--fairness-weight", "-1",
 	)
 	s.NoError(res.Err)
 	if createRequest == nil {
@@ -252,46 +251,9 @@ func (s *SharedServerSuite) TestSchedule_CreateAppliesPriorityAndFairness() {
 		s.Fail("CreateSchedule request did not include priority")
 		return
 	}
-	s.Equal(int32(42), priority.GetPriorityKey())
-	s.Equal("tenant-a", priority.GetFairnessKey())
-	s.Equal(float32(2.5), priority.GetFairnessWeight())
-}
-
-func (s *SharedServerSuite) TestSchedule_CreateRejectsInvalidPriorityAndFairnessBeforeMutation() {
-	var createRequests atomic.Int32
-	s.DevServer.SetServerInterceptor(func(
-		ctx context.Context,
-		req any,
-		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler,
-	) (any, error) {
-		if _, ok := req.(*workflowservice.CreateScheduleRequest); ok {
-			createRequests.Add(1)
-		}
-		return handler(ctx, req)
-	})
-
-	for _, testCase := range []struct {
-		name string
-		args []string
-	}{
-		{name: "negative priority", args: []string{"--priority-key", "-1"}},
-		{name: "priority above int32 maximum", args: []string{"--priority-key", strconv.FormatInt(int64(math.MaxInt32)+1, 10)}},
-		{name: "fairness key longer than 64 bytes", args: []string{"--fairness-key", strings.Repeat("a", 65)}},
-		{name: "negative fairness weight", args: []string{"--fairness-weight", "-1"}},
-		{name: "fairness weight below minimum", args: []string{"--fairness-weight", "0.0009"}},
-		{name: "fairness weight above maximum", args: []string{"--fairness-weight", "1000.1"}},
-	} {
-		s.T().Run(testCase.name, func(t *testing.T) {
-			args := append([]string{"--interval", "10d"}, testCase.args...)
-			_, _, res := s.createSchedule(args...)
-			if res.Err == nil {
-				t.Fatal("schedule create returned nil error")
-			}
-		})
-	}
-
-	s.Equal(int32(0), createRequests.Load())
+	s.Equal(int32(-1), priority.GetPriorityKey())
+	s.Equal(strings.Repeat("a", 65), priority.GetFairnessKey())
+	s.Equal(float32(-1), priority.GetFairnessWeight())
 }
 
 func (s *SharedServerSuite) TestSchedule_CreateAcceptsEmptyFairnessKeyAndZeroWeight() {
@@ -1252,16 +1214,17 @@ func (s *SharedServerSuite) TestSchedule_UpdateRejectsHeadersBeforeMutation() {
 	s.Equal(int32(0), scheduleRequests.Load())
 }
 
-func (s *SharedServerSuite) TestSchedule_UpdateHelpExplainsFullReplacementAndPriorityRange() {
+func (s *SharedServerSuite) TestSchedule_UpdateHelpExplainsFullReplacementAndPrioritySemantics() {
 	res := s.Execute("schedule", "update", "--help")
 	s.NoError(res.Err)
 	normalizedHelp := strings.Join(strings.Fields(res.Stdout.String()), " ")
 	s.Contains(res.Stdout.String(), "full replacement")
 	s.Contains(normalizedHelp, "Any options not provided will be reset to their default values")
 	s.Contains(res.Stdout.String(), "temporal schedule describe")
-	s.Contains(normalizedHelp, "Positive values are interpreted according to the server-configured priority range")
+	s.Contains(normalizedHelp, "Priority key passed to the server")
 	s.Contains(normalizedHelp, "Lower values have higher priority. Zero uses the server-configured default")
-	s.NotContains(normalizedHelp, "Priority key (1-5")
+	s.NotContains(normalizedHelp, "Positive values are interpreted")
+	s.NotContains(normalizedHelp, "server-configured priority range")
 }
 
 func (s *SharedServerSuite) TestSchedule_UpdateDoesNotPrompt() {

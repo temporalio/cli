@@ -49,36 +49,56 @@ func TestToScheduleActionAppliesFairnessFieldsWithoutPriorityKey(t *testing.T) {
 	}
 }
 
-func TestToScheduleActionValidatesPriorityAndFairness(t *testing.T) {
+func TestToScheduleActionForwardsServerPolicyValuesAndValidatesPriorityRepresentation(t *testing.T) {
 	testCases := []struct {
 		name    string
 		options SharedWorkflowStartOptions
 		wantErr bool
 	}{
 		{name: "default priority and fairness", options: SharedWorkflowStartOptions{}},
-		{name: "minimum priority", options: SharedWorkflowStartOptions{PriorityKey: 1}},
+		{name: "minimum priority", options: SharedWorkflowStartOptions{PriorityKey: math.MinInt32}},
+		{name: "negative priority", options: SharedWorkflowStartOptions{PriorityKey: -1}},
 		{name: "server configured priority", options: SharedWorkflowStartOptions{PriorityKey: 6}},
 		{name: "maximum representable priority", options: SharedWorkflowStartOptions{PriorityKey: math.MaxInt32}},
-		{name: "negative priority", options: SharedWorkflowStartOptions{PriorityKey: -1}, wantErr: true},
+		{name: "priority below int32 minimum", options: SharedWorkflowStartOptions{PriorityKey: math.MinInt32 - 1}, wantErr: true},
 		{name: "priority above int32 maximum", options: SharedWorkflowStartOptions{PriorityKey: math.MaxInt32 + 1}, wantErr: true},
 		{name: "empty fairness key and zero weight", options: SharedWorkflowStartOptions{}},
-		{name: "64 byte fairness key", options: SharedWorkflowStartOptions{FairnessKey: strings.Repeat("a", 64)}},
-		{name: "65 byte fairness key", options: SharedWorkflowStartOptions{FairnessKey: strings.Repeat("a", 65)}, wantErr: true},
-		{name: "minimum fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: 0.001}},
-		{name: "maximum fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: 1000}},
-		{name: "negative fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: -1}, wantErr: true},
-		{name: "fairness weight below minimum", options: SharedWorkflowStartOptions{FairnessWeight: 0.0009}, wantErr: true},
-		{name: "fairness weight above maximum", options: SharedWorkflowStartOptions{FairnessWeight: 1000.1}, wantErr: true},
-		{name: "NaN fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: float32(math.NaN())}, wantErr: true},
-		{name: "positive infinite fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: float32(math.Inf(1))}, wantErr: true},
-		{name: "negative infinite fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: float32(math.Inf(-1))}, wantErr: true},
+		{name: "fairness key longer than 64 bytes", options: SharedWorkflowStartOptions{FairnessKey: strings.Repeat("a", 65)}},
+		{name: "negative fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: -1}},
+		{name: "fairness weight below prior minimum", options: SharedWorkflowStartOptions{FairnessWeight: 0.0009}},
+		{name: "fairness weight above prior maximum", options: SharedWorkflowStartOptions{FairnessWeight: 1000.1}},
+		{name: "NaN fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: float32(math.NaN())}},
+		{name: "positive infinite fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: float32(math.Inf(1))}},
+		{name: "negative infinite fairness weight", options: SharedWorkflowStartOptions{FairnessWeight: float32(math.Inf(-1))}},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := toScheduleAction(&testCase.options, &PayloadInputOptions{})
+			action, err := toScheduleAction(&testCase.options, &PayloadInputOptions{})
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("toScheduleAction error = %v, want error = %v", err, testCase.wantErr)
+			}
+			if testCase.wantErr {
+				return
+			}
+			scheduleAction, ok := action.(*client.ScheduleWorkflowAction)
+			if !ok {
+				t.Fatalf("toScheduleAction returned %T, want *client.ScheduleWorkflowAction", action)
+			}
+			if scheduleAction.Priority.PriorityKey != testCase.options.PriorityKey {
+				t.Errorf("PriorityKey = %d, want %d", scheduleAction.Priority.PriorityKey, testCase.options.PriorityKey)
+			}
+			if scheduleAction.Priority.FairnessKey != testCase.options.FairnessKey {
+				t.Errorf("FairnessKey = %q, want %q", scheduleAction.Priority.FairnessKey, testCase.options.FairnessKey)
+			}
+			if math.IsNaN(float64(testCase.options.FairnessWeight)) {
+				if !math.IsNaN(float64(scheduleAction.Priority.FairnessWeight)) {
+					t.Errorf("FairnessWeight = %v, want NaN", scheduleAction.Priority.FairnessWeight)
+				}
+				return
+			}
+			if scheduleAction.Priority.FairnessWeight != testCase.options.FairnessWeight {
+				t.Errorf("FairnessWeight = %v, want %v", scheduleAction.Priority.FairnessWeight, testCase.options.FairnessWeight)
 			}
 		})
 	}
