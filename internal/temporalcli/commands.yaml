@@ -141,6 +141,10 @@ commands:
             `temporal server start-dev`
       * View help: pass `--help` to any command:
             `temporal activity complete --help`
+      * Return structured output with `-o`:
+            `temporal workflow list -o json`
+      * View global and connection options:
+            `temporal options`
     has-init: true
     option-sets:
       - common
@@ -4795,6 +4799,7 @@ option-sets:
     external-package: github.com/temporalio/cli/cliext
   - name: client
     external-package: github.com/temporalio/cli/cliext
+    hide-from-help: true
 
   - name: overlap-policy
     options:

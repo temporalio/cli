@@ -4,6 +4,11 @@
 
 option-sets:
   - name: common
+    description: |
+      These options apply to every command. They control output formatting,
+      logging, and which configuration profile and environment to use.
+      Options that accept an environment variable can be set instead of
+      passing the flag each time.
     options:
       - name: env
         type: string
@@ -12,17 +17,11 @@ option-sets:
         implied-env: TEMPORAL_ENV
       - name: env-file
         type: string
-        description: |
-          Path to environment settings file.
-          Defaults to `$HOME/.config/temporalio/temporal.yaml`.
+        description: Path to environment settings file.
         implied-env: TEMPORAL_ENV_FILE
       - name: config-file
         type: string
-        description: |
-          File path to read TOML config from, defaults to
-          `$CONFIG_PATH/temporalio/temporal.toml` where `$CONFIG_PATH` is defined
-          as `$HOME/.config` on Unix, `$HOME/Library/Application Support` on
-          macOS, and `%AppData%` on Windows.
+        description: TOML config file path.
         implied-env: TEMPORAL_CONFIG_FILE
       - name: profile
         type: string
@@ -30,13 +29,10 @@ option-sets:
         implied-env: TEMPORAL_PROFILE
       - name: disable-config-file
         type: bool
-        description: |
-          If set, disables loading environment config from config file.
+        description: Disable loading config from file.
       - name: disable-config-env
         type: bool
-        description: |
-          If set, disables loading environment config from environment
-          variables.
+        description: Disable loading config from environment variables.
       - name: log-level
         type: string-enum
         enum-values:
@@ -45,9 +41,7 @@ option-sets:
           - warn
           - error
           - never
-        description: |
-          Log level.
-          Default is "never" for most commands and "warn" for "server start-dev".
+        description: Log level.
         default: never
       - name: log-format
         type: string-enum
@@ -89,20 +83,28 @@ option-sets:
         description: Raw payload output, even if the JSON option was used.
       - name: command-timeout
         type: duration
-        description: |
-          The command execution timeout. 0s means no timeout.
+        description: Command execution timeout.
       - name: client-connect-timeout
         type: duration
-        description: |
-          The client connection timeout. 0s means no timeout.
+        description: Client connection timeout.
 
   - name: client
+    hide-from-help: true
+    description: |
+      These options apply to commands that connect to a Temporal Service
+      (workflow, activity, schedule, etc). They specify the server address,
+      namespace, authentication, and TLS settings. Values are resolved in
+      order: CLI flag > environment variable > config file.
+
+      To persist these settings, use:
+        temporal config set --prop KEY --value VALUE
     options:
       - name: address
         type: string
         description: Temporal Service gRPC endpoint.
         default: localhost:7233
         implied-env: TEMPORAL_ADDRESS
+        config-key: address
       - name: client-authority
         type: string
         description: Temporal gRPC client :authority pseudoheader.
@@ -112,83 +114,74 @@ option-sets:
         description: Temporal Service Namespace.
         default: default
         implied-env: TEMPORAL_NAMESPACE
+        config-key: namespace
       - name: api-key
         type: string
         description: API key for request.
         implied-env: TEMPORAL_API_KEY
+        config-key: api_key
       - name: grpc-meta
         type: string[]
-        description: |
-          HTTP headers for requests.
-          Format as a `KEY=VALUE` pair.
-          May be passed multiple times to set multiple headers.
-          Can also be made available via environment variable as
-          `TEMPORAL_GRPC_META_[name]`.
+        description: HTTP headers for requests (KEY=VALUE, repeatable).
+        config-key: grpc_meta.<key>
       - name: tls
         type: bool
-        description: |
-          Enable base TLS encryption. Does not have additional options like mTLS
-          or client certs. This is defaulted to true if api-key or any other TLS
-          options are present. Use --tls=false to explicitly disable.
+        description: Enable base TLS encryption. Auto-enabled when api-key or TLS options are set.
         implied-env: TEMPORAL_TLS
+        config-key: tls
       - name: tls-cert-path
         type: string
-        description: |
-          Path to x509 certificate.
-          Can't be used with --tls-cert-data.
+        description: Path to x509 certificate.
         implied-env: TEMPORAL_TLS_CLIENT_CERT_PATH
+        config-key: tls.client_cert_path
       - name: tls-cert-data
         type: string
-        description: |
-          Data for x509 certificate.
-          Can't be used with --tls-cert-path.
+        description: Inline x509 certificate data.
         implied-env: TEMPORAL_TLS_CLIENT_CERT_DATA
+        config-key: tls.client_cert_data
       - name: tls-key-path
         type: string
-        description: |
-          Path to x509 private key.
-          Can't be used with --tls-key-data.
+        description: Path to x509 private key.
         implied-env: TEMPORAL_TLS_CLIENT_KEY_PATH
+        config-key: tls.client_key_path
       - name: tls-key-data
         type: string
-        description: |
-          Private certificate key data.
-          Can't be used with --tls-key-path.
+        description: Inline x509 private key data.
         implied-env: TEMPORAL_TLS_CLIENT_KEY_DATA
+        config-key: tls.client_key_data
       - name: tls-ca-path
         type: string
-        description: |
-          Path to server CA certificate.
-          Can't be used with --tls-ca-data.
+        description: Path to server CA certificate.
         implied-env: TEMPORAL_TLS_SERVER_CA_CERT_PATH
+        config-key: tls.server_ca_cert_path
       - name: tls-ca-data
         type: string
-        description: |
-          Data for server CA certificate.
-          Can't be used with --tls-ca-path.
+        description: Inline server CA certificate data.
         implied-env: TEMPORAL_TLS_SERVER_CA_CERT_DATA
+        config-key: tls.server_ca_cert_data
       - name: tls-disable-host-verification
         type: bool
         description: Disable TLS host-name verification.
         implied-env: TEMPORAL_TLS_DISABLE_HOST_VERIFICATION
+        config-key: tls.disable_host_verification
       - name: tls-server-name
         type: string
         description: Override target TLS server name.
         implied-env: TEMPORAL_TLS_SERVER_NAME
+        config-key: tls.server_name
       - name: codec-endpoint
         type: string
         description: Remote Codec Server endpoint.
         implied-env: TEMPORAL_CODEC_ENDPOINT
+        config-key: codec.endpoint
       - name: codec-auth
         type: string
         description: Authorization header for Codec Server requests.
         implied-env: TEMPORAL_CODEC_AUTH
+        config-key: codec.auth
       - name: codec-header
         type: string[]
-        description: |
-          HTTP headers for requests to codec server.
-          Format as a `KEY=VALUE` pair.
-          May be passed multiple times to set multiple headers.
+        description: HTTP headers for codec server (KEY=VALUE, repeatable).
       - name: identity
         type: string
-        description: The identity of the user or client submitting this request. Defaults to "temporal-cli:$USER@$HOST".
+        description: Identity of the client submitting requests.
