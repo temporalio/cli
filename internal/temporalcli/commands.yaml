@@ -1400,13 +1400,19 @@ commands:
         - It is not the Current or Ramping Version for this Deployment.
         - It has no active pollers, i.e., none of the task queues in the
         Version have pollers.
-        - It is not draining. This requirement can be ignored with the option
-      `--skip-drainage`.
+        - Its drainage status is not Draining. A Draining Version may still
+        have open pinned Workflow Executions.
+
+      `--skip-drainage` bypasses only this drainage-status check. The Version
+      must still have no active pollers; that requirement is always enforced.
+      If the Version still has open pinned Workflow Executions, deleting it
+      leaves them stuck until they are moved to another Version.
+
       ```
       temporal worker deployment delete-version [options]
       ```
 
-      For example, skipping the drainage restriction:
+      For example, to bypass only the drainage-status check:
 
       ```
       temporal worker deployment delete-version \
@@ -1418,7 +1424,7 @@ commands:
     options:
       - name: skip-drainage
         type: bool
-        description: Ignore the deletion requirement of not draining.
+        description: Allow deletion while the Version's drainage status is Draining. The Version must still have no active pollers.
 
   - name: temporal worker deployment set-current-version
     summary: Make a Worker Deployment Version Current for a Deployment
