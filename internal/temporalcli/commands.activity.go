@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/internal/printer"
 	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/batch/v1"
@@ -32,12 +34,32 @@ type (
 		ScheduleToStartTimeout time.Duration
 		StartToCloseTimeout    time.Duration
 		HeartbeatTimeout       time.Duration
+		StartDelay             time.Duration
 
 		InitialInterval    time.Duration
 		BackoffCoefficient float64
 		MaximumInterval    time.Duration
 		MaximumAttempts    int32
 	}
+)
+
+const activityDeleteWarning = "WARNING: Deleting Standalone Activity Executions in a global Namespace removes them from all replicas. Requests sent to a passive cluster are forwarded to the active cluster by default; to target the passive cluster directly, specify `--grpc-meta xdc-redirection=false`."
+
+// Targeting errors for the activity operate commands. They name every flag a
+// caller can use so the failure tells the user exactly how to retarget:
+//   - a single Activity: --activity-id, optionally with --workflow-id (workflow
+//     Activity) and/or --run-id (specific run; standalone when no --workflow-id)
+//   - a batch of workflow Activities: --query
+var (
+	// errActivityTarget is used by the operations that support batching
+	// (unpause, reset, update-options).
+	errActivityTarget = errors.New("must specify --activity-id to target a single Activity " +
+		"(optionally with --workflow-id and/or --run-id), or --query to target a batch of Activities")
+
+	// errPauseActivityTarget is the pause equivalent; pause has no --query
+	// (batch) mode.
+	errPauseActivityTarget = errors.New("must specify --activity-id to pause an Activity " +
+		"(optionally with --workflow-id and/or --run-id)")
 )
 
 func (c *TemporalActivityStartCommand) run(cctx *CommandContext, args []string) error {
@@ -448,35 +470,10 @@ func printActivityDescription(cctx *CommandContext, resp *workflowservice.Descri
 	if err := cctx.Printer.PrintStructured(d, printer.StructuredOptions{}); err != nil {
 		return err
 	}
-	return printActivityCallbacks(cctx, resp.GetCallbacks())
-}
-
-func printActivityCallbacks(cctx *CommandContext, callbacks []*activitypb.CallbackInfo) error {
-	if len(callbacks) == 0 {
-		return nil
+	if err := printLinks(cctx, info.GetLinks()); err != nil {
+		return err
 	}
-	rows := make([]struct {
-		State                   string
-		Attempt                 int32
-		RegistrationTime        time.Time `cli:",cardOmitEmpty"`
-		NextAttemptScheduleTime time.Time `cli:",cardOmitEmpty"`
-		BlockedReason           string    `cli:",cardOmitEmpty"`
-		LastAttemptFailure      string    `cli:",cardOmitEmpty"`
-	}, len(callbacks))
-	for i, cb := range callbacks {
-		info := cb.GetInfo()
-		rows[i].State = info.GetState().String()
-		rows[i].Attempt = info.GetAttempt()
-		rows[i].RegistrationTime = timestampToTime(info.GetRegistrationTime())
-		rows[i].NextAttemptScheduleTime = timestampToTime(info.GetNextAttemptScheduleTime())
-		rows[i].BlockedReason = info.GetBlockedReason()
-		if f := info.GetLastAttemptFailure(); f != nil {
-			rows[i].LastAttemptFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
-		}
-	}
-	cctx.Printer.Println()
-	cctx.Printer.Println(color.MagentaString("Callbacks:"))
-	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{Table: &printer.TableOptions{}})
+	return printCallbacks(cctx, resp.GetCallbacks())
 }
 
 func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) error {
@@ -562,6 +559,65 @@ func (c *TemporalActivityCountCommand) run(cctx *CommandContext, args []string) 
 	return nil
 }
 
+func (s *ActivityReferenceOrBatchOptions) activityExecOrBatch(
+	cctx *CommandContext,
+	namespace string,
+	cl client.Client,
+	yesFlag bool,
+	overrides singleOrBatchOverrides,
+) (*client.GetActivityHandleOptions, *workflowservice.StartBatchOperationRequest, error) {
+	// If activity is set, we return activity handle options with activity ID and run ID
+	if s.ActivityId != "" {
+		if s.Query != "" {
+			return nil, nil, fmt.Errorf("cannot set query when activity ID is set")
+		} else if yesFlag && !overrides.AllowYesWithActivityID {
+			return nil, nil, fmt.Errorf("cannot set 'yes' when activity ID is set")
+		} else if s.Rps != 0 {
+			return nil, nil, fmt.Errorf("cannot set rps when activity ID is set")
+		}
+		return &client.GetActivityHandleOptions{
+			ActivityID: s.ActivityId,
+			RunID:      s.RunId,
+		}, nil, nil
+	}
+
+	// Check query is set properly
+	if s.Query == "" {
+		return nil, nil, fmt.Errorf("must set either activity ID or query")
+	} else if s.ActivityId != "" { // This is redundant, but kept for completeness
+		return nil, nil, fmt.Errorf("cannot set activity ID when query is set")
+	} else if s.RunId != "" {
+		return nil, nil, fmt.Errorf("cannot set run ID when query is set")
+	}
+
+	// The count is only used in the confirmation prompt; skip the request when --yes
+	// bypasses it, so batch jobs can still proceed if the visibility API is timing out.
+	var promptMessage string
+	if yesFlag {
+		promptMessage = fmt.Sprintf("Start batch against standalone activities matching query %q? y/N", s.Query)
+	} else {
+		count, err := cl.CountActivities(cctx, client.CountActivitiesOptions{Query: s.Query})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed counting standalone activities from query: %w", err)
+		}
+		promptMessage = fmt.Sprintf("Start batch against approximately %v standalone activities(s)? y/N", count.Count)
+	}
+	isYes, err := cctx.promptYes(promptMessage, yesFlag)
+	if err != nil {
+		return nil, nil, err
+	} else if !isYes {
+		// We consider this a command failure
+		return nil, nil, fmt.Errorf("user denied confirmation")
+	}
+
+	return nil, &workflowservice.StartBatchOperationRequest{
+		MaxOperationsPerSecond: s.Rps,
+		Namespace:              namespace,
+		JobId:                  uuid.NewString(),
+		VisibilityQuery:        s.Query,
+	}, nil
+}
+
 func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -569,14 +625,41 @@ func (c *TemporalActivityCancelCommand) run(cctx *CommandContext, args []string)
 	}
 	defer cl.Close()
 
-	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
-		ActivityID: c.ActivityId,
-		RunID:      c.RunId,
-	})
-	if err := handle.Cancel(cctx, client.CancelActivityOptions{Reason: c.Reason}); err != nil {
-		return fmt.Errorf("failed to request activity cancellation: %w", err)
+	opts := ActivityReferenceOrBatchOptions{
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Rps:        c.Rps,
 	}
-	cctx.Printer.Println("Cancellation requested")
+
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{})
+	if err != nil {
+		return err
+	}
+
+	if activityOptions != nil {
+		handle := cl.GetActivityHandle(*activityOptions)
+		if err := handle.Cancel(cctx, client.CancelActivityOptions{Reason: c.Reason}); err != nil {
+			return fmt.Errorf("failed to request activity cancellation: %w", err)
+		}
+		cctx.Printer.Println("Cancellation requested")
+	} else { // batchReq != nil
+		cancelActivitiesOperation := &batch.BatchOperationCancelActivities{
+			Identity: c.Parent.Identity,
+			// do not fallback to defaultReason, to be consistent with single activity cancel
+			Reason: c.Reason,
+		}
+
+		// Reason in batch request falls back to defaultReason
+		batchReq.Reason = cmp.Or(c.Reason, defaultReason())
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_CancelActivitiesOperation{
+			CancelActivitiesOperation: cancelActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -587,22 +670,115 @@ func (c *TemporalActivityTerminateCommand) run(cctx *CommandContext, args []stri
 	}
 	defer cl.Close()
 
-	// The CLI adds a default for terminate but not cancel.
-	// This matches the behavior for workflows.
-	reason := c.Reason
-	if reason == "" {
-		reason = defaultReason()
+	opts := ActivityReferenceOrBatchOptions{
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Rps:        c.Rps,
 	}
-	handle := cl.GetActivityHandle(client.GetActivityHandleOptions{
-		ActivityID: c.ActivityId,
-		RunID:      c.RunId,
-	})
-	// Terminate may fail if the activity doesn't exist or has already completed.
-	if err := handle.Terminate(cctx, client.TerminateActivityOptions{Reason: reason}); err != nil {
-		return fmt.Errorf("failed to terminate activity: %w", err)
+
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{})
+	if err != nil {
+		return err
 	}
-	cctx.Printer.Println("Activity terminated")
+
+	// Reason for single terminate or batch request falls back to defaultReason
+	reason := cmp.Or(c.Reason, defaultReason())
+
+	if activityOptions != nil {
+		// The CLI adds a default for terminate but not cancel.
+		// This matches the behavior for workflows.
+		handle := cl.GetActivityHandle(*activityOptions)
+		// Terminate may fail if the activity doesn't exist or has already completed.
+		if err := handle.Terminate(cctx, client.TerminateActivityOptions{Reason: reason}); err != nil {
+			return fmt.Errorf("failed to terminate activity: %w", err)
+		}
+		cctx.Printer.Println("Activity terminated")
+	} else { // batchReq != nil
+		terminateActivitiesOperation := &batch.BatchOperationTerminateActivities{
+			Identity: c.Parent.Identity,
+			Reason:   reason,
+		}
+
+		batchReq.Reason = reason
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_TerminateActivitiesOperation{
+			TerminateActivitiesOperation: terminateActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (c *TemporalActivityDeleteCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Only warn when the namespace is global, or can't get the namespace info
+	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: c.Parent.Namespace,
+	})
+	if nsErr != nil || nsResp.GetIsGlobalNamespace() {
+		fmt.Fprintln(cctx.Options.Stderr, activityDeleteWarning)
+	}
+
+	opts := ActivityReferenceOrBatchOptions{
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Query:      c.Query,
+		Rps:        c.Rps,
+	}
+
+	activityOptions, batchReq, err := opts.activityExecOrBatch(cctx, c.Parent.Namespace, cl, c.Yes, singleOrBatchOverrides{
+		AllowYesWithActivityID: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	if activityOptions != nil {
+		yes, err := cctx.promptYes(activityDeleteSingleConfirmationMessage(activityOptions), c.Yes)
+		if err != nil {
+			return err
+		} else if !yes {
+			return fmt.Errorf("user denied confirmation")
+		}
+		_, err = cl.WorkflowService().DeleteActivityExecution(cctx, &workflowservice.DeleteActivityExecutionRequest{
+			Namespace:  c.Parent.Namespace,
+			ActivityId: c.ActivityId,
+			RunId:      c.RunId,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete standalone activity: %w", err)
+		}
+		cctx.Printer.Println("Delete activity succeeded")
+	} else { // batchReq != nil
+		deleteActivitiesOperation := &batch.BatchOperationDeleteActivities{}
+		batchReq.Reason = cmp.Or(c.Reason, defaultReason())
+		batchReq.Operation = &workflowservice.StartBatchOperationRequest_DeleteActivitiesOperation{
+			DeleteActivitiesOperation: deleteActivitiesOperation,
+		}
+
+		if err := startBatchJob(cctx, cl, batchReq); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func activityDeleteSingleConfirmationMessage(activityOptions *client.GetActivityHandleOptions) string {
+	action := fmt.Sprintf("Delete Standalone Activity %q", activityOptions.ActivityID)
+	if activityOptions.RunID != "" {
+		action += fmt.Sprintf(" with Run ID %q", activityOptions.RunID)
+	}
+	return fmt.Sprintf("%s? y/N", action)
 }
 
 func (c *TemporalActivityCompleteCommand) run(cctx *CommandContext, args []string) error {
@@ -680,7 +856,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 	if c.Command.Flags().Changed("task-queue") {
 		activityOptions.TaskQueue = &taskqueuepb.TaskQueue{Name: c.TaskQueue}
-		updatePath = append(updatePath, "task_queue_name")
+		updatePath = append(updatePath, "task_queue.name")
 	}
 
 	if c.Command.Flags().Changed("schedule-to-close-timeout") {
@@ -701,6 +877,15 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	if c.Command.Flags().Changed("heartbeat-timeout") {
 		activityOptions.HeartbeatTimeout = durationpb.New(c.HeartbeatTimeout.Duration())
 		updatePath = append(updatePath, "heartbeat_timeout")
+	}
+
+	if c.Command.Flags().Changed("start-delay") {
+		if c.WorkflowId != "" || c.Query != "" {
+			return errors.New("--start-delay is only supported for Standalone Activities, " +
+				"so it cannot be used with --workflow-id or --query")
+		}
+		activityOptions.StartDelay = durationpb.New(c.StartDelay.Duration())
+		updatePath = append(updatePath, "start_delay")
 	}
 
 	if c.Command.Flags().Changed("retry-initial-interval") ||
@@ -741,28 +926,48 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
+	// Target a workflow Activity (--workflow-id), a standalone Activity (no
+	// --workflow-id; the latest run unless --run-id is set), or a batch of
+	// workflow Activities (--query). The server routes to standalone-activity
+	// handling when the workflow ID is empty, so standalone Activities take the
+	// single-execution path below.
+	var exec *common.WorkflowExecution
+	var batchReq *workflowservice.StartBatchOperationRequest
+	if c.WorkflowId == "" && c.Query == "" {
+		if c.ActivityId == "" {
+			return errActivityTarget
+		}
+		exec = &common.WorkflowExecution{RunId: c.RunId}
+	} else {
+		exec, batchReq, err = opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if exec != nil {
 		if c.ActivityId == "" {
-			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+			return errActivityTarget
 		}
-		result, err := cl.WorkflowService().UpdateActivityOptions(cctx, &workflowservice.UpdateActivityOptionsRequest{
-			Namespace: c.Parent.Namespace,
-			Execution: &common.WorkflowExecution{
-				WorkflowId: c.WorkflowId,
-				RunId:      c.RunId,
-			},
-			Activity:        &workflowservice.UpdateActivityOptionsRequest_Id{Id: c.ActivityId},
-			ActivityOptions: activityOptions,
-			UpdateMask: &fieldmaskpb.FieldMask{
-				Paths: updatePath,
-			},
-			Identity: c.Parent.Identity,
-		})
+		resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+		if c.WorkflowId == "" {
+			resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
+		}
+		result, err := cl.WorkflowService().UpdateActivityExecutionOptions(
+			cctx,
+			&workflowservice.UpdateActivityExecutionOptionsRequest{
+				Namespace:       c.Parent.Namespace,
+				WorkflowId:      c.WorkflowId,
+				ActivityId:      c.ActivityId,
+				RunId:           c.RunId,
+				Identity:        c.Parent.Identity,
+				ActivityOptions: activityOptions,
+				UpdateMask: &fieldmaskpb.FieldMask{
+					Paths: updatePath,
+				},
+				RestoreOriginal: c.RestoreOriginalOptions,
+				ResourceId:      resourceID,
+			})
 		if err != nil {
 			return fmt.Errorf("unable to update Activity options: %w", err)
 		}
@@ -774,6 +979,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 			ScheduleToStartTimeout: result.GetActivityOptions().ScheduleToStartTimeout.AsDuration(),
 			StartToCloseTimeout:    result.GetActivityOptions().StartToCloseTimeout.AsDuration(),
 			HeartbeatTimeout:       result.GetActivityOptions().HeartbeatTimeout.AsDuration(),
+			StartDelay:             result.GetActivityOptions().StartDelay.AsDuration(),
 
 			InitialInterval:    result.GetActivityOptions().RetryPolicy.InitialInterval.AsDuration(),
 			BackoffCoefficient: result.GetActivityOptions().RetryPolicy.BackoffCoefficient,
@@ -784,8 +990,9 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
 	} else {
 		updateActivitiesOperation := &batch.BatchOperationUpdateActivityOptions{
-			Identity: c.Parent.Identity,
-			Activity: &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true},
+			Identity:        c.Parent.Identity,
+			Activity:        &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true},
+			ActivityOptions: activityOptions,
 			UpdateMask: &fieldmaskpb.FieldMask{
 				Paths: updatePath,
 			},
@@ -805,8 +1012,12 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) error {
 	if c.ActivityId == "" {
-		return fmt.Errorf("Activity Id must be specified")
+		return errPauseActivityTarget
 	}
+	// Set --workflow-id to target a workflow Activity. Omit it to target a
+	// standalone Activity by --activity-id (and optionally --run-id for a
+	// specific run); the server routes to standalone-activity handling when the
+	// workflow ID is empty.
 
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -814,21 +1025,25 @@ func (c *TemporalActivityPauseCommand) run(cctx *CommandContext, args []string) 
 	}
 	defer cl.Close()
 
-	request := &workflowservice.PauseActivityRequest{
-		Namespace: c.Parent.Namespace,
-		Execution: &common.WorkflowExecution{
-			WorkflowId: c.WorkflowId,
-			RunId:      c.RunId,
-		},
-		Identity: c.Identity,
-		Reason:   c.Reason,
-		Activity: &workflowservice.PauseActivityRequest_Id{Id: c.ActivityId},
+	resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+	if c.WorkflowId == "" {
+		resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
+	}
+
+	request := &workflowservice.PauseActivityExecutionRequest{
+		Namespace:  c.Parent.Namespace,
+		WorkflowId: c.WorkflowId,
+		ActivityId: c.ActivityId,
+		RunId:      c.RunId,
+		Identity:   c.Identity,
+		Reason:     c.Reason,
+		ResourceId: resourceID,
 	}
 	if request.Identity == "" {
 		request.Identity = c.Parent.Identity
 	}
 
-	_, err = cl.WorkflowService().PauseActivity(cctx, request)
+	_, err = cl.WorkflowService().PauseActivityExecution(cctx, request)
 	if err != nil {
 		return fmt.Errorf("unable to pause Activity: %w", err)
 	}
@@ -854,30 +1069,48 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
+	// Target a workflow Activity (--workflow-id), a standalone Activity (no
+	// --workflow-id; the latest run unless --run-id is set), or a batch of
+	// workflow Activities (--query). The server routes to standalone-activity
+	// handling when the workflow ID is empty, so standalone Activities take the
+	// single-execution path below.
+	var exec *common.WorkflowExecution
+	var batchReq *workflowservice.StartBatchOperationRequest
+	if c.WorkflowId == "" && c.Query == "" {
+		if c.ActivityId == "" {
+			return errActivityTarget
+		}
+		exec = &common.WorkflowExecution{RunId: c.RunId}
+	} else {
+		exec, batchReq, err = opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if exec != nil { // single workflow operation
 		if c.ActivityId == "" {
-			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+			return errActivityTarget
+		}
+		resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+		if c.WorkflowId == "" {
+			resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
 		}
 
-		request := &workflowservice.UnpauseActivityRequest{
-			Namespace: c.Parent.Namespace,
-			Execution: &common.WorkflowExecution{
-				WorkflowId: c.WorkflowId,
-				RunId:      c.RunId,
-			},
+		request := &workflowservice.UnpauseActivityExecutionRequest{
+			Namespace:      c.Parent.Namespace,
+			WorkflowId:     c.WorkflowId,
+			ActivityId:     c.ActivityId,
+			RunId:          c.RunId,
+			Identity:       c.Parent.Identity,
 			ResetAttempts:  c.ResetAttempts,
 			ResetHeartbeat: c.ResetHeartbeats,
+			Reason:         c.Reason,
 			Jitter:         durationpb.New(c.Jitter.Duration()),
-			Identity:       c.Parent.Identity,
-			Activity:       &workflowservice.UnpauseActivityRequest_Id{Id: c.ActivityId},
+			ResourceId:     resourceID,
 		}
 
-		_, err = cl.WorkflowService().UnpauseActivity(cctx, request)
+		_, err = cl.WorkflowService().UnpauseActivityExecution(cctx, request)
 		if err != nil {
 			return fmt.Errorf("unable to unpause an Activity: %w", err)
 		}
@@ -920,49 +1153,64 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		Rps:        c.Rps,
 	}
 
-	exec, batchReq, err := opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
-	if err != nil {
-		return err
+	// Target a workflow Activity (--workflow-id), a standalone Activity (no
+	// --workflow-id; the latest run unless --run-id is set), or a batch of
+	// workflow Activities (--query). The server routes to standalone-activity
+	// handling when the workflow ID is empty, so standalone Activities take the
+	// single-execution path below.
+	var exec *common.WorkflowExecution
+	var batchReq *workflowservice.StartBatchOperationRequest
+	if c.WorkflowId == "" && c.Query == "" {
+		if c.ActivityId == "" {
+			return errActivityTarget
+		}
+		exec = &common.WorkflowExecution{RunId: c.RunId}
+	} else {
+		exec, batchReq, err = opts.workflowExecOrBatch(cctx, c.Parent.Namespace, cl, singleOrBatchOverrides{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if exec != nil { // single workflow operation
 		if c.ActivityId == "" {
-			return fmt.Errorf("either --activity-id and --workflow-id, or --query must be set")
+			return errActivityTarget
+		}
+		resourceID := fmt.Sprintf("workflow:%s", c.WorkflowId)
+		if c.WorkflowId == "" {
+			resourceID = fmt.Sprintf("activity:%s", c.ActivityId)
 		}
 
-		request := &workflowservice.ResetActivityRequest{
-			Activity:  &workflowservice.ResetActivityRequest_Id{Id: c.ActivityId},
-			Namespace: c.Parent.Namespace,
-			Execution: &common.WorkflowExecution{
-				WorkflowId: c.WorkflowId,
-				RunId:      c.RunId,
-			},
-			Identity:       c.Parent.Identity,
-			KeepPaused:     c.KeepPaused,
-			ResetHeartbeat: c.ResetHeartbeats,
+		request := &workflowservice.ResetActivityExecutionRequest{
+			Namespace:              c.Parent.Namespace,
+			WorkflowId:             c.WorkflowId,
+			ActivityId:             c.ActivityId,
+			RunId:                  c.RunId,
+			Identity:               c.Parent.Identity,
+			KeepPaused:             c.KeepPaused,
+			Jitter:                 durationpb.New(c.Jitter.Duration()),
+			RestoreOriginalOptions: c.RestoreOriginalOptions,
+			ResourceId:             resourceID,
 		}
 
-		resp, err := cl.WorkflowService().ResetActivity(cctx, request)
+		resp, err := cl.WorkflowService().ResetActivityExecution(cctx, request)
 		if err != nil {
 			return fmt.Errorf("unable to reset an Activity: %w", err)
 		}
 
 		resetResponse := struct {
-			KeepPaused      bool `json:"keepPaused"`
-			ResetHeartbeats bool `json:"resetHeartbeats"`
-			ServerResponse  bool `json:"-"`
+			KeepPaused     bool `json:"keepPaused"`
+			ServerResponse bool `json:"-"`
 		}{
-			ServerResponse:  resp != nil,
-			KeepPaused:      c.KeepPaused,
-			ResetHeartbeats: c.ResetHeartbeats,
+			ServerResponse: resp != nil,
+			KeepPaused:     c.KeepPaused,
 		}
 
 		_ = cctx.Printer.PrintStructured(resetResponse, printer.StructuredOptions{})
 	} else { // batch operation
 		resetActivitiesOperation := &batch.BatchOperationResetActivities{
 			Identity:               c.Parent.Identity,
-			ResetAttempts:          c.ResetAttempts,
-			ResetHeartbeat:         c.ResetHeartbeats,
+			ResetHeartbeat:         true,
 			KeepPaused:             c.KeepPaused,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),
 			RestoreOriginalOptions: c.RestoreOriginalOptions,

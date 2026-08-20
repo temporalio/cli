@@ -84,6 +84,30 @@ type workerDescribeDetail struct {
 	Plugins                    []pluginInfo `cli:",cardOmitEmpty"`
 }
 
+func (c *TemporalWorkerCountCommand) run(cctx *CommandContext, args []string) error {
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	resp, err := cl.WorkflowService().CountWorkers(cctx, &workflowservice.CountWorkersRequest{
+		Namespace:            c.Parent.Namespace,
+		Query:                c.Query,
+		IncludeSystemWorkers: c.IncludeSystemWorkers,
+	})
+	if err != nil {
+		return err
+	}
+
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+	}
+
+	cctx.Printer.Printlnf("%v", resp.Count)
+	return nil
+}
+
 func (c *TemporalWorkerDescribeCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {

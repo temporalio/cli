@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
@@ -187,6 +188,39 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
 }
 
+func (s *SharedServerSuite) TestActivityOptionsUpdate_BatchMatchAll() {
+	run1 := s.waitActivityStarted()
+	run2 := s.waitActivityStarted()
+	query := fmt.Sprintf("WorkflowId = '%s' OR WorkflowId = '%s'", run1.GetID(), run2.GetID())
+
+	// Wait for both Workflow Executions to be visible to the batch query.
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: query,
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 2
+	}, 3*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--query", query,
+		"--task-queue", "batch-updated-task-queue",
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	for _, run := range []client.WorkflowRun{run1, run2} {
+		s.Eventually(func() bool {
+			resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+			s.NoError(err)
+			return len(resp.GetPendingActivities()) == 1 &&
+				resp.GetPendingActivities()[0].GetActivityOptions().GetTaskQueue().GetName() == "batch-updated-task-queue"
+		}, 5*time.Second, 100*time.Millisecond)
+	}
+}
+
 func sendActivityCommand(command string, run client.WorkflowRun, s *SharedServerSuite, extraArgs ...string) *CommandResult {
 	args := []string{
 		"activity", command,
@@ -233,14 +267,18 @@ func (s *SharedServerSuite) TestActivityPauseUnpause() {
 func (s *SharedServerSuite) TestActivityCommandFailed_NoActivityId() {
 	run := s.waitActivityStarted()
 
-	// pause is single-workflow only
+	// pause is single-operation only; its error names --activity-id (and the
+	// optional --workflow-id/--run-id) but not --query.
 	res := sendActivityCommand("pause", run, s)
-	s.ErrorContains(res.Err, "Activity Id must be specified")
+	s.ErrorContains(res.Err, "must specify --activity-id")
+	s.NotContains(res.Err.Error(), "--query")
 
-	// unpause and reset support both single-workflow and batch modes
+	// unpause and reset support both single-operation and batch modes, so their
+	// error names --activity-id and --query.
 	for _, command := range []string{"unpause", "reset"} {
 		res = sendActivityCommand(command, run, s)
-		s.ErrorContains(res.Err, "either --activity-id and --workflow-id, or --query must be set")
+		s.ErrorContains(res.Err, "must specify --activity-id")
+		s.ErrorContains(res.Err, "--query")
 	}
 }
 
@@ -277,6 +315,362 @@ func (s *SharedServerSuite) TestActivityReset() {
 	// make sure we receive a NotFound error from the server`
 	var notFound *serviceerror.NotFound
 	s.ErrorAs(res.Err, &notFound)
+}
+
+// Standalone (workflow-less) activity tests. These exercise CLI routing to the
+// *ActivityExecution APIs: when no --workflow-id is set, the activity is
+// targeted by --activity-id and --run-id and the server routes the request to
+// standalone-activity handling.
+
+func newStandaloneActivityID() string {
+	return "standalone-activity-" + uuid.NewString()
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_Pause() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--identity", identity,
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_Unpause() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"activity", "unpause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--reset-attempts",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) != enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_Reset() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "ServerResponse", "true")
+
+	// Targeting a missing standalone activity surfaces the server's NotFound.
+	res = s.Execute(
+		"activity", "reset",
+		"--activity-id", "fake-standalone-id",
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.Error(res.Err)
+	var notFound *serviceerror.NotFound
+	s.ErrorAs(res.Err, &notFound)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--identity", identity,
+		"--schedule-to-close-timeout", "60s",
+		"--start-to-close-timeout", "10s",
+		"--retry-initial-interval", "5s",
+		"--retry-maximum-interval", "10s",
+		"--retry-maximum-attempts", "5",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	out := res.Stdout.String()
+	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "1m0s")
+	s.ContainsOnSameLine(out, "StartToCloseTimeout", "10s")
+	s.ContainsOnSameLine(out, "InitialInterval", "5s")
+	s.ContainsOnSameLine(out, "MaximumInterval", "10s")
+	s.ContainsOnSameLine(out, "MaximumAttempts", "5")
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions_StartDelay() {
+	var started atomic.Bool
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		started.Store(true)
+		return nil, nil
+	})
+
+	handle, err := s.Client.ExecuteActivity(
+		s.Context,
+		client.StartActivityOptions{
+			ID:                  newStandaloneActivityID(),
+			TaskQueue:           s.Worker().Options.TaskQueue,
+			StartToCloseTimeout: time.Minute,
+			StartDelay:          15 * time.Second,
+		},
+		"DevActivity",
+		"input",
+	)
+	s.NoError(err)
+
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"activity", "update-options",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--start-delay", "0s",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"activity", "unpause",
+		"--activity-id", handle.GetID(),
+		"--run-id", handle.GetRunID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.Eventually(started.Load, 2*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityUpdateOptions_StartDelayRejectedForWorkflowActivity() {
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", activityId,
+		"--workflow-id", "anything",
+		"--start-delay", "30s",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "--start-delay")
+	s.ErrorContains(res.Err, "--workflow-id")
+
+	res = s.Execute(
+		"activity", "update-options",
+		"--query", "anything",
+		"--start-delay", "30s",
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "--start-delay")
+	s.ErrorContains(res.Err, "--query")
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_PauseByActivityIdOnly() {
+	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
+	defer stopFailing()
+
+	// Without --run-id, the command targets the latest run of the Activity ID.
+	res := s.Execute(
+		"activity", "pause",
+		"--activity-id", handle.GetID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		return s.standaloneActivityRunState(handle) == enums.PENDING_ACTIVITY_STATE_PAUSED
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestActivityStandalone_RequiresActivityId() {
+	// With neither --activity-id nor --query, every operation is an error, and
+	// the message tells the user how to retarget: it names --activity-id and the
+	// optional --workflow-id/--run-id, plus --query for the batch-capable
+	// operations (pause has no --query mode).
+	for _, command := range []string{"pause", "unpause", "reset", "update-options"} {
+		res := s.Execute(
+			"activity", command,
+			"--address", s.Address(),
+		)
+		s.Error(res.Err, "command %q should require --activity-id", command)
+		s.ErrorContains(res.Err, "--activity-id")
+		s.ErrorContains(res.Err, "--workflow-id")
+		s.ErrorContains(res.Err, "--run-id")
+		if command == "pause" {
+			s.NotContains(res.Err.Error(), "--query")
+		} else {
+			s.ErrorContains(res.Err, "--query")
+		}
+	}
+}
+
+// startStandaloneActivity starts a standalone (workflow-less) activity that
+// fails and retries indefinitely, so it stays pending and can be paused, reset,
+// or updated cleanly. It waits for the activity to be picked up and returns the
+// handle plus a function that lets the activity complete (used for cleanup).
+func (s *SharedServerSuite) startStandaloneActivity(actID string) (client.ActivityHandle, func()) {
+	var failActivity atomic.Bool
+	failActivity.Store(true)
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		if failActivity.Load() {
+			return nil, fmt.Errorf("standalone activity failing on purpose")
+		}
+		return nil, nil
+	})
+	handle, err := s.Client.ExecuteActivity(
+		s.Context,
+		client.StartActivityOptions{
+			ID:                  actID,
+			TaskQueue:           s.Worker().Options.TaskQueue,
+			StartToCloseTimeout: time.Minute,
+			RetryPolicy: &temporal.RetryPolicy{
+				InitialInterval: time.Second,
+				MaximumInterval: time.Second,
+			},
+		},
+		"DevActivity",
+		"input",
+	)
+	s.NoError(err)
+	s.Eventually(func() bool {
+		desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+		s.NoError(err)
+		return desc.Attempt >= 1
+	}, 10*time.Second, 100*time.Millisecond)
+	return handle, func() { failActivity.Store(false) }
+}
+
+func (s *SharedServerSuite) standaloneActivityRunState(handle client.ActivityHandle) enums.PendingActivityState {
+	desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+	s.NoError(err)
+	return desc.RunState
+}
+
+// TestActivityInvalidTargeting covers every invalid row of the activity
+// single-operation targeting matrix, across all of the operations that share
+// it. A single operation needs --activity-id plus either --workflow-id or
+// --run-id, and --query is mutually exclusive with both --workflow-id and
+// --run-id, so each of these combinations is rejected.
+//
+// reset/unpause/update-options reject the --query combinations as targeting
+// errors. pause has no --query flag, so it rejects them as unknown-flag errors;
+// either way the combination is rejected, which is the behavior under test.
+func (s *SharedServerSuite) TestActivityInvalidTargeting() {
+	const q = "WorkflowType='DevWorkflow'"
+	cases := []struct {
+		name       string
+		activityID string
+		workflowID string
+		runID      string
+		query      string
+	}{
+		{name: "nothing set"},
+		{name: "run-id only", runID: "r-id"},
+		{name: "run-id and query", runID: "r-id", query: q},
+		{name: "workflow-id only", workflowID: "w-id"},
+		{name: "workflow-id and query", workflowID: "w-id", query: q},
+		{name: "workflow-id and run-id, no activity-id", workflowID: "w-id", runID: "r-id"},
+		{name: "workflow-id, run-id, and query", workflowID: "w-id", runID: "r-id", query: q},
+		{name: "activity-id, run-id, and query", activityID: "a-id", runID: "r-id", query: q},
+		{name: "activity-id, workflow-id, and query", activityID: "a-id", workflowID: "w-id", query: q},
+		{name: "all flags set", activityID: "a-id", workflowID: "w-id", runID: "r-id", query: q},
+	}
+	for _, command := range []string{"pause", "unpause", "reset", "update-options"} {
+		for _, tc := range cases {
+			args := []string{"activity", command, "--address", s.Address()}
+			if tc.activityID != "" {
+				args = append(args, "--activity-id", tc.activityID)
+			}
+			if tc.workflowID != "" {
+				args = append(args, "--workflow-id", tc.workflowID)
+			}
+			if tc.runID != "" {
+				args = append(args, "--run-id", tc.runID)
+			}
+			if tc.query != "" {
+				args = append(args, "--query", tc.query)
+			}
+			res := s.Execute(args...)
+			s.Error(res.Err, "command %q case %q should be invalid", command, tc.name)
+		}
+	}
+}
+
+// TestActivityReset_WorkflowActivityLatestRun covers --activity-id +
+// --workflow-id with no --run-id: a specific activity in the workflow's latest
+// run.
+func (s *SharedServerSuite) TestActivityReset_WorkflowActivityLatestRun() {
+	run := s.waitActivityStarted()
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", activityId,
+		"--workflow-id", run.GetID(),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "ServerResponse", "true")
+}
+
+// TestActivityReset_ActivityIdWithQueryStartsBatch covers --activity-id +
+// --query: the activity ID is ignored and a batch over the matching workflows
+// is started instead.
+func (s *SharedServerSuite) TestActivityReset_ActivityIdWithQueryStartsBatch() {
+	run := s.waitActivityStarted()
+
+	var startedBatch atomic.Bool
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if _, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startedBatch.Store(true)
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	res := s.Execute(
+		"activity", "reset",
+		"--activity-id", "ignored-activity-id",
+		"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	s.True(startedBatch.Load(), "a batch operation should have been started")
 }
 
 // Test helpers
@@ -1247,6 +1641,38 @@ func (s *SharedServerSuite) TestActivity_Terminate() {
 	s.Contains(err.Error(), "terminated")
 }
 
+func (s *SharedServerSuite) TestActivity_Delete_Success() {
+	activityStarted := make(chan struct{})
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		close(activityStarted)
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+
+	started := s.startActivity("delete-test")
+	runID := started["runId"].(string)
+	<-activityStarted
+
+	res := s.Execute(
+		"activity", "delete",
+		"--activity-id", "delete-test",
+		"--run-id", runID,
+		"--address", s.Address(),
+		"-y",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Delete activity succeeded")
+
+	s.Eventually(func() bool {
+		handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			ActivityID: "delete-test",
+			RunID:      runID,
+		})
+		err := handle.Get(s.Context, nil)
+		return err != nil && strings.Contains(err.Error(), "activity not found")
+	}, 5*time.Second, 200*time.Millisecond)
+}
+
 func (s *SharedServerSuite) TestActivity_SearchAttributes() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, nil
@@ -1448,4 +1874,291 @@ func (s *SharedServerSuite) TestActivity_Terminate_DefaultReason_NoUnknownUser()
 	failureMsg, _ := outcome["failure"].(map[string]any)["message"].(string)
 	s.Contains(failureMsg, "Requested from CLI by")
 	s.NotContains(failureMsg, "<unknown-user>")
+}
+
+// batch operators (cancel, terminate, delete) on standalone activities
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchSuccess() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		uniqueKW := operator + "-" + uuid.NewString()[:8]
+		activityIds := make([]string, 0, 5)
+		for i := 0; i < 5; i++ {
+			activityId := fmt.Sprintf("%s-test-%d", operator, i)
+			activityIds = append(activityIds, activityId)
+			s.startActivity(activityId,
+				"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+			)
+		}
+
+		// Wait for all to be visible
+		s.Eventually(func() bool {
+			res := s.Execute(
+				"activity", "list",
+				"--address", s.Address(),
+				"--query", fmt.Sprintf(`CustomKeywordField = "%s" AND ExecutionStatus = "Running"`, uniqueKW),
+			)
+			return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= 5
+		}, 5*time.Second, 200*time.Millisecond)
+
+		// Send cancel, terminate or delete
+		reason := "test batch " + operator
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+			"--reason", reason,
+			"-y",
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Started batch")
+
+		// get job ID for later check.
+		lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
+		s.Equal(2, len(lines), "expected one success line")
+		parts := strings.Split(lines[1], ":")
+		s.Equal(2, len(parts), "expected success line to contain job ID")
+		jobId := strings.TrimSpace(parts[1])
+
+		switch operator {
+		case "cancel":
+			// Wait for all to be canceled
+			s.Eventually(func() bool {
+				count := 0
+				for _, activityId := range activityIds {
+					handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+						ActivityID: activityId,
+					})
+					desc, err := handle.Describe(s.Context, client.DescribeActivityOptions{})
+					if err == nil && desc.RunState.String() == "CancelRequested" {
+						count++
+					}
+				}
+				return count >= 5
+			}, 5*time.Second, 200*time.Millisecond)
+
+		case "terminate":
+			// Wait for all to be terminated
+			s.Eventually(func() bool {
+				res := s.Execute(
+					"activity", "list",
+					"--address", s.Address(),
+					"--query", fmt.Sprintf(`CustomKeywordField = "%s" AND ExecutionStatus = "Terminated"`, uniqueKW),
+				)
+				return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= 5
+			}, 5*time.Second, 200*time.Millisecond)
+
+		case "delete":
+			// Wait for all to be deleted
+			s.Eventually(func() bool {
+				res := s.Execute(
+					"activity", "list",
+					"--address", s.Address(),
+					"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+				)
+				return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") == 0
+			}, 5*time.Second, 200*time.Millisecond)
+		}
+
+		// check batch job has no failure
+		res = s.Execute(
+			"batch", "describe",
+			"--address", s.Address(),
+			"--job-id", jobId,
+		)
+		s.NoError(res.Err)
+		out := res.Stdout.String()
+		s.ContainsOnSameLine(out, "CompletedCount", "5/5")
+		s.ContainsOnSameLine(out, "FailureCount", "0/5")
+
+		// check for reason
+		res = s.Execute(
+			"batch", "describe",
+			"--address", s.Address(),
+			"--job-id", jobId,
+			"-o", "json",
+		)
+		s.NoError(res.Err)
+		var jsonOut map[string]any
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		s.Equal(reason, jsonOut["reason"])
+	}
+}
+
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchFailed() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		uniqueKW := operator + "-test-fail-" + uuid.NewString()[:8]
+		activityId := operator + "-test-fail"
+		runId := operator + "-test-run-id"
+
+		query := fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW)
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--activity-id", activityId,
+			"--query", query,
+			"-y",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set query when activity ID is set")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--run-id", runId,
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "must set either activity ID or query")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--activity-id", activityId,
+			"--run-id", runId,
+			"--query", query,
+			"-y",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set query when activity ID is set")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--activity-id", activityId,
+			"--rps", "10",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set rps when activity ID is set")
+
+		res = s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--run-id", runId,
+			"--query", query,
+			"-y",
+		)
+		s.Error(res.Err)
+		s.Contains(res.Err.Error(), "cannot set run ID when query is set")
+
+		if operator != "delete" {
+			res = s.Execute(
+				"activity", operator,
+				"--address", s.Address(),
+				"--activity-id", activityId,
+				"-y",
+			)
+			s.Error(res.Err)
+			s.Contains(res.Err.Error(), "cannot set 'yes' when activity ID is set")
+		}
+	}
+}
+
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchDefaultReason() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		// Send cancel, terminate or delete with default reason
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--query", `CustomKeywordField = "UnknownValue"`,
+			"-y",
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Started batch")
+
+		// get job ID for later check.
+		lines := strings.Split(strings.TrimSpace(res.Stdout.String()), "\n")
+		s.Equal(2, len(lines), "expected two lines, confirmation and success message")
+		parts := strings.Split(lines[1], ":")
+		s.Equal(2, len(parts), "expected success line to contain job ID")
+		jobId := strings.TrimSpace(parts[1])
+
+		// check for reason
+		res = s.Execute(
+			"batch", "describe",
+			"--address", s.Address(),
+			"--job-id", jobId,
+			"-o", "json",
+		)
+		s.NoError(res.Err)
+		var jsonOut map[string]any
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		s.Contains(jsonOut["reason"], "Requested from CLI by")
+	}
+}
+
+func (s *SharedServerSuite) TestActivity_CancelTerminateDelete_BatchRateLimit() {
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// don't complete the activity
+		return nil, activity.ErrResultPending
+	})
+
+	// following borrowed from testTerminateBatchWorkflow to intercept batch request
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	for _, operator := range []string{"cancel", "terminate", "delete"} {
+		uniqueKW := operator + "-rps-" + uuid.NewString()[:8]
+		iterations := 2
+		activityIds := make([]string, 0, iterations)
+		for i := 0; i < iterations; i++ {
+			activityId := fmt.Sprintf("%s-test-rps-%d", operator, i)
+			activityIds = append(activityIds, activityId)
+			s.startActivity(activityId,
+				"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+			)
+		}
+
+		// Wait for all to be visible
+		s.Eventually(func() bool {
+			res := s.Execute(
+				"activity", "list",
+				"--address", s.Address(),
+				"--query", fmt.Sprintf(`CustomKeywordField = "%s" AND ExecutionStatus = "Running"`, uniqueKW),
+			)
+			return res.Err == nil && strings.Count(res.Stdout.String(), operator+"-test-") >= iterations
+		}, 5*time.Second, 200*time.Millisecond)
+
+		// Send cancel, terminate or delete
+		var rps float32 = 1
+		s.CommandHarness.Stdin.WriteString("y\n")
+		res := s.Execute(
+			"activity", operator,
+			"--address", s.Address(),
+			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+			"--rps", fmt.Sprint(rps),
+		)
+		s.NoError(res.Err)
+		s.Contains(res.Stdout.String(), "Started batch")
+
+		s.NotNil(startBatchRequest)
+		s.Equal(rps, startBatchRequest.MaxOperationsPerSecond)
+	}
 }

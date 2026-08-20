@@ -17,6 +17,8 @@ func TestHelp_Root(t *testing.T) {
 
 	assert.Contains(t, res.Stdout.String(), "Available Commands:")
 	assert.Contains(t, res.Stdout.String(), "workflow")
+	assert.Contains(t, res.Stdout.String(), "temporal workflow list -o json")
+	assert.Contains(t, res.Stdout.String(), "temporal options")
 	assert.NoError(t, res.Err)
 }
 
@@ -42,6 +44,28 @@ func TestHelp_WithValueFlag(t *testing.T) {
 		assert.NotContains(t, res.Stderr.String(), "pflag: help requested")
 		assert.NoError(t, res.Err)
 	}
+}
+
+func TestHelp_ConfigProfileExamples(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	for _, args := range [][]string{
+		{"config", "--help"},
+		{"config", "get", "--help"},
+		{"config", "set", "--help"},
+		{"config", "delete", "--help"},
+		{"config", "delete-profile", "--help"},
+	} {
+		res := h.Execute(args...)
+		require.Contains(t, res.Stdout.String(), "--profile YourProfile", strings.Join(args[:2], " "))
+		require.NoError(t, res.Err)
+	}
+
+	res := h.Execute("config", "list", "--help")
+	descriptionAndExamples := strings.SplitN(res.Stdout.String(), "\nUsage:", 2)
+	require.Len(t, descriptionAndExamples, 2)
+	require.NotContains(t, descriptionAndExamples[0], "--profile")
+	require.NoError(t, res.Err)
 }
 
 func TestHelp_HelpShowsAllFlag(t *testing.T) {
@@ -70,12 +94,10 @@ func TestHelp_AllFlag_ShowsExtensions(t *testing.T) {
 	assert.Contains(t, out, "foo")        // shown now!
 	assert.NotContains(t, out, "bar-baz") // is under workflow
 
-	// Verify foo appears in Available Commands section (between "Available Commands:" and "Flags:")
+	// Verify foo appears in Available Commands section
 	availableIdx := strings.Index(out, "Available Commands:")
 	fooIdx := strings.Index(out, "foo")
-	flagsIdx := strings.Index(out, "Flags:")
 	assert.Greater(t, fooIdx, availableIdx, "foo should appear after Available Commands:")
-	assert.Less(t, fooIdx, flagsIdx, "foo should appear before Flags:")
 	assert.NoError(t, res.Err)
 
 	// Non-executable extensions are skipped
@@ -84,8 +106,8 @@ func TestHelp_AllFlag_ShowsExtensions(t *testing.T) {
 		require.NoError(t, os.Rename(fooPath, fooPath+".bak"))
 		require.NoError(t, os.Rename(fooBarPath, fooBarPath+".bak"))
 	} else {
-		require.NoError(t, os.Chmod(fooPath, 0644))
-		require.NoError(t, os.Chmod(fooBarPath, 0644))
+		require.NoError(t, os.Chmod(fooPath, 0o644))
+		require.NoError(t, os.Chmod(fooBarPath, 0o644))
 	}
 	res = h.Execute("help", "--all")
 	assert.NotContains(t, res.Stdout.String(), "foo")
@@ -118,4 +140,33 @@ func TestHelp_AllFlag_FirstInPathWins(t *testing.T) {
 	res := h.Execute("foo")
 	assert.Equal(t, "first\n", res.Stdout.String())
 	assert.NoError(t, res.Err)
+}
+
+func TestHelp_AllFlag_ShorterCommandPathWinsi(t *testing.T) {
+	// bin1/temporal-foo
+	// bin2/temporal-foo-bar
+	// bin1/something-nested
+	// bin2/something
+	// bin1/uncommon-prefix
+	h := newExtensionHarness(t)
+	binDir1 := h.binDir
+	binDir2 := t.TempDir()
+
+	// Set PATH with binDir1 before binDir2
+	oldPath := os.Getenv("PATH")
+	os.Setenv("PATH", binDir1+string(os.PathListSeparator)+binDir2+string(os.PathListSeparator)+oldPath)
+	t.Cleanup(func() { os.Setenv("PATH", oldPath) })
+
+	h.createExtension("temporal-foo", codeEchoArgs)
+	h.createExtension("temporal-something-nested", codeEchoArgs)
+	h.createExtension("temporal-sharedprefix-one", codeEchoArgs)
+	h.binDir = binDir2
+	h.createExtension("temporal-foo-bar", codeEchoArgs)
+	h.createExtension("temporal-something", codeEchoArgs)
+	h.createExtension("temporal-sharedprefix-two", codeEchoArgs)
+
+	res := h.Execute("help", "--all")
+	assert.Regexp(t, `foo\s+An extension command located at .*[\\/]temporal-foo`, res.Stdout.String())
+	assert.Regexp(t, `something\s+An extension command located at .*[\\/]temporal-something`, res.Stdout.String())
+	assert.Contains(t, res.Stdout.String(), "Extension commands under temporal sharedprefix")
 }

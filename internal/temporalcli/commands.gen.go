@@ -151,6 +151,22 @@ func (v *DeploymentReferenceOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "build-id")
 }
 
+type ActivityReferenceOrBatchOptions struct {
+	ActivityId string
+	RunId      string
+	Query      string
+	Rps        float32
+	FlagSet    *pflag.FlagSet
+}
+
+func (v *ActivityReferenceOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID. You must set either --activity-id or --query.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Activity Run ID. If not set, targets the latest run. Only use with --activity-id. Cannot use with --query.")
+	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --activity-id or --query. Note: Using --query for batch activity operations is an experimental feature and may change in the future.")
+	f.Float32Var(&v.Rps, "rps", 0, "Limit batch's requests per second. Only allowed when --query is present.")
+}
+
 type SingleActivityOrBatchOptions struct {
 	WorkflowId string
 	Query      string
@@ -164,9 +180,9 @@ type SingleActivityOrBatchOptions struct {
 
 func (v *SingleActivityOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. You must set either --workflow-id or --query.")
+	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Set to target a workflow Activity. Omit to target a standalone Activity. For a Workflow Activity you must set either --workflow-id or --query.")
 	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --workflow-id or --query. Note: Using --query for batch activity operations is an experimental feature and may change in the future.")
-	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. Only use with --workflow-id. Cannot use with --query.")
+	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. Only use with --workflow-id or --activity-id. Cannot use with --query.")
 	f.StringVar(&v.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to user name.")
 	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm signaling. Only allowed when --query is present.")
 	f.Float32Var(&v.Rps, "rps", 0, "Limit batch's requests per second. Only allowed if query is present.")
@@ -507,9 +523,9 @@ func NewTemporalCommand(cctx *CommandContext) *TemporalCommand {
 	s.Command.Use = "temporal"
 	s.Command.Short = "Temporal command-line interface and development server"
 	if hasHighlighting {
-		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      \x1b[1mtemporal server start-dev\x1b[0m\n* View help: pass \x1b[1m--help\x1b[0m to any command:\n      \x1b[1mtemporal activity complete --help\x1b[0m"
+		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      \x1b[1mtemporal server start-dev\x1b[0m\n* View help: pass \x1b[1m--help\x1b[0m to any command:\n      \x1b[1mtemporal activity complete --help\x1b[0m\n* Return structured output with \x1b[1m-o\x1b[0m:\n      \x1b[1mtemporal workflow list -o json\x1b[0m\n* View global and connection options:\n      \x1b[1mtemporal options\x1b[0m"
 	} else {
-		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* View help: pass `--help` to any command:\n      `temporal activity complete --help`"
+		s.Command.Long = "The Temporal CLI manages, monitors, and debugs Temporal apps. It lets you run\na local Temporal Service, start Workflow Executions, pass messages to running\nWorkflows, inspect state, and more.\n\n* Start a local development service:\n      `temporal server start-dev`\n* View help: pass `--help` to any command:\n      `temporal activity complete --help`\n* Return structured output with `-o`:\n      `temporal workflow list -o json`\n* View global and connection options:\n      `temporal options`"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCommand(cctx, &s).Command)
@@ -539,11 +555,16 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Parent = parent
 	s.Command.Use = "activity"
 	s.Command.Short = "Operate on Activity Executions"
-	s.Command.Long = "Perform operations on Activity Executions."
+	if hasHighlighting {
+		s.Command.Long = "Perform operations on Activity Executions.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m\x1b[0m"
+	} else {
+		s.Command.Long = "Perform operations on Activity Executions.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m\n```"
+	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalActivityCancelCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityCompleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityCountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalActivityDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityFailCommand(cctx, &s).Command)
@@ -556,14 +577,16 @@ func NewTemporalActivityCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalActivityUnpauseCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalActivityUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
 type TemporalActivityCancelCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	ActivityReferenceOptions
+	ActivityReferenceOrBatchOptions
 	Reason string
+	Yes    bool
 }
 
 func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityCancelCommand {
@@ -573,13 +596,14 @@ func NewTemporalActivityCancelCommand(cctx *CommandContext, parent *TemporalActi
 	s.Command.Use = "cancel [flags]"
 	s.Command.Short = "Request cancellation of a Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
+		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n\x1b[1mtemporal activity cancel \\\n    --activity-id YourActivityId\x1b[0m\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status.\n\nA visibility Query lets you send bulk cancellations to Standalone Activity\nExecutions matching the results:\n\n\x1b[1mtemporal activity cancel \\\n    --query YourQuery \\\n    --reason YourReason\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n```\ntemporal activity cancel \\\n    --activity-id YourActivityId\n```\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status."
+		s.Command.Long = "Request cancellation of a Standalone Activity.\n\n```\ntemporal activity cancel \\\n    --activity-id YourActivityId\n```\n\nRequesting cancellation transitions the Activity's run state\nto CancelRequested. If the Activity is heartbeating, a\ncancellation error will be raised when the next heartbeat\nresponse is received; if the Activity allows this error to\npropagate, the Activity transitions to canceled status.\n\nA visibility Query lets you send bulk cancellations to Standalone Activity\nExecutions matching the results:\n\n```\ntemporal activity cancel \\\n    --query YourQuery \\\n    --reason YourReason\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation.")
-	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for cancellation. Also used as reason for batch operation with --query, which defaults to a message with the current user's name.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when --query is present.")
+	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -604,9 +628,9 @@ func NewTemporalActivityCompleteCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Use = "complete [flags]"
 	s.Command.Short = "Mark an activity as completed successfully with a result"
 	if hasHighlighting {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n\x1b[1mtemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\x1b[0m\n\nOmit \x1b[1m--workflow-id\x1b[0m to target a Standalone Activity by Activity ID\nand optional Run ID."
 	} else {
-		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```"
+		s.Command.Long = "Complete an Activity, marking it as successfully finished. Specify the\nActivity ID and include a JSON result for the returned value:\n\n```\ntemporal activity complete \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --result '{\"YourResultKey\": \"YourResultVal\"}'\n```\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID. This may be the ID of an Activity invoked by a Workflow, or of a Standalone Activity. Required.")
@@ -650,6 +674,37 @@ func NewTemporalActivityCountCommand(cctx *CommandContext, parent *TemporalActiv
 	return &s
 }
 
+type TemporalActivityDeleteCommand struct {
+	Parent  *TemporalActivityCommand
+	Command cobra.Command
+	ActivityReferenceOrBatchOptions
+	Reason string
+	Yes    bool
+}
+
+func NewTemporalActivityDeleteCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityDeleteCommand {
+	var s TemporalActivityDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Standalone Activity Execution (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Standalone Activity Execution and its Event History.\n\n\x1b[1mtemporal activity delete \\\n    --activity-id YourActivityId\x1b[0m\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nA visibility Query lets you send bulk delete to Standalone Activity\nExecutions matching the results:\n\n\x1b[1mtemporal activity delete \\\n    --query YourQuery\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
+	} else {
+		s.Command.Long = "Delete a Standalone Activity Execution and its Event History.\n\n```\ntemporal activity delete \\\n    --activity-id YourActivityId\n```\n\nThe removal executes asynchronously. If the Execution is Running, the Service\nterminates it before deletion.\n\nA visibility Query lets you send bulk delete to Standalone Activity\nExecutions matching the results:\n\n```\ntemporal activity delete \\\n    --query YourQuery\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to a message with the current user's name.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm.")
+	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalActivityDescribeCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
@@ -664,9 +719,9 @@ func NewTemporalActivityDescribeCommand(cctx *CommandContext, parent *TemporalAc
 	s.Command.Use = "describe [flags]"
 	s.Command.Short = "Show detailed info for a Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Display information about a Standalone Activity.\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId\x1b[0m"
+		s.Command.Long = "Display information about a Standalone Activity.\n\n\x1b[1mtemporal activity describe \\\n    --activity-id YourActivityId\x1b[0m\n\nIf \x1b[1m--run-id\x1b[0m is omitted, the latest Activity run is described."
 	} else {
-		s.Command.Long = "Display information about a Standalone Activity.\n\n```\ntemporal activity describe \\\n    --activity-id YourActivityId\n```"
+		s.Command.Long = "Display information about a Standalone Activity.\n\n```\ntemporal activity describe \\\n    --activity-id YourActivityId\n```\n\nIf `--run-id` is omitted, the latest Activity run is described."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().BoolVar(&s.Raw, "raw", false, "Print properties without changing their format.")
@@ -693,9 +748,9 @@ func NewTemporalActivityExecuteCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Use = "execute [flags]"
 	s.Command.Short = "Start a new Standalone Activity and wait for its result (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n\x1b[1mtemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n\x1b[1mtemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m\n\nThe command exits after the Activity completes."
 	} else {
-		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n```\ntemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+		s.Command.Long = "Start a new Standalone Activity and block until it completes.\nThe result is output to stdout.\n\n```\ntemporal activity execute \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 30s \\\n    --input '{\"some-key\": \"some-value\"}'\n```\n\nThe command exits after the Activity completes."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
@@ -725,9 +780,9 @@ func NewTemporalActivityFailCommand(cctx *CommandContext, parent *TemporalActivi
 	s.Command.Use = "fail [flags]"
 	s.Command.Short = "Mark an Activity as completed unsuccessfully with an error"
 	if hasHighlighting {
-		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n\x1b[1mtemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m"
+		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n\x1b[1mtemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nOmit \x1b[1m--workflow-id\x1b[0m to target a Standalone Activity by Activity ID\nand optional Run ID."
 	} else {
-		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n```\ntemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```"
+		s.Command.Long = "Fail an Activity, marking it as having encountered an error:\n\n```\ntemporal activity fail \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "Activity ID. This may be the ID of an Activity invoked by a Workflow, or of a Standalone Activity. Required.")
@@ -776,10 +831,11 @@ func NewTemporalActivityListCommand(cctx *CommandContext, parent *TemporalActivi
 }
 
 type TemporalActivityPauseCommand struct {
-	Parent  *TemporalActivityCommand
-	Command cobra.Command
-	WorkflowReferenceOptions
+	Parent     *TemporalActivityCommand
+	Command    cobra.Command
 	ActivityId string
+	WorkflowId string
+	RunId      string
 	Identity   string
 	Reason     string
 }
@@ -791,15 +847,16 @@ func NewTemporalActivityPauseCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "pause [flags]"
 	s.Command.Short = "Pause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use \x1b[1mtemporal activity update-options\x1b[0m\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use \x1b[1mtemporal activity update-options\x1b[0m\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nTo target a workflow Activity, specify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\x1b[0m\n\nTo target a standalone Activity, specify the Activity and Run IDs:\n\n\x1b[1mtemporal activity pause \\\n    --activity-id YourActivityId \\\n    --run-id YourRunId\x1b[0m\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	} else {
-		s.Command.Long = "Pause an Activity. Not supported for Standalone Activities.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use `temporal activity update-options`\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
+		s.Command.Long = "Pause an Activity.\n\nIf the Activity is not currently running (e.g. because it previously\nfailed), it will not be run again until it is unpaused.\n\nHowever, if the Activity is currently running, it will run until the next\ntime it fails, completes, or times out, at which point the pause will kick in.\n\nPause does not stop or extend the Activity's Schedule-To-Close Timeout.\nA paused Activity can still time out. Use `temporal activity update-options`\nto extend timeout settings before a long pause.\n\nIf the Activity is on its last retry attempt and fails, the failure will\nbe returned to the caller, just as if the Activity had not been paused.\n\nTo target a workflow Activity, specify the Activity and Workflow IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nTo target a standalone Activity, specify the Activity and Run IDs:\n\n```\ntemporal activity pause \\\n    --activity-id YourActivityId \\\n    --run-id YourRunId\n```\n\nTo later unpause the activity, see unpause. You may also want to\nreset the activity to unpause it while also starting it from the beginning."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to pause. Required.")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Set to target a workflow Activity. Omit to target a standalone Activity.")
+	s.Command.Flags().StringVarP(&s.RunId, "run-id", "r", "", "Run ID. With --workflow-id, identifies the workflow run. For a standalone Activity (no --workflow-id), targets a specific run; omit to target the latest run.")
 	s.Command.Flags().StringVar(&s.Identity, "identity", "", "The identity of the user or client submitting this request.")
 	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for pausing the Activity.")
-	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -814,8 +871,6 @@ type TemporalActivityResetCommand struct {
 	SingleActivityOrBatchOptions
 	ActivityId             string
 	KeepPaused             bool
-	ResetAttempts          bool
-	ResetHeartbeats        bool
 	Jitter                 cliext.FlagDuration
 	RestoreOriginalOptions bool
 }
@@ -827,15 +882,13 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "reset [flags]"
 	s.Command.Short = "Reset an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Reset an activity. Not supported for Standalone Activities.\nThis restarts the activity as if it were first being\nscheduled. That is, it will reset both the number of attempts and the\nactivity timeout, as well as, optionally, the\nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify \x1b[1mkeep_paused\x1b[0m to prevent this.\n\nIf the activity is paused and the \x1b[1mkeep_paused\x1b[0m flag is not provided,\nit will be unpaused. If the activity is paused and \x1b[1mkeep_paused\x1b[0m flag\nis provided - it will stay paused.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m) or \x1b[1m--query\x1b[0m must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure\nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the \x1b[1mreset_heartbeats\x1b[0m flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\x1b[0m\n\nActivities can be reset in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\x1b[0m"
+		s.Command.Long = "Reset an activity.\nThis restarts the activity as if it were first being scheduled: the\nattempt count returns to one, its per-attempt timeouts are re-armed, and\nits heartbeat details are cleared.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify \x1b[1m--keep-paused\x1b[0m to prevent this.\n\nIf the activity is paused and the \x1b[1m--keep-paused\x1b[0m flag is not provided,\nit will be unpaused. If the activity is paused and the \x1b[1m--keep-paused\x1b[0m\nflag is provided, it will stay paused.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m for a workflow Activity, or\nalone for a standalone Activity) or \x1b[1m--query\x1b[0m must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a\nCanceled failure the next time\nthey heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nReset always clears the heartbeat details.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --keep-paused\x1b[0m\n\nWorkflow Activities can be reset in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\x1b[0m\n\nThe \x1b[1m--query\x1b[0m flag currently applies only to Workflow Activities.\n\nOmit \x1b[1m--workflow-id\x1b[0m to target a Standalone Activity by Activity ID\nand optional Run ID."
 	} else {
-		s.Command.Long = "Reset an activity. Not supported for Standalone Activities.\nThis restarts the activity as if it were first being\nscheduled. That is, it will reset both the number of attempts and the\nactivity timeout, as well as, optionally, the\nheartbeat details.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify `keep_paused` to prevent this.\n\nIf the activity is paused and the `keep_paused` flag is not provided,\nit will be unpaused. If the activity is paused and `keep_paused` flag\nis provided - it will stay paused.\n\nEither `--activity-id` (with `--workflow-id`) or `--query` must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a Canceled failure\nthe next time they heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nIf the `reset_heartbeats` flag is set, the heartbeat details will also be cleared.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --keep-paused\n    --reset-heartbeats\n```\n\nActivities can be reset in bulk with a visibility query list filter:\n\n```\ntemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\n```"
+		s.Command.Long = "Reset an activity.\nThis restarts the activity as if it were first being scheduled: the\nattempt count returns to one, its per-attempt timeouts are re-armed, and\nits heartbeat details are cleared.\n\nIf the activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the activity is already paused, it will be unpaused by default.\nYou can specify `--keep-paused` to prevent this.\n\nIf the activity is paused and the `--keep-paused` flag is not provided,\nit will be unpaused. If the activity is paused and the `--keep-paused`\nflag is provided, it will stay paused.\n\nEither `--activity-id` (with `--workflow-id` for a workflow Activity, or\nalone for a standalone Activity) or `--query` must be specified.\n\n### Resetting activities that heartbeat {#reset-heartbeats}\n\nActivities that heartbeat will receive a\nCanceled failure the next time\nthey heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nReset always clears the heartbeat details.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --keep-paused\n```\n\nWorkflow Activities can be reset in bulk with a visibility query list filter:\n\n```\ntemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\n```\n\nThe `--query` flag currently applies only to Workflow Activities.\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
-	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
-	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats.")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will reset at random a time within the specified duration. Can only be used with --query.")
 	s.Command.Flags().BoolVar(&s.RestoreOriginalOptions, "restore-original-options", false, "Restore the original options of the activity.")
@@ -861,9 +914,9 @@ func NewTemporalActivityResultCommand(cctx *CommandContext, parent *TemporalActi
 	s.Command.Use = "result [flags]"
 	s.Command.Short = "Wait for and output the result of a Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Wait for a Standalone Activity to complete and output the\nresult.\n\n\x1b[1mtemporal activity result \\\n    --activity-id YourActivityId\x1b[0m"
+		s.Command.Long = "Wait for a Standalone Activity to complete and output the\nresult.\n\n\x1b[1mtemporal activity result \\\n    --activity-id YourActivityId\x1b[0m\n\nIf \x1b[1m--run-id\x1b[0m is omitted, the latest Activity run is used."
 	} else {
-		s.Command.Long = "Wait for a Standalone Activity to complete and output the\nresult.\n\n```\ntemporal activity result \\\n    --activity-id YourActivityId\n```"
+		s.Command.Long = "Wait for a Standalone Activity to complete and output the\nresult.\n\n```\ntemporal activity result \\\n    --activity-id YourActivityId\n```\n\nIf `--run-id` is omitted, the latest Activity run is used."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
@@ -889,9 +942,9 @@ func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActiv
 	s.Command.Use = "start [flags]"
 	s.Command.Short = "Start a new Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m"
+		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n\x1b[1mtemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\x1b[0m\n\nThe command returns the Activity ID and Run ID."
 	} else {
-		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\n```"
+		s.Command.Long = "Start a new Standalone Activity. Outputs the Activity ID and\nRun ID.\n\n```\ntemporal activity start \\\n    --activity-id YourActivityId \\\n    --type YourActivity \\\n    --task-queue YourTaskQueue \\\n    --start-to-close-timeout 5m \\\n    --input '{\"some-key\": \"some-value\"}'\n```\n\nThe command returns the Activity ID and Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ActivityStartOptions.BuildFlags(s.Command.Flags())
@@ -907,8 +960,9 @@ func NewTemporalActivityStartCommand(cctx *CommandContext, parent *TemporalActiv
 type TemporalActivityTerminateCommand struct {
 	Parent  *TemporalActivityCommand
 	Command cobra.Command
-	ActivityReferenceOptions
+	ActivityReferenceOrBatchOptions
 	Reason string
+	Yes    bool
 }
 
 func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalActivityCommand) *TemporalActivityTerminateCommand {
@@ -918,13 +972,14 @@ func NewTemporalActivityTerminateCommand(cctx *CommandContext, parent *TemporalA
 	s.Command.Use = "terminate [flags]"
 	s.Command.Short = "Forcefully end a Standalone Activity (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Terminate a Standalone Activity.\n\n\x1b[1mtemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to terminations."
+		s.Command.Long = "Terminate a Standalone Activity.\n\n\x1b[1mtemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\x1b[0m\n\nActivity code cannot see or respond to terminations.\n\nA visibility Query lets you send bulk terminations to Standalone Activity\nExecutions matching the results:\n\n\x1b[1mtemporal activity terminate \\\n    --query YourQuery \\\n    --reason YourReason\x1b[0m\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See \x1b[1mtemporal batch --help\x1b[0m for a quick reference."
 	} else {
-		s.Command.Long = "Terminate a Standalone Activity.\n\n```\ntemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\n```\n\nActivity code cannot see or respond to terminations."
+		s.Command.Long = "Terminate a Standalone Activity.\n\n```\ntemporal activity terminate \\\n    --activity-id YourActivityId \\\n    --reason YourReason\n```\n\nActivity code cannot see or respond to terminations.\n\nA visibility Query lets you send bulk terminations to Standalone Activity\nExecutions matching the results:\n\n```\ntemporal activity terminate \\\n    --query YourQuery \\\n    --reason YourReason\n```\n\nVisit https://docs.temporal.io/visibility to read more about Search Attributes\nand Query creation. See `temporal batch --help` for a quick reference."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name.")
-	s.ActivityReferenceOptions.BuildFlags(s.Command.Flags())
+	s.Command.Flags().StringVar(&s.Reason, "reason", "", "Reason for termination. Defaults to a message with the current user's name. Also used as reason for batch operation with --query.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm. Only allowed when --query is present.")
+	s.ActivityReferenceOrBatchOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -950,12 +1005,12 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 	s.Command.Use = "unpause [flags]"
 	s.Command.Short = "Unpause an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\nNot supported for Standalone Activities.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse \x1b[1m--reset-attempts\x1b[0m to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, \x1b[1m--reset-attempts\x1b[0m will allow the\nActivity to be retried another N times after unpausing.\n\nUse \x1b[1m--reset-heartbeat\x1b[0m to reset the Activity's heartbeats.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m) or \x1b[1m--query\x1b[0m must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\x1b[0m\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n\x1b[1mtemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\x1b[0m"
+		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse \x1b[1m--reset-attempts\x1b[0m to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, \x1b[1m--reset-attempts\x1b[0m will allow the\nActivity to be retried another N times after unpausing.\n\nUse \x1b[1m--reset-heartbeats\x1b[0m to reset the Activity's heartbeats.\n\nEither \x1b[1m--activity-id\x1b[0m (with \x1b[1m--workflow-id\x1b[0m for a workflow Activity, or\nalone for a standalone Activity) or \x1b[1m--query\x1b[0m must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n\x1b[1mtemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --reset-attempts \\\n    --reset-heartbeats\x1b[0m\n\nWorkflow Activities can be unpaused in bulk via a visibility Query list filter:\n\n\x1b[1mtemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\x1b[0m\n\nThe \x1b[1m--query\x1b[0m flag currently applies only to Workflow Activities.\n\nOmit \x1b[1m--workflow-id\x1b[0m to target a Standalone Activity by Activity ID\nand optional Run ID."
 	} else {
-		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\nNot supported for Standalone Activities.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse `--reset-attempts` to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, `--reset-attempts` will allow the\nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeat` to reset the Activity's heartbeats.\n\nEither `--activity-id` (with `--workflow-id`) or `--query` must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n    --reset-attempts\n    --reset-heartbeats\n```\n\nActivities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\n```"
+		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nUse `--reset-attempts` to reset the number of previous run attempts to\nzero. For example, if an Activity is near the maximum number of attempts\nN specified in its retry policy, `--reset-attempts` will allow the\nActivity to be retried another N times after unpausing.\n\nUse `--reset-heartbeats` to reset the Activity's heartbeats.\n\nEither `--activity-id` (with `--workflow-id` for a workflow Activity, or\nalone for a standalone Activity) or `--query` must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --reset-attempts \\\n    --reset-heartbeats\n```\n\nWorkflow Activities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\n```\n\nThe `--query` flag currently applies only to Workflow Activities.\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).")
 	s.Command.Flags().BoolVar(&s.ResetAttempts, "reset-attempts", false, "Reset the activity attempts.")
 	s.Command.Flags().BoolVar(&s.ResetHeartbeats, "reset-heartbeats", false, "Reset the Activity's heartbeats.")
 	s.Jitter = 0
@@ -979,6 +1034,7 @@ type TemporalActivityUpdateOptionsCommand struct {
 	ScheduleToStartTimeout  cliext.FlagDuration
 	StartToCloseTimeout     cliext.FlagDuration
 	HeartbeatTimeout        cliext.FlagDuration
+	StartDelay              cliext.FlagDuration
 	RetryInitialInterval    cliext.FlagDuration
 	RetryMaximumInterval    cliext.FlagDuration
 	RetryBackoffCoefficient float32
@@ -991,14 +1047,14 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Parent = parent
 	s.Command.DisableFlagsInUseLine = true
 	s.Command.Use = "update-options [flags]"
-	s.Command.Short = "Change the values of options affecting a running Activity"
+	s.Command.Short = "Change the values of options affecting an Activity"
 	if hasHighlighting {
-		s.Command.Long = "Update the options of a running Activity that were passed into it from\na Workflow. Updates are incremental, only changing the specified options.\nNot supported for Standalone Activities.\n\nFor example:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m\n\nYou may follow this command with \x1b[1mtemporal activity reset\x1b[0m, and the new values will apply after the reset.\n\nEither \x1b[1m--activity-id\x1b[0m or \x1b[1m--query\x1b[0m must be specified.\n\nActivity options can be updated in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\x1b[0m"
+		s.Command.Long = "Update an Activity's options. Updates are incremental, only changing the\nspecified options.\n\nFor example:\n\n\x1b[1mtemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\x1b[0m\n\nYou may follow this command with \x1b[1mtemporal activity reset\x1b[0m, and the new\nvalues will apply after the reset.\n\nFor a Standalone Activity before its first dispatch, use \x1b[1m--start-delay\x1b[0m\nto change when the first Activity Task becomes available. The duration is\nmeasured from the Activity's original schedule time, and \x1b[1m0s\x1b[0m makes it\navailable immediately. \x1b[1m--start-delay\x1b[0m cannot be changed after the first\nActivity Task has been dispatched and is not supported for workflow\nActivities.\n\nEither \x1b[1m--activity-id\x1b[0m or \x1b[1m--query\x1b[0m must be specified.\n\nWorkflow Activity options can be updated in bulk with a visibility query list filter:\n\n\x1b[1mtemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\x1b[0m\n\nThe \x1b[1m--query\x1b[0m flag currently applies only to Workflow Activities.\n\nOmit \x1b[1m--workflow-id\x1b[0m to target a Standalone Activity by Activity ID\nand optional Run ID."
 	} else {
-		s.Command.Long = "Update the options of a running Activity that were passed into it from\na Workflow. Updates are incremental, only changing the specified options.\nNot supported for Standalone Activities.\n\nFor example:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n```\n\nYou may follow this command with `temporal activity reset`, and the new values will apply after the reset.\n\nEither `--activity-id` or `--query` must be specified.\n\nActivity options can be updated in bulk with a visibility query list filter:\n\n```\ntemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\n```"
+		s.Command.Long = "Update an Activity's options. Updates are incremental, only changing the\nspecified options.\n\nFor example:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n```\n\nYou may follow this command with `temporal activity reset`, and the new\nvalues will apply after the reset.\n\nFor a Standalone Activity before its first dispatch, use `--start-delay`\nto change when the first Activity Task becomes available. The duration is\nmeasured from the Activity's original schedule time, and `0s` makes it\navailable immediately. `--start-delay` cannot be changed after the first\nActivity Task has been dispatched and is not supported for workflow\nActivities.\n\nEither `--activity-id` or `--query` must be specified.\n\nWorkflow Activity options can be updated in bulk with a visibility query list filter:\n\n```\ntemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\n```\n\nThe `--query` flag currently applies only to Workflow Activities.\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with `--query`. Requires `--workflow-id` to be specified.")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
 	s.Command.Flags().Var(&s.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Indicates how long the caller is willing to wait for an activity completion. Limits how long retries will be attempted.")
@@ -1008,6 +1064,8 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 	s.Command.Flags().Var(&s.StartToCloseTimeout, "start-to-close-timeout", "Maximum time an activity is allowed to execute after being picked up by a worker. This timeout is always retryable.")
 	s.HeartbeatTimeout = 0
 	s.Command.Flags().Var(&s.HeartbeatTimeout, "heartbeat-timeout", "Maximum permitted time between successful worker heartbeats.")
+	s.StartDelay = 0
+	s.Command.Flags().Var(&s.StartDelay, "start-delay", "For a Standalone Activity before its first Activity Task is dispatched, changes when that task becomes available. The duration is measured from the Activity's original schedule time. Set to `0s` to make the task available immediately.")
 	s.RetryInitialInterval = 0
 	s.Command.Flags().Var(&s.RetryInitialInterval, "retry-initial-interval", "Interval of the first retry. If retryBackoffCoefficient is 1.0 then it is used for all retries.")
 	s.RetryMaximumInterval = 0
@@ -1045,6 +1103,7 @@ func NewTemporalBatchCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.AddCommand(&NewTemporalBatchListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalBatchTerminateCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -1145,9 +1204,9 @@ func NewTemporalConfigCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 	s.Command.Use = "config"
 	s.Command.Short = "Manage config files (EXPERIMENTAL)"
 	if hasHighlighting {
-		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal.\n\n\x1b[1mtemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m\n\nThe default config file path is \x1b[1m$CONFIG_PATH/temporalio/temporal.toml\x1b[0m where\n\x1b[1m$CONFIG_PATH\x1b[0m is defined as \x1b[1m$HOME/.config\x1b[0m on Unix,\n\x1b[1m$HOME/Library/Application Support\x1b[0m on macOS, and \x1b[1m%AppData%\x1b[0m on Windows.\nThis can be overridden with the \x1b[1mTEMPORAL_CONFIG_FILE\x1b[0m environment\nvariable or \x1b[1m--config-file\x1b[0m.\n\nThe default profile is \x1b[1mdefault\x1b[0m. This can be overridden with the\n\x1b[1mTEMPORAL_PROFILE\x1b[0m environment variable or \x1b[1m--profile\x1b[0m."
+		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal.\n\n\x1b[1mtemporal config set \\\n    --profile YourProfile \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m\n\nThe default config file path is \x1b[1m$CONFIG_PATH/temporalio/temporal.toml\x1b[0m where\n\x1b[1m$CONFIG_PATH\x1b[0m is defined as \x1b[1m$HOME/.config\x1b[0m on Unix,\n\x1b[1m$HOME/Library/Application Support\x1b[0m on macOS, and \x1b[1m%AppData%\x1b[0m on Windows.\nThis can be overridden with the \x1b[1mTEMPORAL_CONFIG_FILE\x1b[0m environment\nvariable or \x1b[1m--config-file\x1b[0m.\n\nThe default profile is \x1b[1mdefault\x1b[0m. This can be overridden with the\n\x1b[1mTEMPORAL_PROFILE\x1b[0m environment variable or \x1b[1m--profile\x1b[0m."
 	} else {
-		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal.\n\n```\ntemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\n```\n\nThe default config file path is `$CONFIG_PATH/temporalio/temporal.toml` where\n`$CONFIG_PATH` is defined as `$HOME/.config` on Unix,\n`$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows.\nThis can be overridden with the `TEMPORAL_CONFIG_FILE` environment\nvariable or `--config-file`.\n\nThe default profile is `default`. This can be overridden with the\n`TEMPORAL_PROFILE` environment variable or `--profile`."
+		s.Command.Long = "Config files are TOML files that contain profiles, with each profile\ncontaining configuration for connecting to Temporal.\n\n```\ntemporal config set \\\n    --profile YourProfile \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\n```\n\nThe default config file path is `$CONFIG_PATH/temporalio/temporal.toml` where\n`$CONFIG_PATH` is defined as `$HOME/.config` on Unix,\n`$HOME/Library/Application Support` on macOS, and `%AppData%` on Windows.\nThis can be overridden with the `TEMPORAL_CONFIG_FILE` environment\nvariable or `--config-file`.\n\nThe default profile is `default`. This can be overridden with the\n`TEMPORAL_PROFILE` environment variable or `--profile`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalConfigDeleteCommand(cctx, &s).Command)
@@ -1171,9 +1230,9 @@ func NewTemporalConfigDeleteCommand(cctx *CommandContext, parent *TemporalConfig
 	s.Command.Use = "delete [flags]"
 	s.Command.Short = "Delete a config file property (EXPERIMENTAL)\n"
 	if hasHighlighting {
-		s.Command.Long = "Remove a property within a profile.\n\n\x1b[1mtemporal config delete \\\n    --prop tls.client_cert_path\x1b[0m"
+		s.Command.Long = "Remove a property within a profile.\n\n\x1b[1mtemporal config delete \\\n    --profile YourProfile \\\n    --prop tls.client_cert_path\x1b[0m"
 	} else {
-		s.Command.Long = "Remove a property within a profile.\n\n```\ntemporal config delete \\\n    --prop tls.client_cert_path\n```"
+		s.Command.Long = "Remove a property within a profile.\n\n```\ntemporal config delete \\\n    --profile YourProfile \\\n    --prop tls.client_cert_path\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Specific property to delete. If unset, deletes entire profile. Required.")
@@ -1198,9 +1257,9 @@ func NewTemporalConfigDeleteProfileCommand(cctx *CommandContext, parent *Tempora
 	s.Command.Use = "delete-profile [flags]"
 	s.Command.Short = "Delete an entire config profile (EXPERIMENTAL)\n"
 	if hasHighlighting {
-		s.Command.Long = "Remove a full profile entirely. The \x1b[1m--profile\x1b[0m must be set explicitly.\n\n\x1b[1mtemporal config delete-profile \\\n    --profile my-profile\x1b[0m"
+		s.Command.Long = "Remove a full profile entirely. The \x1b[1m--profile\x1b[0m must be set explicitly.\n\n\x1b[1mtemporal config delete-profile \\\n    --profile YourProfile\x1b[0m"
 	} else {
-		s.Command.Long = "Remove a full profile entirely. The `--profile` must be set explicitly.\n\n```\ntemporal config delete-profile \\\n    --profile my-profile\n```"
+		s.Command.Long = "Remove a full profile entirely. The `--profile` must be set explicitly.\n\n```\ntemporal config delete-profile \\\n    --profile YourProfile\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -1224,9 +1283,9 @@ func NewTemporalConfigGetCommand(cctx *CommandContext, parent *TemporalConfigCom
 	s.Command.Use = "get [flags]"
 	s.Command.Short = "Show config file properties (EXPERIMENTAL)"
 	if hasHighlighting {
-		s.Command.Long = "Display specific properties or the entire profile.\n\n\x1b[1mtemporal config get \\\n    --prop address\x1b[0m\n\nor\n\n\x1b[1mtemporal config get\x1b[0m"
+		s.Command.Long = "Display specific properties or the entire profile.\n\n\x1b[1mtemporal config get \\\n    --profile YourProfile \\\n    --prop address\x1b[0m\n\nor\n\n\x1b[1mtemporal config get\x1b[0m"
 	} else {
-		s.Command.Long = "Display specific properties or the entire profile.\n\n```\ntemporal config get \\\n    --prop address\n```\n\nor\n\n```\ntemporal config get\n```"
+		s.Command.Long = "Display specific properties or the entire profile.\n\n```\ntemporal config get \\\n    --profile YourProfile \\\n    --prop address\n```\n\nor\n\n```\ntemporal config get\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Specific property to get.")
@@ -1277,9 +1336,9 @@ func NewTemporalConfigSetCommand(cctx *CommandContext, parent *TemporalConfigCom
 	s.Command.Use = "set [flags]"
 	s.Command.Short = "Set config file properties (EXPERIMENTAL)"
 	if hasHighlighting {
-		s.Command.Long = "Assign a value to a property and store it in the config file:\n\n\x1b[1mtemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m"
+		s.Command.Long = "Assign a value to a property and store it in the config file:\n\n\x1b[1mtemporal config set \\\n    --profile YourProfile \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\x1b[0m"
 	} else {
-		s.Command.Long = "Assign a value to a property and store it in the config file:\n\n```\ntemporal config set \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\n```"
+		s.Command.Long = "Assign a value to a property and store it in the config file:\n\n```\ntemporal config set \\\n    --profile YourProfile \\\n    --prop address \\\n    --value us-west-2.aws.api.temporal.io:7233\n```"
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Prop, "prop", "p", "", "Property name. Required.")
@@ -1444,6 +1503,7 @@ func NewTemporalNexusCommand(cctx *CommandContext, parent *TemporalCommand) *Tem
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalNexusOperationCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -1726,6 +1786,7 @@ func NewTemporalOperatorCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalOperatorNexusCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalOperatorSearchAttributeCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -2010,7 +2071,7 @@ func NewTemporalOperatorNamespaceDeleteCommand(cctx *CommandContext, parent *Tem
 		s.Command.Long = "Removes a Namespace from the Service.\n\n```\ntemporal operator namespace delete [options]\n```\n\nFor example:\n\n```\ntemporal operator namespace delete \\\n    --namespace YourNamespaceName\n```"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
-	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Request confirmation before deletion.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm deletion.")
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2443,6 +2504,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -2843,6 +2905,7 @@ func NewTemporalTaskQueueCommand(cctx *CommandContext, parent *TemporalCommand) 
 	s.Command.AddCommand(&NewTemporalTaskQueueUpdateBuildIdsCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalTaskQueueVersioningCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
@@ -3570,10 +3633,41 @@ func NewTemporalWorkerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 		s.Command.Long = "Modify or read state associated with a Worker, for example,\nusing Worker Deployments commands:\n\n```\ntemporal worker deployment\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerCountCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerListCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
+	return &s
+}
+
+type TemporalWorkerCountCommand struct {
+	Parent               *TemporalWorkerCommand
+	Command              cobra.Command
+	Query                string
+	IncludeSystemWorkers bool
+}
+
+func NewTemporalWorkerCountCommand(cctx *CommandContext, parent *TemporalWorkerCommand) *TemporalWorkerCountCommand {
+	var s TemporalWorkerCountCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "count [flags]"
+	s.Command.Short = "Count workers in a namespace (EXPERIMENTAL)"
+	if hasHighlighting {
+		s.Command.Long = "Show a count of workers in a namespace. Use \x1b[1m--query\x1b[0m to count a subset:\n\n\x1b[1mtemporal worker count --namespace YourNamespace --query 'TaskQueue=\"YourTaskQueue\"'\x1b[0m"
+	} else {
+		s.Command.Long = "Show a count of workers in a namespace. Use `--query` to count a subset:\n\n```\ntemporal worker count --namespace YourNamespace --query 'TaskQueue=\"YourTaskQueue\"'\n```"
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter.")
+	s.Command.Flags().BoolVar(&s.IncludeSystemWorkers, "include-system-workers", false, "Include system workers created by the server.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
@@ -3639,13 +3733,18 @@ type TemporalWorkerDeploymentCreateVersionCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
-	AwsLambdaFunctionArn          string
-	AwsLambdaAssumeRoleArn        string
-	AwsLambdaAssumeRoleExternalId string
-	GcpCloudRunProject            string
-	GcpCloudRunRegion             string
-	GcpCloudRunWorkerPool         string
-	GcpCloudRunServiceAccount     string
+	AwsLambdaFunctionArn           string
+	AwsLambdaAssumeRoleArn         string
+	AwsLambdaAssumeRoleExternalId  string
+	AwsLambdaSkipRoleAndExternalId bool
+	GcpCloudRunProject             string
+	GcpCloudRunRegion              string
+	GcpCloudRunWorkerPool          string
+	GcpCloudRunServiceAccount      string
+	GcpCloudRunMinInstances        int
+	GcpCloudRunMaxInstances        int
+	GcpCloudRunInitialInstances    int
+	GcpCloudRunUtilizationTarget   float32
 }
 
 func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentCreateVersionCommand {
@@ -3655,18 +3754,23 @@ func NewTemporalWorkerDeploymentCreateVersionCommand(cctx *CommandContext, paren
 	s.Command.Use = "create-version [flags]"
 	s.Command.Short = "Create a new Worker Deployment Version"
 	if hasHighlighting {
-		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment create-version [options]\x1b[0m\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\x1b[0m\n\nOr pass compute provider information for a GCP Cloud Run worker pool\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool YourWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment create-version [options]\x1b[0m\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\x1b[0m\n\nOr pass compute provider information for a GCP Cloud Run worker pool\nthat spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool YourWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \\\n    --gcp-cloud-run-min-instances 1 \\\n    --gcp-cloud-run-max-instances 3 \\\n    --gcp-cloud-run-initial-instances 1 \\\n    --gcp-cloud-run-utilization-target 0.75\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
 	} else {
-		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n```\ntemporal worker deployment create-version [options]\n```\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\n```\n\nOr pass compute provider information for a GCP Cloud Run worker pool\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool YourWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com\n```\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+		s.Command.Long = "\nCreate a new Worker Deployment Version:\n\n```\ntemporal worker deployment create-version [options]\n```\n\nConfigure a Worker Deployment Version's compute configuration as needed.\nFor example, pass compute provider information for an AWS Lambda function\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --aws-lambda-function-arn LambdaFunctionARN \\\n    --aws-lambda-assume-role-arn LambdaAssumeRoleARN \\\n    --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID\n```\n\nOr pass compute provider information for a GCP Cloud Run worker pool\nthat spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment create-version \\\n    --namespace YourNamespaceName \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool YourWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \\\n    --gcp-cloud-run-min-instances 1 \\\n    --gcp-cloud-run-max-instances 3 \\\n    --gcp-cloud-run-initial-instances 1 \\\n    --gcp-cloud-run-utilization-target 0.75\n```\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified, and must be omitted when --aws-lambda-skip-role-and-external-id is passed.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified, and must be omitted when --aws-lambda-skip-role-and-external-id is passed.")
+	s.Command.Flags().BoolVar(&s.AwsLambdaSkipRoleAndExternalId, "aws-lambda-skip-role-and-external-id", false, "When --aws-lambda-function-arn is specified, --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id are required unless this flag is passed, in which case both must be omitted.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunProject, "gcp-cloud-run-project", "", "GCP project ID hosting the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunRegion, "gcp-cloud-run-region", "", "Region of the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunWorkerPool, "gcp-cloud-run-worker-pool", "", "GCP Cloud Run worker pool name to scale when there are no active pollers for task queue targets in the Worker Deployment.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunServiceAccount, "gcp-cloud-run-service-account", "", "Customer GCP service account the Temporal server impersonates to manage the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
+	s.Command.Flags().IntVar(&s.GcpCloudRunMinInstances, "gcp-cloud-run-min-instances", 0, "Minimum number of Cloud Run worker pool instances the scaler will maintain. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together. Defaults to 0 when unset. Only valid with --gcp-cloud-run-worker-pool.")
+	s.Command.Flags().IntVar(&s.GcpCloudRunMaxInstances, "gcp-cloud-run-max-instances", 0, "Maximum number of Cloud Run worker pool instances the scaler may scale up to. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together. Defaults to 30 when unset. Only valid with --gcp-cloud-run-worker-pool.")
+	s.Command.Flags().IntVar(&s.GcpCloudRunInitialInstances, "gcp-cloud-run-initial-instances", 0, "Number of Cloud Run worker pool instances the scaler starts with. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together, and this value must be between the min and max (inclusive). Defaults to 0 when unset. Only valid with --gcp-cloud-run-worker-pool.")
+	s.Command.Flags().Float32Var(&s.GcpCloudRunUtilizationTarget, "gcp-cloud-run-utilization-target", 0, "Target average worker utilization the scaler aims for, as a fraction in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together. Lower values keep more spare capacity per worker. Defaults to 0.8 when unset. Only valid with --gcp-cloud-run-worker-pool.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
@@ -3970,14 +4074,19 @@ type TemporalWorkerDeploymentUpdateVersionComputeConfigCommand struct {
 	Parent  *TemporalWorkerDeploymentCommand
 	Command cobra.Command
 	DeploymentVersionOptions
-	AwsLambdaFunctionArn          string
-	AwsLambdaAssumeRoleArn        string
-	AwsLambdaAssumeRoleExternalId string
-	GcpCloudRunProject            string
-	GcpCloudRunRegion             string
-	GcpCloudRunWorkerPool         string
-	GcpCloudRunServiceAccount     string
-	Remove                        bool
+	AwsLambdaFunctionArn           string
+	AwsLambdaAssumeRoleArn         string
+	AwsLambdaAssumeRoleExternalId  string
+	AwsLambdaSkipRoleAndExternalId bool
+	GcpCloudRunProject             string
+	GcpCloudRunRegion              string
+	GcpCloudRunWorkerPool          string
+	GcpCloudRunServiceAccount      string
+	GcpCloudRunMinInstances        int
+	GcpCloudRunMaxInstances        int
+	GcpCloudRunInitialInstances    int
+	GcpCloudRunUtilizationTarget   float32
+	Remove                         bool
 }
 
 func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand {
@@ -3987,18 +4096,23 @@ func NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx *CommandC
 	s.Command.Use = "update-version-compute-config [flags]"
 	s.Command.Short = "Update compute configuration for a Version"
 	if hasHighlighting {
-		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\x1b[0m\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\x1b[0m\n\nTo update the GCP Cloud Run worker pool associated with an existing\nWorker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool UpdatedWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com\x1b[0m\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\x1b[0m\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\x1b[0m\n\nTo update the GCP Cloud Run worker pool associated with an existing\nWorker Deployment Version:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool UpdatedWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \\\n    --gcp-cloud-run-min-instances 1 \\\n    --gcp-cloud-run-max-instances 3 \\\n    --gcp-cloud-run-initial-instances 1 \\\n    --gcp-cloud-run-utilization-target 0.75\x1b[0m\n\nTo update only the scaling settings on an existing GCP Cloud Run Worker\nDeployment Version, supply the four scaler flags without the provider\nfields (all four must be set together):\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --gcp-cloud-run-min-instances 1 \\\n    --gcp-cloud-run-max-instances 3 \\\n    --gcp-cloud-run-initial-instances 1 \\\n    --gcp-cloud-run-utilization-target 0.75\x1b[0m\n\nProvider fields are only required when changing the compute provider.\nSwitching the provider resets the scaling settings for the new provider.\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n\x1b[1m temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
 	} else {
-		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\n```\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\n```\n\nTo update the GCP Cloud Run worker pool associated with an existing\nWorker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool UpdatedWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com\n```\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\n```\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+		s.Command.Long = "Update compute configuration associated with a Worker Deployment\nVersion.\n\nFor example, to update the AWS Lambda function ARN associated with an\nexisting Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-function-arn UpdatedLambdaFunctionARN\n```\n\nTo update the AWS IAM role ARN that is assumed by the serverless worker\nmanager associated with an existing Worker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --aws-lambda-assume-role-arn UpdatedRoleARN\n```\n\nTo update the GCP Cloud Run worker pool associated with an existing\nWorker Deployment Version:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --gcp-cloud-run-project YourGCPProject \\\n    --gcp-cloud-run-region us-central1 \\\n    --gcp-cloud-run-worker-pool UpdatedWorkerPool \\\n    --gcp-cloud-run-service-account customer-sa@proj.iam.gserviceaccount.com \\\n    --gcp-cloud-run-min-instances 1 \\\n    --gcp-cloud-run-max-instances 3 \\\n    --gcp-cloud-run-initial-instances 1 \\\n    --gcp-cloud-run-utilization-target 0.75\n```\n\nTo update only the scaling settings on an existing GCP Cloud Run Worker\nDeployment Version, supply the four scaler flags without the provider\nfields (all four must be set together):\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --gcp-cloud-run-min-instances 1 \\\n    --gcp-cloud-run-max-instances 3 \\\n    --gcp-cloud-run-initial-instances 1 \\\n    --gcp-cloud-run-utilization-target 0.75\n```\n\nProvider fields are only required when changing the compute provider.\nSwitching the provider resets the scaling settings for the new provider.\n\nIf --remove is specified, the compute configuration for the Worker\nDeployment Version will be removed:\n\n```\n temporal worker deployment update-version-compute-config \\\n    --deployment-name YourDeploymentName --build-id YourBuildID \\\n    --remove\n```\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.AwsLambdaFunctionArn, "aws-lambda-function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified.")
-	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleArn, "aws-lambda-assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when invoking the Lambda function that spawns a new Worker in this Worker Deployment Version. Required when --aws-lambda-function-arn is specified, and must be omitted when --aws-lambda-skip-role-and-external-id is passed.")
+	s.Command.Flags().StringVar(&s.AwsLambdaAssumeRoleExternalId, "aws-lambda-assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --aws-lambda-assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when --aws-lambda-function-arn is specified, and must be omitted when --aws-lambda-skip-role-and-external-id is passed.")
+	s.Command.Flags().BoolVar(&s.AwsLambdaSkipRoleAndExternalId, "aws-lambda-skip-role-and-external-id", false, "When --aws-lambda-function-arn is specified, --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id are required unless this flag is passed, in which case both must be omitted.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunProject, "gcp-cloud-run-project", "", "GCP project ID hosting the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunRegion, "gcp-cloud-run-region", "", "Region of the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunWorkerPool, "gcp-cloud-run-worker-pool", "", "GCP Cloud Run worker pool name to scale when there are no active pollers for task queue targets in the Worker Deployment.")
 	s.Command.Flags().StringVar(&s.GcpCloudRunServiceAccount, "gcp-cloud-run-service-account", "", "Customer GCP service account the Temporal server impersonates to manage the Cloud Run worker pool. Required when --gcp-cloud-run-worker-pool is specified.")
+	s.Command.Flags().IntVar(&s.GcpCloudRunMinInstances, "gcp-cloud-run-min-instances", 0, "Minimum number of Cloud Run worker pool instances the scaler will maintain. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together. If omitted, the version's existing scaling settings are left unchanged. Only valid with --gcp-cloud-run-worker-pool.")
+	s.Command.Flags().IntVar(&s.GcpCloudRunMaxInstances, "gcp-cloud-run-max-instances", 0, "Maximum number of Cloud Run worker pool instances the scaler may scale up to. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together. If omitted, the version's existing scaling settings are left unchanged. Only valid with --gcp-cloud-run-worker-pool.")
+	s.Command.Flags().IntVar(&s.GcpCloudRunInitialInstances, "gcp-cloud-run-initial-instances", 0, "Number of Cloud Run worker pool instances the scaler starts with. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together, and this value must be between the min and max (inclusive). If omitted, the version's existing scaling settings are left unchanged. Only valid with --gcp-cloud-run-worker-pool.")
+	s.Command.Flags().Float32Var(&s.GcpCloudRunUtilizationTarget, "gcp-cloud-run-utilization-target", 0, "Target average worker utilization the scaler aims for, as a fraction in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must all be set together. Lower values keep more spare capacity per worker. If omitted, the version's existing scaling settings are left unchanged. Only valid with --gcp-cloud-run-worker-pool.")
 	s.Command.Flags().BoolVar(&s.Remove, "remove", false, "Removes any compute configuration associated with this Worker Deployment Version.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -4141,6 +4255,7 @@ func NewTemporalWorkflowCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowUpdateOptionsCommand(cctx, &s).Command)
 	s.ClientOptions.BuildFlags(s.Command.PersistentFlags())
+	s.ClientOptions.HideFlags()
 	return &s
 }
 
