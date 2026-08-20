@@ -1470,7 +1470,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
 
-	// A lone flag is rejected: all four scaling settings must be set together.
+	// A lone flag is rejected: all five scaling settings must be set together.
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1503,7 +1503,86 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be set together")
 
-	// min cannot exceed max (all four set so the group check passes first).
+	// The instance counts and utilization-target without scale-down-stabilization-duration are
+	// also rejected: scale-down-stabilization-duration is part of the same all-or-none group.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "1",
+		"--gcp-cloud-run-max-instances", "3",
+		"--gcp-cloud-run-initial-instances", "2",
+		"--gcp-cloud-run-utilization-target", "0.5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be set together")
+
+	// scale-down-stabilization-duration cannot be negative (all five set so the group check
+	// passes first).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration=-1s",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--gcp-cloud-run-scale-down-stabilization-duration cannot be negative")
+
+	// A negative sub-millisecond value is also rejected: it must be caught before
+	// the duration is truncated to whole milliseconds (which would send 0 and
+	// silently disable the wait instead).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration=-1us",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--gcp-cloud-run-scale-down-stabilization-duration cannot be negative")
+
+	// A positive sub-millisecond value is rejected rather than silently rounded.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "500us",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--gcp-cloud-run-scale-down-stabilization-duration must be a whole number of milliseconds")
+
+	// min cannot exceed max (all five set so the group check passes first).
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1517,6 +1596,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "3",
 		"--gcp-cloud-run-initial-instances", "4",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "cannot exceed")
@@ -1535,6 +1615,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "0",
 		"--gcp-cloud-run-initial-instances", "0",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "--gcp-cloud-run-max-instances must be at least 1")
@@ -1553,6 +1634,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "10",
 		"--gcp-cloud-run-initial-instances", "15",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be between")
@@ -1572,6 +1654,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "10",
 		"--gcp-cloud-run-initial-instances", "5",
 		"--gcp-cloud-run-utilization-target", "1.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be greater than 0 and at most 1")
@@ -1640,7 +1723,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 	serviceAccount := "customer-sa@my-gcp-project.iam.gserviceaccount.com"
 
 	// Scaler-only update (no provider flags): the mask is just scaler.details,
-	// no provider is sent, and all four settings are carried.
+	// no provider is sent, and all five settings are carried.
 	res := s.Execute(
 		"worker", "deployment", "update-version-compute-config",
 		"--address", s.Address(),
@@ -1649,6 +1732,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 		"--gcp-cloud-run-max-instances", "10",
 		"--gcp-cloud-run-initial-instances", "5",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "2m",
 	)
 	s.NoError(res.Err)
 	req := takeCaptured()
@@ -1663,6 +1747,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 	s.Equal(float64(10), details["max_count"])
 	s.Equal(float64(5), details["initial_count"])
 	s.Equal(float64(0.5), details["utilization_target"])
+	s.Equal(float64(120000), details["no_sync_quiet_ms"])
 
 	// Switching to AWS Lambda clears the (rate-based) scaler.details so they
 	// don't linger under the no-sync scaler.
@@ -1700,7 +1785,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 	s.NotContains(sg.GetUpdateMask().GetPaths(), "scaler.details")
 	s.Equal("gcp-cloud-run", sg.GetScalingGroup().GetProvider().GetType())
 
-	// A scaler-only update still requires all four flags together.
+	// A scaler-only update still requires all five flags together.
 	res = s.Execute(
 		"worker", "deployment", "update-version-compute-config",
 		"--address", s.Address(),
