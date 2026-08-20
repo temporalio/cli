@@ -154,6 +154,9 @@ func (c *CommandContext) preprocessOptions() error {
 				// to its own error handling logic, and just copy the exit code through.
 				os.Exit(exitError.ExitCode())
 			}
+			if writeConnectionError(c.Options.Stderr, err, !color.NoColor) {
+				os.Exit(1)
+			}
 			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
