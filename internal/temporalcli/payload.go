@@ -14,6 +14,13 @@ import (
 func CreatePayloads(data [][]byte, metadata map[string][][]byte, isBase64 bool) (*common.Payloads, error) {
 	ret := &common.Payloads{Payloads: make([]*common.Payload, len(data))}
 	for i, in := range data {
+		// Decode base64 if base64'd (std encoding only for now)
+		if isBase64 {
+			var err error
+			if in, err = base64.StdEncoding.DecodeString(string(in)); err != nil {
+				return nil, fmt.Errorf("input #%v is not valid base64", i+1)
+			}
+		}
 		var metadataForIndex = make(map[string][]byte, len(metadata))
 		for k, vals := range metadata {
 			if len(vals) == 0 {
@@ -28,13 +35,6 @@ func CreatePayloads(data [][]byte, metadata map[string][][]byte, isBase64 bool) 
 				return nil, fmt.Errorf("input #%v is not valid JSON", i+1)
 			}
 			metadataForIndex[k] = v
-		}
-		// Decode base64 if base64'd (std encoding only for now)
-		if isBase64 {
-			var err error
-			if in, err = base64.StdEncoding.DecodeString(string(in)); err != nil {
-				return nil, fmt.Errorf("input #%v is not valid base64", i+1)
-			}
 		}
 		ret.Payloads[i] = &common.Payload{Data: in, Metadata: metadataForIndex}
 	}
