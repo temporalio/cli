@@ -1098,16 +1098,14 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		}
 
 		request := &workflowservice.UnpauseActivityExecutionRequest{
-			Namespace:      c.Parent.Namespace,
-			WorkflowId:     c.WorkflowId,
-			ActivityId:     c.ActivityId,
-			RunId:          c.RunId,
-			Identity:       c.Parent.Identity,
-			ResetAttempts:  c.ResetAttempts,
-			ResetHeartbeat: c.ResetHeartbeats,
-			Reason:         c.Reason,
-			Jitter:         durationpb.New(c.Jitter.Duration()),
-			ResourceId:     resourceID,
+			Namespace:  c.Parent.Namespace,
+			WorkflowId: c.WorkflowId,
+			ActivityId: c.ActivityId,
+			RunId:      c.RunId,
+			Identity:   c.Parent.Identity,
+			Reason:     c.Reason,
+			Jitter:     durationpb.New(c.Jitter.Duration()),
+			ResourceId: resourceID,
 		}
 
 		_, err = cl.WorkflowService().UnpauseActivityExecution(cctx, request)
