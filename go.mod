@@ -17,10 +17,10 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.53.1
-	go.temporal.io/api v1.63.4
+	go.temporal.io/api v1.63.5
 	go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
-	go.temporal.io/server v1.32.0-160.0
+	go.temporal.io/server v1.32.0-162.0
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
 	golang.org/x/mod v0.38.0
 	golang.org/x/term v0.45.0
@@ -169,9 +169,9 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
-	github.com/temporalio/ringpop-go v0.0.0-20250130211428-b97329e994f7 // indirect
-	github.com/temporalio/sqlparser v0.0.0-20260722001706-17d16cfe1da5 // indirect
-	github.com/temporalio/tchannel-go v1.22.1-0.20260129151045-8706a1ab5f61 // indirect
+	github.com/temporalio/ringpop-go v0.1.0 // indirect
+	github.com/temporalio/sqlparser v0.1.0 // indirect
+	github.com/temporalio/tchannel-go v1.22.1 // indirect
 	github.com/tidwall/btree v1.8.1 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/uber-common/bark v1.3.0 // indirect
@@ -194,7 +194,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
-	go.temporal.io/auto-scaled-workers v0.0.0-20260706201056-4320b34799ee // indirect
+	go.temporal.io/auto-scaled-workers v0.0.0-20260811170210-91f6fe1d10ab // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/dig v1.19.0 // indirect
 	go.uber.org/fx v1.24.0 // indirect
