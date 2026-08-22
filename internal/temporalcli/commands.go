@@ -22,10 +22,14 @@ import (
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"github.com/temporalio/ui-server/v2/server/version"
+	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/common/v1"
 	commonpb "go.temporal.io/api/common/v1"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/failure/v1"
+	"go.temporal.io/api/temporalnexus"
 	"go.temporal.io/api/temporalproto"
+	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/sdk/contrib/envconfig"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
@@ -387,6 +391,12 @@ func Execute(ctx context.Context, options CommandOptions) {
 			return
 		}
 
+		if !cctx.ActuallyRanCommand && len(cctx.Options.Args) > 0 && isCompletionCommand(cctx.Options.Args[0]) {
+			// Completion was requested, but we didn't match an extension and delegate. Register all extension
+			// commands so things like "temporal cl<TAB>" will expand to "temporal cloud"
+			registerExtensionCommands(&cmd.Command)
+		}
+
 		// Run builtin command if no extension handled the command.
 		if !cctx.ActuallyRanCommand {
 			err = cmd.Command.ExecuteContext(cctx)
@@ -419,7 +429,10 @@ func Execute(ctx context.Context, options CommandOptions) {
 	}
 }
 
-// getUsageTemplate returns a custom usage template with proper flag wrapping
+// getUsageTemplate returns a custom usage template with proper flag wrapping.
+// On the root command, global flags are hidden and a hint to "temporal options"
+// is shown instead (similar to kubectl). On subcommands, local flags are shown
+// normally and inherited flags are replaced with the same hint.
 // The default template can be found here: https://github.com/spf13/cobra/blob/v1.9.1/command.go#L1937-L1966
 func getUsageTemplate() string {
 	// Get terminal width, default to 80 if unable to determine
@@ -449,19 +462,108 @@ Available Commands:{{range $cmds}}{{if (or .IsAvailableCommand (eq .Name "help")
   {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if not .AllChildCommandsHaveGroup}}
 
 Additional Commands:{{range $cmds}}{{if (and (eq .GroupID "") (or .IsAvailableCommand (eq .Name "help")))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{end}}{{end}}{{if and .HasAvailableLocalFlags .HasParent}}
 
 Flags:
-{{.LocalFlags.FlagUsagesWrapped %d | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-Global Flags:
-{{.InheritedFlags.FlagUsagesWrapped %d | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+{{.LocalFlags.FlagUsagesWrapped %d | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
 
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`, flagWidth, flagWidth)
+
+Use "{{.Root.Name}} options" for global and connection options.
+`, flagWidth)
+}
+
+type flagRow struct {
+	Flag        string `json:"flag"`
+	Env         string `json:"env,omitempty"`
+	Config      string `json:"config,omitempty"`
+	Description string `json:"description"`
+}
+
+type flagRowNoConfig struct {
+	Flag        string `json:"flag"`
+	Env         string `json:"env,omitempty"`
+	Description string `json:"description"`
+}
+
+// printFlagTable prints flags in a table using the existing printer package.
+func printFlagTable(w io.Writer, flags *pflag.FlagSet) {
+	p := &printer.Printer{Output: w}
+
+	// Determine which columns are needed
+	hasConfig := false
+	flags.VisitAll(func(f *pflag.Flag) {
+		_, _, config := parseFlagUsage(f.Usage)
+		if config != "" {
+			hasConfig = true
+		}
+	})
+
+	// Collect rows
+	var fullRows []flagRow
+	var shortRows []flagRowNoConfig
+
+	flags.VisitAll(func(f *pflag.Flag) {
+		desc, env, config := parseFlagUsage(f.Usage)
+
+		// Build flag name with short and type
+		flag := "--" + f.Name
+		if f.Shorthand != "" {
+			flag += ", -" + f.Shorthand
+		}
+		if typ := f.Value.Type(); typ != "bool" {
+			if typ == "stringArray" {
+				typ = "string[]"
+			}
+			flag += " " + typ
+		}
+
+		// Add default if non-empty
+		if f.DefValue != "" && f.DefValue != "false" && f.DefValue != "0" && f.DefValue != "0s" && f.DefValue != "[]" {
+			desc += " (default " + f.DefValue + ")"
+		}
+
+		fullRows = append(fullRows, flagRow{Flag: flag, Env: env, Config: config, Description: desc})
+		shortRows = append(shortRows, flagRowNoConfig{Flag: flag, Env: env, Description: desc})
+	})
+
+	opts := printer.StructuredOptions{Table: &printer.TableOptions{}}
+	if hasConfig {
+		_ = p.PrintStructured(fullRows, opts)
+	} else {
+		_ = p.PrintStructured(shortRows, opts)
+	}
+}
+
+// parseFlagUsage extracts the base description, env var, and config key
+// from a flag usage string. It looks for "Env: VALUE." and "Config: VALUE."
+// suffixes that were added by the code generator.
+//
+// Env var values never contain dots, so we split on the first dot.
+// Config key values may contain dots (e.g. "tls.server_name"), so we
+// split on the last dot.
+func parseFlagUsage(usage string) (desc, env, config string) {
+	desc = usage
+	// Extract config first (uses last dot) since it may appear after env
+	if i := strings.Index(desc, " Config: "); i >= 0 {
+		rest := desc[i+9:]
+		if j := strings.LastIndex(rest, "."); j >= 0 {
+			config = rest[:j]
+			desc = strings.TrimSpace(desc[:i] + rest[j+1:])
+		}
+	}
+	// Extract env (uses first dot since env vars have no dots)
+	if i := strings.Index(desc, " Env: "); i >= 0 {
+		rest := desc[i+6:]
+		if j := strings.Index(rest, "."); j >= 0 {
+			env = rest[:j]
+			desc = strings.TrimSpace(desc[:i] + rest[j+1:])
+		}
+	}
+	return
 }
 
 func (c *TemporalCommand) initCommand(cctx *CommandContext) {
@@ -475,6 +577,31 @@ func (c *TemporalCommand) initCommand(cctx *CommandContext) {
 
 	// Customize the built-in help command to support --all/-a for listing extensions
 	customizeHelpCommand(&c.Command)
+
+	// Add "options" command to list global and connection flags (similar to kubectl options)
+	c.Command.AddCommand(&cobra.Command{
+		Use:   "options",
+		Short: "Print global and connection options inherited by all commands",
+		Long:  "Print the list of global and connection flags available across commands.",
+		Run: func(cmd *cobra.Command, args []string) {
+			w := cmd.OutOrStdout()
+			var commonOpts cliext.CommonOptions
+			fmt.Fprintln(w, "Global options")
+			fmt.Fprintln(w)
+			fmt.Fprint(w, commonOpts.Description())
+			fmt.Fprintln(w)
+			printFlagTable(w, cmd.Root().PersistentFlags())
+			fmt.Fprintln(w)
+			var clientOpts cliext.ClientOptions
+			fmt.Fprintln(w, "Connection options")
+			fmt.Fprintln(w)
+			fmt.Fprint(w, clientOpts.Description())
+			fmt.Fprintln(w)
+			connFlags := pflag.NewFlagSet("connection", pflag.ContinueOnError)
+			clientOpts.BuildFlags(connFlags)
+			printFlagTable(w, connFlags)
+		},
+	})
 
 	// Unfortunately color is a global option, so we can set in pre-run but we
 	// must unset in post-run
@@ -604,6 +731,118 @@ func timestampToTime(t *timestamppb.Timestamp) time.Time {
 		return time.Time{}
 	}
 	return t.AsTime()
+}
+
+// nexusLinkStrings converts Temporal common links into their Nexus link URL
+// string representations, skipping any link variant that has no Nexus
+// equivalent. The conversion helpers live in go.temporal.io/api/temporalnexus
+// (previously in the Go SDK's temporalnexus package).
+func nexusLinkStrings(links []*commonpb.Link) []string {
+	var out []string
+	for _, link := range links {
+		if nexusLink, ok := temporalnexus.CommonLinkToNexusLink(link); ok {
+			out = append(out, nexusLink.GetUrl())
+		}
+	}
+	return out
+}
+
+// printLinks renders Temporal common links as a standalone Nexus links section.
+// Nothing is printed when none of the links have a Nexus representation.
+func printLinks(cctx *CommandContext, links []*commonpb.Link) error {
+	urls := nexusLinkStrings(links)
+	if len(urls) == 0 {
+		return nil
+	}
+	rows := make([]struct {
+		Link string
+	}, len(urls))
+	for i, url := range urls {
+		rows[i].Link = url
+	}
+	cctx.Printer.Println()
+	cctx.Printer.Println(color.MagentaString("Links: %v", len(urls)))
+	cctx.Printer.Println()
+	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{})
+}
+
+// callbackInfoForPrint is the subset of accessors shared by workflow.v1.CallbackInfo
+// and callback.v1.CallbackInfo (the latter nested inside activity.v1.CallbackInfo).
+// It lets the workflow and activity describe commands render callbacks through a
+// single code path (printCallbacks).
+type callbackInfoForPrint interface {
+	GetCallback() *commonpb.Callback
+	GetState() enums.CallbackState
+	GetAttempt() int32
+	GetRegistrationTime() *timestamppb.Timestamp
+	GetNextAttemptScheduleTime() *timestamppb.Timestamp
+	GetLastAttemptCompleteTime() *timestamppb.Timestamp
+	GetLastAttemptFailure() *failure.Failure
+	GetBlockedReason() string
+}
+
+type callbackForPrint interface {
+	*workflowpb.CallbackInfo | *activitypb.CallbackInfo
+}
+
+func normalizeCallbackForPrint[T callbackForPrint](cb T) (callbackInfoForPrint, string) {
+	switch cb := any(cb).(type) {
+	case *workflowpb.CallbackInfo:
+		trigger := "Unknown"
+		if cb.GetTrigger().GetWorkflowClosed() != nil {
+			trigger = "WorkflowClosed"
+		}
+		return cb, trigger
+	case *activitypb.CallbackInfo:
+		trigger := "Unknown"
+		if cb.GetTrigger().GetActivityClosed() != nil {
+			trigger = "ActivityClosed"
+		}
+		return cb.GetInfo(), trigger
+	default:
+		panic("unsupported callback type")
+	}
+}
+
+// printCallbacks renders the "Callbacks: N" section shared by the workflow and
+// activity describe commands. Nothing is printed when there are no callbacks.
+// This is only reached for text output; JSON output prints the raw describe
+// response instead.
+func printCallbacks[T callbackForPrint](cctx *CommandContext, callbacks []T) error {
+	if len(callbacks) == 0 {
+		return nil
+	}
+	rows := make([]struct {
+		URL                     string
+		Links                   []string `cli:",cardOmitEmpty"`
+		Trigger                 string
+		State                   enums.CallbackState
+		Attempt                 int32
+		RegistrationTime        time.Time `cli:",cardOmitEmpty"`
+		NextAttemptScheduleTime time.Time `cli:",cardOmitEmpty"`
+		LastAttemptCompleteTime time.Time `cli:",cardOmitEmpty"`
+		BlockedReason           string    `cli:",cardOmitEmpty"`
+		LastAttemptFailure      string    `cli:",cardOmitEmpty"`
+	}, len(callbacks))
+	for i, cb := range callbacks {
+		ci, trigger := normalizeCallbackForPrint(cb)
+		rows[i].URL = ci.GetCallback().GetNexus().GetUrl()
+		rows[i].Links = nexusLinkStrings(ci.GetCallback().GetLinks())
+		rows[i].Trigger = trigger
+		rows[i].State = ci.GetState()
+		rows[i].Attempt = ci.GetAttempt()
+		rows[i].RegistrationTime = timestampToTime(ci.GetRegistrationTime())
+		rows[i].NextAttemptScheduleTime = timestampToTime(ci.GetNextAttemptScheduleTime())
+		rows[i].LastAttemptCompleteTime = timestampToTime(ci.GetLastAttemptCompleteTime())
+		rows[i].BlockedReason = ci.GetBlockedReason()
+		if f := ci.GetLastAttemptFailure(); f != nil {
+			rows[i].LastAttemptFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
+		}
+	}
+	cctx.Printer.Println()
+	cctx.Printer.Println(color.MagentaString("Callbacks: %v", len(callbacks)))
+	cctx.Printer.Println()
+	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{})
 }
 
 type nopWriter struct{}

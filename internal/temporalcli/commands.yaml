@@ -141,6 +141,10 @@ commands:
             `temporal server start-dev`
       * View help: pass `--help` to any command:
             `temporal activity complete --help`
+      * Return structured output with `-o`:
+            `temporal workflow list -o json`
+      * View global and connection options:
+            `temporal options`
     has-init: true
     option-sets:
       - common
@@ -435,13 +439,15 @@ commands:
 
       Either `--activity-id` or `--query` must be specified.
 
-      Activity options can be updated in bulk with a visibility query list filter:
+      Workflow Activity options can be updated in bulk with a visibility query list filter:
 
       ```
       temporal activity update-options \
           --query 'WorkflowType="YourWorkflow"' \
           --task-queue NewTaskQueueName
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -599,12 +605,14 @@ commands:
           --workflow-id YourWorkflowId
       ```
 
-      Activities can be unpaused in bulk via a visibility Query list filter:
+      Workflow Activities can be unpaused in bulk via a visibility Query list filter:
 
       ```
       temporal activity unpause \
           --query 'TemporalPauseInfo IS NOT NULL'
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -667,12 +675,14 @@ commands:
           --keep-paused
       ```
 
-      Activities can be reset in bulk with a visibility query list filter:
+      Workflow Activities can be reset in bulk with a visibility query list filter:
 
       ```
       temporal activity reset \
           --query 'WorkflowType="YourWorkflow"'
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -5136,6 +5146,7 @@ option-sets:
     external-package: github.com/temporalio/cli/cliext
   - name: client
     external-package: github.com/temporalio/cli/cliext
+    hide-from-help: true
 
   - name: overlap-policy
     options:
