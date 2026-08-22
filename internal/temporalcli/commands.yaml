@@ -594,13 +594,6 @@ commands:
       scheduled immediately. Otherwise, it will be scheduled after its retry
       timeout expires.
 
-      Use `--reset-attempts` to reset the number of previous run attempts to
-      zero. For example, if an Activity is near the maximum number of attempts
-      N specified in its retry policy, `--reset-attempts` will allow the
-      Activity to be retried another N times after unpausing.
-
-      Use `--reset-heartbeats` to reset the Activity's heartbeats.
-
       Either `--activity-id` (with `--workflow-id` for a workflow Activity, or
       alone for a standalone Activity) or `--query` must be specified.
 
@@ -609,9 +602,7 @@ commands:
       ```
       temporal activity unpause \
           --activity-id YourActivityId \
-          --workflow-id YourWorkflowId \
-          --reset-attempts \
-          --reset-heartbeats
+          --workflow-id YourWorkflowId
       ```
 
       Workflow Activities can be unpaused in bulk via a visibility Query list filter:
@@ -633,12 +624,6 @@ commands:
           The Activity ID to unpause. Mutually exclusive with `--query`.
           Set `--workflow-id` to target a workflow Activity, or omit it to target
           a standalone Activity (the latest run unless `--run-id` is set).
-      - name: reset-attempts
-        type: bool
-        description: Reset the activity attempts.
-      - name: reset-heartbeats
-        type: bool
-        description: Reset the Activity's heartbeats.
       - name: jitter
         type: duration
         description: |
