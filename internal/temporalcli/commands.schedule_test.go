@@ -59,6 +59,11 @@ func (s *SharedServerSuite) TestSchedule_Create() {
 	s.NoError(res.Err)
 }
 
+func (s *SharedServerSuite) TestSchedule_CreateFastForward() {
+	_, _, res := s.createSchedule("--interval", "10d", "--paused", "--ff", "5h")
+	s.NoError(res.Err)
+}
+
 func (s *SharedServerSuite) TestSchedule_Delete() {
 	schedId, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
@@ -509,6 +514,24 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 			j.Schedule.Action.StartWorkflow.TaskQueue.Name == "SomeOtherTq" &&
 			j.Schedule.Spec.Interval[0].Interval == "3600s"
 	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_UpdateFastForward() {
+	schedID, schedWorkflowID, res := s.createSchedule("--interval", "10d", "--paused")
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "update",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", schedWorkflowID,
+		"--interval", "10d",
+		"--paused",
+		"--fast-forward", "6h",
+	)
+	s.NoError(res.Err)
 }
 
 func (s *SharedServerSuite) TestSchedule_Memo_Update() {

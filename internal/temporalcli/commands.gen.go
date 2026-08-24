@@ -43,6 +43,7 @@ type ScheduleConfigurationOptions struct {
 	CatchupWindow    cliext.FlagDuration
 	Cron             []string
 	EndTime          cliext.FlagTimestamp
+	FastForward      cliext.FlagDuration
 	Interval         []string
 	Jitter           cliext.FlagDuration
 	Notes            string
@@ -61,6 +62,8 @@ func (v *ScheduleConfigurationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.Var(&v.CatchupWindow, "catchup-window", "Maximum catch-up time for when the Service is unavailable.")
 	f.StringArrayVar(&v.Cron, "cron", nil, "Calendar specification in cron string format. For example: `\"30 12 * * Fri\"`.")
 	f.Var(&v.EndTime, "end-time", "Schedule end time.")
+	v.FastForward = 0
+	f.Var(&v.FastForward, "fast-forward", "Enable time skipping and fast-forward the Schedule by this duration. Experimental. Aliased as \"--ff\".")
 	f.StringArrayVar(&v.Interval, "interval", nil, "Interval duration. For example, 90m, or 60m/15m to include phase offset.")
 	v.Jitter = 0
 	f.Var(&v.Jitter, "jitter", "Max difference in time from the specification. Vary the start time randomly within this amount.")
@@ -2569,6 +2572,7 @@ func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalSche
 	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"ff":   "fast-forward",
 		"name": "type",
 	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {
@@ -2787,6 +2791,7 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
 	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"ff":   "fast-forward",
 		"name": "type",
 	}))
 	s.Command.Run = func(c *cobra.Command, args []string) {

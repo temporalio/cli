@@ -235,6 +235,8 @@ func (s *SharedServerSuite) SetupSuite() {
 			// Enable for operator cluster commands
 			EnableGlobalNamespace: true,
 			DynamicConfigValues: map[string]any{
+				"frontend.WorkflowTimeSkippingEnabled":                true,
+				"frontend.ScheduleTimeSkippingEnabled":                true,
 				"frontend.enableUpdateWorkflowExecutionAsyncAccepted": true,
 				// Allow a high rate of change to namespaces, particularly
 				// for the task-queue command tests.

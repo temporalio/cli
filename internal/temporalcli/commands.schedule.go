@@ -8,9 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	commonpb "go.temporal.io/api/common/v1"
@@ -297,6 +299,9 @@ func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string)
 		// TriggerImmediately not supported
 		// ScheduleBackfill not supported
 	}
+	if c.FastForward.Duration() > 0 {
+		opts.TimeSkippingConfig = scheduleTimeSkippingConfig(c.FastForward.Duration())
+	}
 
 	if err = c.toScheduleSpec(&opts.Spec); err != nil {
 		return err
@@ -531,6 +536,9 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 			Paused: c.Paused,
 		},
 	}
+	if c.FastForward.Duration() > 0 {
+		newSchedule.TimeSkippingConfig = scheduleTimeSkippingConfig(c.FastForward.Duration())
+	}
 
 	if newSchedule.Policy.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
 		return err
@@ -556,6 +564,16 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 			}, nil
 		},
 	})
+}
+
+func scheduleTimeSkippingConfig(fastForward time.Duration) *commonpb.TimeSkippingConfig {
+	return &commonpb.TimeSkippingConfig{
+		Enabled: true,
+		FastForwardConfig: &commonpb.FastForwardConfig{
+			Id:       uuid.NewString(),
+			Duration: durationpb.New(fastForward),
+		},
+	}
 }
 
 func formatCalendarSpec(spec client.ScheduleCalendarSpec) *schedpb.CalendarSpec {

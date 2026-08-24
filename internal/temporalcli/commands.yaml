@@ -5188,6 +5188,13 @@ option-sets:
       - name: end-time
         type: timestamp
         description: Schedule end time.
+      - name: fast-forward
+        aliases:
+          - ff
+        type: duration
+        description: |
+          Enable time skipping and fast-forward the Schedule by this duration.
+          Experimental.
       - name: interval
         type: string[]
         description: |
