@@ -1,0 +1,7 @@
+go 1.26.4
+
+use (
+	.
+	../sdk-go
+	../temporal
+)

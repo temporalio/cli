@@ -3311,6 +3311,11 @@ commands:
           Keys must be identifiers, and values must be JSON values.
           For example: `YourKey="YourString"`
           Can be passed multiple times.
+      - name: dynamic-config-file
+        type: string
+        description: |
+          Path to a dynamic configuration YAML file. Values passed with
+          `--dynamic-config-value` take precedence over values from this file.
       - name: log-config
         type: bool
         description: Print the server config to stderr.
