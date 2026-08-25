@@ -71,7 +71,13 @@ jobs:
         run: mkdir junit-xml
 
       - name: Test
-        run: gotestsum --junitfile junit-xml/${{matrix.os}}.xml -- ./...
+        shell: bash
+        run: |
+          gotestsum --junitfile junit-xml/${{matrix.os}}.xml -- ./...
+          (
+            cd cliext
+            gotestsum --junitfile ../junit-xml/${{matrix.os}}-cliext.xml -- ./...
+          )
 
       - name: Upload junit-xml artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
