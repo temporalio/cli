@@ -1250,7 +1250,8 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       If a Worker Deployment Version with the supplied BuildID already exists,
@@ -1317,24 +1318,27 @@ commands:
         description: |
           Minimum number of Cloud Run worker pool instances the scaler will
           maintain. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Defaults
           to 0 when unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-max-instances
         type: int
         description: |
           Maximum number of Cloud Run worker pool instances the scaler may
           scale up to. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Defaults
           to 30 when unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-initial-instances
         type: int
         description: |
           Number of Cloud Run worker pool instances the scaler starts with.
           Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together, and this
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together, and this
           value must be between the min and max (inclusive). Defaults to 0 when
           unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-utilization-target
@@ -1342,10 +1346,23 @@ commands:
         description: |
           Target average worker utilization the scaler aims for, as a fraction
           in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Lower
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Lower
           values keep more spare capacity per worker. Defaults to 0.8 when
           unset. Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-scale-down-stabilization-duration
+        type: duration
+        description: |
+          Duration the scaler waits after it last saw unmet task demand
+          before it may scale the Cloud Run worker pool down. Raise this to
+          keep the pool from scaling down before long-running or bursty
+          activities finish. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. A
+          value of 0s disables the wait. Defaults to 90s when unset. Only
+          valid with --gcp-cloud-run-worker-pool.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
@@ -1587,12 +1604,13 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       To update only the scaling settings on an existing GCP Cloud Run Worker
-      Deployment Version, supply the four scaler flags without the provider
-      fields (all four must be set together):
+      Deployment Version, supply the five scaler flags without the provider
+      fields (all five must be set together):
 
       ```
        temporal worker deployment update-version-compute-config \
@@ -1600,7 +1618,8 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       Provider fields are only required when changing the compute provider.
@@ -1677,39 +1696,56 @@ commands:
         description: |
           Minimum number of Cloud Run worker pool instances the scaler will
           maintain. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. If
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. If
           omitted, the version's existing scaling settings are left unchanged.
-          Only valid with --gcp-cloud-run-worker-pool.
+          Only applies to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-max-instances
         type: int
         description: |
           Maximum number of Cloud Run worker pool instances the scaler may
           scale up to. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. If
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. If
           omitted, the version's existing scaling settings are left unchanged.
-          Only valid with --gcp-cloud-run-worker-pool.
+          Only applies to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-initial-instances
         type: int
         description: |
           Number of Cloud Run worker pool instances the scaler starts with.
           Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together, and this
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together, and this
           value must be between the min and max (inclusive). If omitted, the
-          version's existing scaling settings are left unchanged. Only valid
-          with --gcp-cloud-run-worker-pool.
+          version's existing scaling settings are left unchanged. Only applies
+          to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-utilization-target
         type: float
         description: |
           Target average worker utilization the scaler aims for, as a fraction
           in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Lower
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Lower
           values keep more spare capacity per worker. If omitted, the version's
-          existing scaling settings are left unchanged. Only valid with
-          --gcp-cloud-run-worker-pool.
+          existing scaling settings are left unchanged. Only applies to a
+          GCP Cloud Run worker pool.
+      - name: gcp-cloud-run-scale-down-stabilization-duration
+        type: duration
+        description: |
+          Duration the scaler waits after it last saw unmet task demand
+          before it may scale the Cloud Run worker pool down. Raise this to
+          keep the pool from scaling down before long-running or bursty
+          activities finish. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. A
+          value of 0s disables the wait. If omitted, the version's existing
+          scaling settings are left unchanged. Only applies to a
+          GCP Cloud Run worker pool.
       - name: remove
         type: bool
         description: |
