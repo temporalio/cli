@@ -136,11 +136,12 @@ type formattedComputeConfigProvider struct {
 }
 
 type formattedComputeConfigScaler struct {
-	Type              string   `json:"type"`
-	MinInstances      *int64   `json:"minInstances,omitempty"`
-	MaxInstances      *int64   `json:"maxInstances,omitempty"`
-	InitialInstances  *int64   `json:"initialInstances,omitempty"`
-	UtilizationTarget *float64 `json:"utilizationTarget,omitempty"`
+	Type                   string   `json:"type"`
+	MinInstances           *int64   `json:"minInstances,omitempty"`
+	MaxInstances           *int64   `json:"maxInstances,omitempty"`
+	InitialInstances       *int64   `json:"initialInstances,omitempty"`
+	UtilizationTarget      *float64 `json:"utilizationTarget,omitempty"`
+	ScaleDownStabilization string   `json:"scaleDownStabilization,omitempty"`
 }
 
 func drainageStatusToStr(drainage client.WorkerDeploymentVersionDrainageStatus) (string, error) {
@@ -393,6 +394,7 @@ const (
 	scalerKeyMaxCount          = "max_count"
 	scalerKeyInitialCount      = "initial_count"
 	scalerKeyUtilizationTarget = "utilization_target"
+	scalerKeyNoSyncQuietMs     = "no_sync_quiet_ms"
 )
 
 // scalerCountFromMap reads an integer worker-count value from a decoded scaler
@@ -427,10 +429,11 @@ func scalerFloatFromMap(m map[string]any, key string) (float64, bool) {
 // scalerSettings holds the rate-based scaler settings surfaced for display. Each
 // field is nil when the corresponding key is absent from the scaler details.
 type scalerSettings struct {
-	minInstances      *int64
-	maxInstances      *int64
-	initialInstances  *int64
-	utilizationTarget *float64
+	minInstances           *int64
+	maxInstances           *int64
+	initialInstances       *int64
+	utilizationTarget      *float64
+	scaleDownStabilization *time.Duration
 }
 
 // decodeScalerSettings extracts the rate-based scaler settings from a
@@ -458,6 +461,12 @@ func decodeScalerSettings(s *computepb.ComputeScaler) scalerSettings {
 	}
 	if v, ok := scalerFloatFromMap(m, scalerKeyUtilizationTarget); ok {
 		out.utilizationTarget = &v
+	}
+	if v, ok := scalerCountFromMap(m, scalerKeyNoSyncQuietMs); ok {
+		// The WCI key is stored in milliseconds; surface it as a duration to match
+		// how the CLI renders other duration fields (e.g. ApproximateBacklogAge).
+		d := time.Duration(v) * time.Millisecond
+		out.scaleDownStabilization = &d
 	}
 	return out
 }
@@ -490,6 +499,9 @@ func formatComputeConfigProto(cc *computepb.ComputeConfig) *formattedComputeConf
 			fs.MaxInstances = set.maxInstances
 			fs.InitialInstances = set.initialInstances
 			fs.UtilizationTarget = set.utilizationTarget
+			if set.scaleDownStabilization != nil {
+				fs.ScaleDownStabilization = formatDuration(*set.scaleDownStabilization)
+			}
 			sg.Scaler = fs
 		}
 		sgs[name] = sg
@@ -540,7 +552,8 @@ func computeConfigSummaryStr(cc *computepb.ComputeConfig) string {
 		}
 		summary := p.GetType()
 		// Append whichever scaler settings are present so the one-line summary
-		// reflects the configured limits (ordered min, initial, max, utilization).
+		// reflects the configured limits (ordered min, initial, max, utilization,
+		// scale-down-stabilization).
 		set := decodeScalerSettings(sg.GetScaler())
 		parts := []string{}
 		if set.minInstances != nil {
@@ -554,6 +567,9 @@ func computeConfigSummaryStr(cc *computepb.ComputeConfig) string {
 		}
 		if set.utilizationTarget != nil {
 			parts = append(parts, fmt.Sprintf("utilization %g", *set.utilizationTarget))
+		}
+		if set.scaleDownStabilization != nil {
+			parts = append(parts, fmt.Sprintf("scale-down-stabilization %s", formatDuration(*set.scaleDownStabilization)))
 		}
 		if len(parts) > 0 {
 			summary = fmt.Sprintf("%s (%s)", summary, strings.Join(parts, ", "))
@@ -1134,50 +1150,41 @@ func scalerTypeForProvider(providerType string) (string, error) {
 	return "", fmt.Errorf("no scaler mapping for compute provider %q", providerType)
 }
 
-// gcpCloudRunScalerDetails builds the ComputeScaler.Details payload from the GCP
-// Cloud Run scaling flags. It carries two independent groups of rate-based scaler
-// settings:
-//   - the instance-count group (min_count/max_count/initial_count), which is
-//     all-or-none and must satisfy min <= initial <= max, and
-//   - utilization_target, a standalone fraction in (0, 1].
-//
-// The *Set booleans come from cobra's Flags().Changed, so an omitted flag stays
-// distinct from an explicit 0. Returns a nil payload when nothing is set, leaving
-// WCI's defaults (min 0, max 30, initial 0, utilization_target 0.8) in effect.
-// Every setting is GCP Cloud Run only; any use with another provider is rejected.
-// Config keys mirror the WCI rate-based scaler:
-// https://github.com/temporalio/temporal-auto-scaled-workers/blob/main/wci/workflow/scaling_algorithm/rate_based.go
 // gcpScalerFlags holds the GCP Cloud Run scaling flag values together with
 // whether each was actually set (from cobra's Flags().Changed). Pairing each
 // value with its Set bool keeps an omitted flag distinct from an explicit 0 and
 // removes the positional-argument risk of passing the raw values around.
 type gcpScalerFlags struct {
-	min            int
-	minSet         bool
-	max            int
-	maxSet         bool
-	initial        int
-	initialSet     bool
-	utilization    float32
-	utilizationSet bool
+	min                       int
+	minSet                    bool
+	max                       int
+	maxSet                    bool
+	initial                   int
+	initialSet                bool
+	utilization               float32
+	utilizationSet            bool
+	scaleDownStabilization    time.Duration
+	scaleDownStabilizationSet bool
 }
 
 func (f gcpScalerFlags) anySet() bool {
-	return f.minSet || f.maxSet || f.initialSet || f.utilizationSet
+	return f.minSet || f.maxSet || f.initialSet || f.utilizationSet || f.scaleDownStabilizationSet
 }
 
 func (f gcpScalerFlags) allSet() bool {
-	return f.minSet && f.maxSet && f.initialSet && f.utilizationSet
+	return f.minSet && f.maxSet && f.initialSet && f.utilizationSet && f.scaleDownStabilizationSet
 }
 
 // gcpCloudRunScalerDetails builds the ComputeScaler.Details payload from the GCP
-// Cloud Run scaling flags (min/max/initial instance counts and utilization
-// target). The four form a single all-or-none group: setting any one requires
-// all four. That keeps the min<=initial<=max relationship self-contained and
-// avoids comparing an explicit value against WCI's default for an unset sibling.
-// Returns a nil payload when nothing is set, leaving WCI's defaults (min 0,
-// max 30, initial 0, utilization_target 0.8) in effect. Every setting is GCP
-// Cloud Run only; any use with another provider is rejected.
+// Cloud Run scaling flags (min/max/initial instance counts, utilization target,
+// and the scale-down stabilization duration). The five form a single all-or-none group:
+// setting any one requires all five. That keeps the min<=initial<=max
+// relationship self-contained, always writes the full scaler config so an update
+// never leaves a stale sibling behind, and avoids comparing an explicit value
+// against WCI's default for an unset sibling. Returns a nil payload when nothing
+// is set, leaving WCI's defaults (min 0, max 30, initial 0, utilization_target
+// 0.8, no_sync_quiet_ms 90000) in effect. Every setting is GCP Cloud Run only;
+// any use with another provider is rejected.
 func gcpCloudRunScalerDetails(providerType string, f gcpScalerFlags) (*commonpb.Payload, error) {
 	if !f.anySet() {
 		return nil, nil
@@ -1188,7 +1195,7 @@ func gcpCloudRunScalerDetails(providerType string, f gcpScalerFlags) (*commonpb.
 		return nil, fmt.Errorf("the Cloud Run scaling flags are only valid with --gcp-cloud-run-worker-pool")
 	}
 	if !f.allSet() {
-		return nil, fmt.Errorf("--gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must be set together")
+		return nil, fmt.Errorf("--gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, --gcp-cloud-run-utilization-target, and --gcp-cloud-run-scale-down-stabilization-duration must be set together")
 	}
 	if f.min < 0 {
 		return nil, fmt.Errorf("--gcp-cloud-run-min-instances cannot be negative")
@@ -1207,11 +1214,21 @@ func gcpCloudRunScalerDetails(providerType string, f gcpScalerFlags) (*commonpb.
 	if f.utilization <= 0 || f.utilization > 1 {
 		return nil, fmt.Errorf("--gcp-cloud-run-utilization-target must be greater than 0 and at most 1")
 	}
+	// Validate the raw duration before converting: Milliseconds() truncates
+	// toward zero, which would hide a negative sub-millisecond value (turning it
+	// into 0, disabling the wait) or silently round a fractional millisecond.
+	if f.scaleDownStabilization < 0 {
+		return nil, fmt.Errorf("--gcp-cloud-run-scale-down-stabilization-duration cannot be negative")
+	}
+	if f.scaleDownStabilization%time.Millisecond != 0 {
+		return nil, fmt.Errorf("--gcp-cloud-run-scale-down-stabilization-duration must be a whole number of milliseconds")
+	}
 	details := map[string]any{
 		scalerKeyMinCount:          f.min,
 		scalerKeyMaxCount:          f.max,
 		scalerKeyInitialCount:      f.initial,
 		scalerKeyUtilizationTarget: f.utilization,
+		scalerKeyNoSyncQuietMs:     f.scaleDownStabilization.Milliseconds(),
 	}
 	dc := converter.GetDefaultDataConverter()
 	return dc.ToPayload(&details)
@@ -1224,6 +1241,7 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) gcpScalerFlags() gcpScale
 		max: c.GcpCloudRunMaxInstances, maxSet: f.Changed("gcp-cloud-run-max-instances"),
 		initial: c.GcpCloudRunInitialInstances, initialSet: f.Changed("gcp-cloud-run-initial-instances"),
 		utilization: c.GcpCloudRunUtilizationTarget, utilizationSet: f.Changed("gcp-cloud-run-utilization-target"),
+		scaleDownStabilization: c.GcpCloudRunScaleDownStabilizationDuration.Duration(), scaleDownStabilizationSet: f.Changed("gcp-cloud-run-scale-down-stabilization-duration"),
 	}
 }
 
@@ -1306,6 +1324,7 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) gcpScalerFla
 		max: c.GcpCloudRunMaxInstances, maxSet: f.Changed("gcp-cloud-run-max-instances"),
 		initial: c.GcpCloudRunInitialInstances, initialSet: f.Changed("gcp-cloud-run-initial-instances"),
 		utilization: c.GcpCloudRunUtilizationTarget, utilizationSet: f.Changed("gcp-cloud-run-utilization-target"),
+		scaleDownStabilization: c.GcpCloudRunScaleDownStabilizationDuration.Duration(), scaleDownStabilizationSet: f.Changed("gcp-cloud-run-scale-down-stabilization-duration"),
 	}
 }
 
