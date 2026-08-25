@@ -12,7 +12,8 @@ server_pid_file="${state_dir}/server.pid"
 worker_pid_file="${state_dir}/worker.pid"
 server_log="${state_dir}/server.log"
 worker_log="${state_dir}/worker.log"
-dynamic_config_file="${TEMPORAL_DYNAMIC_CONFIG_FILE:-${demo_dir}/dynamicconfig.yaml}"
+scheduler_version="${TEMPORAL_SCHEDULER_VERSION:-v2}"
+dynamic_config_file="${TEMPORAL_DYNAMIC_CONFIG_FILE:-${demo_dir}/dynamicconfig-${scheduler_version}.yaml}"
 
 temporal_port="${TEMPORAL_PORT:-7233}"
 ui_port="${TEMPORAL_UI_PORT:-8233}"
@@ -84,6 +85,13 @@ check_workspace() {
 
 check_server_build() {
   check_workspace
+  case "$scheduler_version" in
+    v1 | v2) ;;
+    *)
+      printf 'Unsupported TEMPORAL_SCHEDULER_VERSION %q; expected v1 or v2.\n' "$scheduler_version" >&2
+      exit 1
+      ;;
+  esac
   if [[ ! -x "$cli_bin" ]]; then
     printf 'The Temporal binary is missing. Run "make build-server" first.\n' >&2
     exit 1
@@ -147,6 +155,8 @@ server_start() {
   trap - ERR INT TERM
   printf '\nTemporal server started.\n'
   printf 'Namespace: %s\n' "$namespace"
+  printf 'Scheduler configuration: %s\n' "$scheduler_version"
+  printf 'Dynamic config: %s\n' "$dynamic_config_file"
   printf 'Web UI: http://localhost:%s\n' "$ui_port"
   printf 'Server log: %s\n' "$server_log"
 }

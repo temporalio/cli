@@ -18,12 +18,21 @@ Run the demo:
 
 ```bash
 cd demo
-make demo-start
+make demo-start-v2
 make demo-status
 make demo-describe
 make demo-logs
 make demo-clean
 ```
+
+Choose the Scheduler implementation at startup:
+
+```bash
+make demo-start-v1  # legacy Workflow-backed Scheduler
+make demo-start-v2  # CHASM Scheduler
+```
+
+`make demo-start` is an alias for `make demo-start-v2`.
 
 The Web UI is available at <http://localhost:8233>. The development server uses
 in-memory persistence, so `make demo-clean` stops the processes and removes all demo
@@ -33,10 +42,12 @@ For general usage with your own namespace, Worker, Workflow, and Schedule, see
 [`manual.md`](manual.md). The `server-*` targets start only Temporal Server and
 the Web UI; they do not start the demo Worker or create a Schedule.
 
-The server loads `dynamicconfig.yaml`, which enables CHASM Scheduler creation
-and routing with a 100 percent rollout only for the `fx-test` namespace. The
-registered server defaults remain in effect for other namespaces. The existing
-time-skipping dynamic configuration values are still supplied by `demo.sh`.
+V1 loads `dynamicconfig-v1.yaml` with CHASM creation and routing disabled and a
+zero percent rollout for `fx-test`. V2 loads `dynamicconfig-v2.yaml`, which
+enables CHASM Scheduler creation and routing with a 100 percent rollout only for
+`fx-test`. Registered server defaults remain in effect for other namespaces.
+The existing time-skipping dynamic configuration values are still supplied by
+`demo.sh`.
 
 Configuration can be overridden with environment variables:
 
@@ -53,5 +64,5 @@ TEMPORAL_LOG_LEVEL=debug make demo-start
 Use a different dynamic configuration file with:
 
 ```bash
-TEMPORAL_DYNAMIC_CONFIG_FILE=/path/to/dynamicconfig.yaml make demo-start
+TEMPORAL_DYNAMIC_CONFIG_FILE=/path/to/dynamicconfig.yaml make demo-start-v2
 ```

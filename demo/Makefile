@@ -4,7 +4,7 @@ TEMPORAL_BIN := $(BIN_DIR)/temporal
 WORKER_BIN := $(BIN_DIR)/worker
 
 .PHONY: all build build-server build-worker \
-	demo-start demo-describe demo-status demo-logs demo-clean \
+	demo-start demo-start-v1 demo-start-v2 demo-describe demo-status demo-logs demo-clean \
 	server-start server-status server-logs server-stop
 
 all: build
@@ -21,8 +21,13 @@ build-worker:
 	@echo "Building the one-timer Workflow Worker..."
 	@cd $(ROOT_DIR) && go build -o $(WORKER_BIN) ./demo/worker
 
-demo-start: build
-	@./demo.sh demo-start
+demo-start: demo-start-v2
+
+demo-start-v1: build
+	@TEMPORAL_SCHEDULER_VERSION=v1 ./demo.sh demo-start
+
+demo-start-v2: build
+	@TEMPORAL_SCHEDULER_VERSION=v2 ./demo.sh demo-start
 
 demo-describe:
 	@./demo.sh demo-describe
