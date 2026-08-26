@@ -5,12 +5,12 @@ server selected by the repository's `go.work` file.
 
 ## Automated demo
 
-Choose the Scheduler implementation:
+V2 CHASM is the default. Use the explicit V1 command only for the legacy
+Workflow-backed Scheduler:
 
 ```bash
 make demo-start-v1  # legacy Workflow-backed Scheduler: false / 0 / false
-make demo-start-v2  # CHASM Scheduler: true / 100 / true
-make demo-start     # alias for demo-start-v2
+make demo-start     # CHASM Scheduler: true / 100 / true (default)
 ```
 
 Manage either demo with:
@@ -23,7 +23,11 @@ make demo-clean
 ```
 
 The Web UI is at <http://localhost:8233>. `demo-clean` stops the server and
-Worker and removes the generated binaries, PID files, and logs.
+Worker, deletes the active Schedule, and removes generated binaries, PID files,
+logs, and run metadata. Each start creates uniquely named `BufferAll` and `Skip`
+Schedules; `demo-status` prints both IDs and direct Web UI links, while
+`demo-describe` describes both. `BufferAll` queues every overlapping start;
+`Skip` discards an overlapping start while the previous Workflow is running.
 
 ## Use your own namespace and application
 
@@ -82,7 +86,7 @@ Use the CLI directly:
   --namespace my-namespace \
   --schedule-id my-hourly-schedule \
   --interval 1h \
-  --overlap-policy AllowAll \
+  --overlap-policy BufferAll \
   --workflow-id my-scheduled-workflow \
   --task-queue my-task-queue \
   --type MyWorkflow
@@ -98,7 +102,7 @@ Schedule update performs a full replacement, so re-specify the Schedule fields:
   --namespace my-namespace \
   --schedule-id my-hourly-schedule \
   --interval 1h \
-  --overlap-policy AllowAll \
+  --overlap-policy BufferAll \
   --workflow-id my-scheduled-workflow \
   --task-queue my-task-queue \
   --type MyWorkflow \

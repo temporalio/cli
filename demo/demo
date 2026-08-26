@@ -12,14 +12,6 @@ server_pid_file="${state_dir}/server.pid"
 worker_pid_file="${state_dir}/worker.pid"
 server_log="${state_dir}/server.log"
 worker_log="${state_dir}/worker.log"
-buffer_all_schedule_id_file="${state_dir}/buffer-all-schedule.id"
-buffer_all_workflow_id_file="${state_dir}/buffer-all-workflow.id"
-skip_schedule_id_file="${state_dir}/skip-schedule.id"
-skip_workflow_id_file="${state_dir}/skip-workflow.id"
-legacy_allow_all_schedule_id_file="${state_dir}/allow-all-schedule.id"
-legacy_allow_all_workflow_id_file="${state_dir}/allow-all-workflow.id"
-legacy_schedule_id_file="${state_dir}/schedule.id"
-legacy_workflow_id_file="${state_dir}/workflow.id"
 scheduler_version="${TEMPORAL_SCHEDULER_VERSION:-v2}"
 dynamic_config_file="${TEMPORAL_DYNAMIC_CONFIG_FILE:-${demo_dir}/dynamicconfig-${scheduler_version}.yaml}"
 
@@ -28,10 +20,8 @@ ui_port="${TEMPORAL_UI_PORT:-8233}"
 temporal_address="${TEMPORAL_ADDRESS:-127.0.0.1:${temporal_port}}"
 namespace="${TEMPORAL_NAMESPACE:-fx-test}"
 task_queue="${TEMPORAL_TASK_QUEUE:-fx-test-task-queue}"
-buffer_all_schedule_id="${TEMPORAL_BUFFER_ALL_SCHEDULE_ID:-}"
-buffer_all_workflow_id="${TEMPORAL_BUFFER_ALL_WORKFLOW_ID:-}"
-skip_schedule_id="${TEMPORAL_SKIP_SCHEDULE_ID:-}"
-skip_workflow_id="${TEMPORAL_SKIP_WORKFLOW_ID:-}"
+schedule_id="${TEMPORAL_SCHEDULE_ID:-one-hour-timer}"
+workflow_id="${TEMPORAL_WORKFLOW_ID:-one-hour-timer-workflow}"
 fast_forward="${TEMPORAL_FAST_FORWARD:-5h}"
 log_level="${TEMPORAL_LOG_LEVEL:-warn}"
 
@@ -47,57 +37,8 @@ pid_is_running() {
   if [[ -n "$expected_command" ]]; then
     local command
     command="$(ps -p "$pid" -o command= 2>/dev/null || true)"
-    if [[ "$command" != *"$expected_command"* ]]; then
-      local executables
-      executables="$(lsof -a -p "$pid" -d txt -Fn 2>/dev/null || true)"
-      [[ "$executables" == *"n${expected_command}"* ]] || return 1
-    fi
+    [[ "$command" == *"$expected_command"* ]] || return 1
   fi
-}
-
-prepare_demo_identity() {
-  local run_id
-  local schedule_id_prefix
-  local workflow_id_prefix
-  run_id="${TEMPORAL_DEMO_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$$-${RANDOM}}"
-  schedule_id_prefix="${TEMPORAL_SCHEDULE_ID:-one-hour-timer-${scheduler_version}-${run_id}}"
-  workflow_id_prefix="${TEMPORAL_WORKFLOW_ID:-one-hour-timer-workflow-${scheduler_version}-${run_id}}"
-  buffer_all_schedule_id="${TEMPORAL_BUFFER_ALL_SCHEDULE_ID:-${schedule_id_prefix}-buffer-all}"
-  buffer_all_workflow_id="${TEMPORAL_BUFFER_ALL_WORKFLOW_ID:-${workflow_id_prefix}-buffer-all}"
-  skip_schedule_id="${TEMPORAL_SKIP_SCHEDULE_ID:-${schedule_id_prefix}-skip}"
-  skip_workflow_id="${TEMPORAL_SKIP_WORKFLOW_ID:-${workflow_id_prefix}-skip}"
-  printf '%s\n' "$buffer_all_schedule_id" >"$buffer_all_schedule_id_file"
-  printf '%s\n' "$buffer_all_workflow_id" >"$buffer_all_workflow_id_file"
-  printf '%s\n' "$skip_schedule_id" >"$skip_schedule_id_file"
-  printf '%s\n' "$skip_workflow_id" >"$skip_workflow_id_file"
-}
-
-load_demo_identity() {
-  if [[ -f "$buffer_all_schedule_id_file" && -f "$buffer_all_workflow_id_file" && \
-    -f "$skip_schedule_id_file" && -f "$skip_workflow_id_file" ]]; then
-    buffer_all_schedule_id="$(<"$buffer_all_schedule_id_file")"
-    buffer_all_workflow_id="$(<"$buffer_all_workflow_id_file")"
-    skip_schedule_id="$(<"$skip_schedule_id_file")"
-    skip_workflow_id="$(<"$skip_workflow_id_file")"
-    return
-  fi
-  if [[ -n "$buffer_all_schedule_id" && -n "$buffer_all_workflow_id" && \
-    -n "$skip_schedule_id" && -n "$skip_workflow_id" ]]; then
-    return
-  fi
-  printf 'No active demo identity. Run "make demo-start" (V2) or "make demo-start-v1" first.\n' >&2
-  exit 1
-}
-
-delete_demo_schedule() {
-  local id_file="$1"
-  [[ -f "$id_file" ]] || return 0
-  local id
-  id="$(<"$id_file")"
-  "$cli_bin" schedule delete \
-    --address "$temporal_address" \
-    --namespace "$namespace" \
-    --schedule-id "$id" >/dev/null 2>&1 || true
 }
 
 stop_process() {
@@ -124,74 +65,15 @@ stop_process() {
   done
 
   kill -TERM "$pid" 2>/dev/null || true
-
-  for _ in {1..20}; do
-    if ! kill -0 "$pid" 2>/dev/null; then
-      rm -f "$pid_file"
-      return
-    fi
-    sleep 0.25
-  done
-
-  kill -KILL "$pid" 2>/dev/null || true
   rm -f "$pid_file"
 }
 
 demo_cleanup() {
-  if pid_is_running "$server_pid_file" "$cli_bin"; then
-    delete_demo_schedule "$buffer_all_schedule_id_file"
-    delete_demo_schedule "$skip_schedule_id_file"
-    delete_demo_schedule "$legacy_allow_all_schedule_id_file"
-    delete_demo_schedule "$legacy_schedule_id_file"
-  fi
   stop_process "Worker" "$worker_pid_file" "$worker_bin"
   stop_process "Temporal server" "$server_pid_file" "$cli_bin"
-  rm -f \
-    "$server_log" \
-    "$worker_log" \
-    "$buffer_all_schedule_id_file" \
-    "$buffer_all_workflow_id_file" \
-    "$skip_schedule_id_file" \
-    "$skip_workflow_id_file" \
-    "$legacy_allow_all_schedule_id_file" \
-    "$legacy_allow_all_workflow_id_file" \
-    "$legacy_schedule_id_file" \
-    "$legacy_workflow_id_file"
+  rm -f "$server_log" "$worker_log"
   rmdir "$state_dir" 2>/dev/null || true
   printf 'Cleanup complete.\n'
-}
-
-create_demo_schedule() {
-  local schedule_id="$1"
-  local workflow_id="$2"
-  local overlap_policy="$3"
-  printf 'Creating hourly %s Schedule %s...\n' "$overlap_policy" "$schedule_id"
-  "$cli_bin" schedule create \
-    --address "$temporal_address" \
-    --namespace "$namespace" \
-    --schedule-id "$schedule_id" \
-    --interval 1h \
-    --overlap-policy "$overlap_policy" \
-    --workflow-id "$workflow_id" \
-    --task-queue "$task_queue" \
-    --type OneHourTimerWorkflow
-}
-
-fast_forward_demo_schedule() {
-  local schedule_id="$1"
-  local workflow_id="$2"
-  local overlap_policy="$3"
-  printf 'Fast-forwarding %s Schedule by %s...\n' "$overlap_policy" "$fast_forward"
-  "$cli_bin" schedule update \
-    --address "$temporal_address" \
-    --namespace "$namespace" \
-    --schedule-id "$schedule_id" \
-    --interval 1h \
-    --overlap-policy "$overlap_policy" \
-    --workflow-id "$workflow_id" \
-    --task-queue "$task_queue" \
-    --type OneHourTimerWorkflow \
-    --fast-forward "$fast_forward"
 }
 
 check_workspace() {
@@ -296,8 +178,6 @@ demo_start() {
   server_start
   trap demo_cleanup ERR INT TERM
 
-  prepare_demo_identity
-
   printf 'Starting the one-timer Workflow Worker...\n'
   nohup env \
     TEMPORAL_ADDRESS="$temporal_address" \
@@ -308,42 +188,48 @@ demo_start() {
 
   sleep 1
 
-  create_demo_schedule "$buffer_all_schedule_id" "$buffer_all_workflow_id" BufferAll
-  create_demo_schedule "$skip_schedule_id" "$skip_workflow_id" Skip
-  fast_forward_demo_schedule "$buffer_all_schedule_id" "$buffer_all_workflow_id" BufferAll
-  fast_forward_demo_schedule "$skip_schedule_id" "$skip_workflow_id" Skip
+  printf 'Creating the hourly Schedule...\n'
+  "$cli_bin" schedule create \
+    --address "$temporal_address" \
+    --namespace "$namespace" \
+    --schedule-id "$schedule_id" \
+    --interval 1h \
+    --overlap-policy AllowAll \
+    --workflow-id "$workflow_id" \
+    --task-queue "$task_queue" \
+    --type OneHourTimerWorkflow
+
+  printf 'Enabling time skipping and fast-forwarding by %s...\n' "$fast_forward"
+  "$cli_bin" schedule update \
+    --address "$temporal_address" \
+    --namespace "$namespace" \
+    --schedule-id "$schedule_id" \
+    --interval 1h \
+    --overlap-policy AllowAll \
+    --workflow-id "$workflow_id" \
+    --task-queue "$task_queue" \
+    --type OneHourTimerWorkflow \
+    --fast-forward "$fast_forward"
 
   trap - ERR INT TERM
   printf '\nDemo started.\n'
-  printf 'BufferAll Schedule ID: %s\n' "$buffer_all_schedule_id"
-  printf 'Skip Schedule ID: %s\n' "$skip_schedule_id"
   printf 'Web UI: http://localhost:%s\n' "$ui_port"
-  printf 'BufferAll UI: http://localhost:%s/namespaces/%s/schedules/%s\n' "$ui_port" "$namespace" "$buffer_all_schedule_id"
-  printf 'Skip UI: http://localhost:%s/namespaces/%s/schedules/%s\n' "$ui_port" "$namespace" "$skip_schedule_id"
   printf 'Describe after five seconds: make demo-describe\n'
   printf 'Cleanup: make demo-clean\n'
 }
 
 demo_describe() {
   check_demo_build
-  load_demo_identity
   if ! pid_is_running "$server_pid_file" "$cli_bin"; then
     printf 'The Temporal server is not running.\n' >&2
     exit 1
   fi
 
   sleep 5
-  printf '=== BufferAll: %s ===\n' "$buffer_all_schedule_id"
   "$cli_bin" schedule describe \
     --address "$temporal_address" \
     --namespace "$namespace" \
-    --schedule-id "$buffer_all_schedule_id" \
-    --output json
-  printf '\n=== Skip: %s ===\n' "$skip_schedule_id"
-  "$cli_bin" schedule describe \
-    --address "$temporal_address" \
-    --namespace "$namespace" \
-    --schedule-id "$skip_schedule_id" \
+    --schedule-id "$schedule_id" \
     --output json
 }
 
@@ -360,17 +246,6 @@ server_status() {
 
 demo_status() {
   server_status
-
-  if [[ -f "$buffer_all_schedule_id_file" ]]; then
-    printf 'BufferAll Schedule ID: %s\n' "$(<"$buffer_all_schedule_id_file")"
-    printf 'BufferAll UI: http://localhost:%s/namespaces/%s/schedules/%s\n' \
-      "$ui_port" "$namespace" "$(<"$buffer_all_schedule_id_file")"
-  fi
-  if [[ -f "$skip_schedule_id_file" ]]; then
-    printf 'Skip Schedule ID: %s\n' "$(<"$skip_schedule_id_file")"
-    printf 'Skip UI: http://localhost:%s/namespaces/%s/schedules/%s\n' \
-      "$ui_port" "$namespace" "$(<"$skip_schedule_id_file")"
-  fi
 
   if pid_is_running "$worker_pid_file" "$worker_bin"; then
     printf 'Worker: running (PID %s)\n' "$(<"$worker_pid_file")"
