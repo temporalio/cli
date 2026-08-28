@@ -130,7 +130,7 @@ func TestGenericTLSHandshakeFailureDoesNotImplyClientCertificate(t *testing.T) {
 	assert.Equal(t, causeUnknown, classifyTLSAlert(err))
 
 	d := &connectDiagnosis{}
-	d.classifyTLSError(err)
+	d.classifyTLSError(err, true)
 	assert.Equal(t, causeUnknown, d.Cause)
 	requireStage(t, d, diagFail, "remote error: tls: handshake failure")
 	assert.Nil(t, suggestAction(d, connectMeta{Address: "example:7233"}))
@@ -590,7 +590,7 @@ func TestRejectedClientCertIsDistinctFromMissingOne(t *testing.T) {
 	assert.Equal(t, causeClientCertRequired, classifyTLSAlert(required))
 
 	d := &connectDiagnosis{}
-	d.classifyTLSError(rejected)
+	d.classifyTLSError(rejected, true)
 	assert.Equal(t, causeClientCertRejected, d.Cause)
 	requireStage(t, d, diagFail, "server rejected the client certificate")
 
@@ -635,9 +635,9 @@ func TestIsIPLiteralAcceptsScopedIPv6(t *testing.T) {
 	}
 }
 
-// gRPC verifies against --client-authority when it is set and no explicit TLS
-// server name is configured, so a probe using the address host would report a
-// hostname mismatch the real client never hit.
+// The plaintext probe's SNI name follows --client-authority, which is the
+// authority gRPC uses on the insecure path. The configured-TLS probe
+// deliberately does not use it; see TestConfiguredTLSProbeIgnoresAuthority.
 func TestEffectiveServerNameHonorsAuthority(t *testing.T) {
 	assert.Equal(t, "myhost", effectiveServerName("myhost", ""))
 	assert.Equal(t, "authority.example", effectiveServerName("myhost", "authority.example"))
@@ -732,4 +732,78 @@ func TestCustomDialerSkipsTransportProbes(t *testing.T) {
 		assert.NotContains(t, stage.Label, "DNS lookup for")
 		assert.NotContains(t, stage.Label, "TCP connection")
 	}
+}
+
+// The SDK passes WithAuthority only on its insecure path. With TLS configured
+// gRPC therefore derives the handshake name from the TLS ServerName, or the
+// endpoint when that is unset, and --client-authority never reaches it. A
+// probe that used the authority would report a mismatch the client never hit.
+func TestConfiguredTLSProbeIgnoresAuthority(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+	host, _, err := net.SplitHostPort(addr)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	d := diagnoseConnection(ctx, connectTarget{
+		Address:   addr,
+		Authority: "authority.example",
+		TLS:       &tls.Config{RootCAs: certPool(t, cert)},
+	}, fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded")))
+
+	assert.Equal(t, host, d.ServerName, "the endpoint host, not the authority")
+	assert.False(t, d.ServerNameConfigured)
+	assert.NotEqual(t, causeHostnameMismatch, d.Cause)
+}
+
+// InsecureSkipVerify disables certificate verification, not SNI, and grpc-go
+// sets ServerName from the authority regardless. Omitting SNI can route an
+// SNI-based endpoint to a default virtual host.
+func TestProbeSendsSNIEvenWhenVerificationIsDisabled(t *testing.T) {
+	var mu sync.Mutex
+	var names []string
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+			mu.Lock()
+			names = append(names, hello.ServerName)
+			mu.Unlock()
+			return nil, nil
+		},
+	})
+
+	// SNI is never sent for an IP literal, so the probe is driven with a
+	// hostname to observe it on the wire.
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = conn.Close() })
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	d := &connectDiagnosis{}
+	d.probeTLS(ctx, conn, "localhost", &tls.Config{InsecureSkipVerify: true})
+
+	assert.Equal(t, "localhost", d.ServerName)
+	mu.Lock()
+	defer mu.Unlock()
+	require.NotEmpty(t, names)
+	assert.Equal(t, "localhost", names[0], "SNI must be sent with verification disabled")
+}
+
+// Alert 42 is "bad certificate", which a server may send both for a rejected
+// certificate and for a missing one. Only a client that presented one can have
+// had it rejected, so the client configuration disambiguates. (A Go TLS 1.2
+// server sends alert 40 for the missing case, which stays causeUnknown; other
+// implementations do send 42, and telling a user with no certificate that
+// theirs was rejected sends them to check a pair that does not exist.)
+func TestAlert42MeaningDependsOnWhetherACertWasSent(t *testing.T) {
+	d := &connectDiagnosis{}
+	d.classifyTLSError(errors.New("remote error: tls: bad certificate"), true)
+	assert.Equal(t, causeClientCertRejected, d.Cause)
+
+	d = &connectDiagnosis{}
+	d.classifyTLSError(errors.New("remote error: tls: bad certificate"), false)
+	assert.Equal(t, causeClientCertRequired, d.Cause)
 }

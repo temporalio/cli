@@ -178,16 +178,19 @@ func diagnoseConnection(ctx context.Context, target connectTarget, origErr error
 	defer conn.Close()
 	d.ok("TCP connection established")
 
-	serverName := effectiveServerName(host, target.Authority)
 	if tlsCfg != nil {
-		d.probeTLS(ctx, conn, serverName, tlsCfg)
+		// Deliberately not the authority. The SDK passes WithAuthority only on
+		// its insecure path, so with TLS configured gRPC derives the handshake
+		// name from the TLS ServerName, or the endpoint when that is unset.
+		// --client-authority never reaches this handshake.
+		d.probeTLS(ctx, conn, host, tlsCfg)
 		if ctx.Err() != nil {
 			return d
 		}
 		if d.Cause != causeUnknown {
 			return d
 		}
-	} else if cause, detail := probeServerSpeaksTLS(ctx, conn, serverName); cause != causeUnknown {
+	} else if cause, detail := probeServerSpeaksTLS(ctx, conn, effectiveServerName(host, target.Authority)); cause != causeUnknown {
 		d.fail("server expects TLS, but the CLI is connecting without it" + detail)
 		d.Cause = cause
 		return d
@@ -214,11 +217,15 @@ func diagnoseConnection(ctx context.Context, target connectTarget, origErr error
 // and classifies the failure, if any. On handshake success it briefly reads to
 // catch post-handshake rejections: TLS 1.3 servers requiring client
 // certificates complete the handshake first and only then send an alert.
-func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, serverName string, tlsCfg *tls.Config) {
+func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, host string, tlsCfg *tls.Config) {
 	cfg := tlsCfg.Clone()
 	d.ServerNameConfigured = cfg.ServerName != ""
-	if cfg.ServerName == "" && !cfg.InsecureSkipVerify {
-		cfg.ServerName = serverName
+	// Always send SNI. grpc-go sets ServerName from the authority
+	// unconditionally, and InsecureSkipVerify disables certificate
+	// verification, not SNI. Omitting it can route an SNI-based endpoint to a
+	// default virtual host and fail a handshake the real client completes.
+	if cfg.ServerName == "" {
+		cfg.ServerName = host
 	}
 	d.ServerName = cfg.ServerName
 	// The real gRPC transport advertises h2. A server that requires ALPN
@@ -227,12 +234,16 @@ func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, serverNa
 	if len(cfg.NextProtos) == 0 {
 		cfg.NextProtos = []string{"h2"}
 	}
+	// Alert 42 is ambiguous without this: a TLS 1.2 server sends it both for a
+	// rejected certificate and for none at all.
+	clientCertConfigured := len(cfg.Certificates) > 0 || cfg.GetClientCertificate != nil
+
 	tlsConn := tls.Client(conn, cfg)
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		if d.interrupted(ctx, "TLS handshake") {
 			return
 		}
-		d.classifyTLSError(err)
+		d.classifyTLSError(err, clientCertConfigured)
 		return
 	}
 	// Handshake OK; a short read distinguishes an mTLS rejection alert from a
@@ -247,7 +258,7 @@ func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, serverNa
 	}
 	if err != nil && !isTimeout(err) {
 		if cause := classifyTLSAlert(err); cause != causeUnknown {
-			d.classifyTLSError(err)
+			d.classifyTLSError(err, clientCertConfigured)
 			return
 		}
 	}
@@ -263,13 +274,20 @@ func armReadDeadline(ctx context.Context, conn net.Conn) func() bool {
 	return context.AfterFunc(ctx, func() { _ = conn.SetReadDeadline(time.Now()) })
 }
 
-func (d *connectDiagnosis) classifyTLSError(err error) {
+func (d *connectDiagnosis) classifyTLSError(err error, clientCertConfigured bool) {
 	var recordErr tls.RecordHeaderError
 	var certErr *tls.CertificateVerificationError
 	var unknownAuthErr x509.UnknownAuthorityError
 	var hostnameErr x509.HostnameError
 	var invalidErr x509.CertificateInvalidError
 	alert := classifyTLSAlert(err)
+	// Only a client that presented a certificate can have had one rejected.
+	// A TLS 1.2 server sends alert 42 for an empty certificate message too,
+	// where alert 116 is TLS 1.3 only, so the alert alone cannot separate
+	// absence from rejection.
+	if alert == causeClientCertRejected && !clientCertConfigured {
+		alert = causeClientCertRequired
+	}
 	switch {
 	case errors.As(err, &recordErr):
 		d.fail("TLS handshake failed: server did not respond with TLS (it may be a plaintext gRPC endpoint)")
@@ -351,12 +369,10 @@ func probeServerSpeaksTLS(ctx context.Context, conn net.Conn, serverName string)
 	if err == nil {
 		return causeServerSpeaksTLS, ""
 	}
-	// Either certificate alert still proves the server spoke TLS.
-	switch classifyTLSAlert(err) {
-	case causeClientCertRequired:
+	// Either certificate alert still proves the server spoke TLS. This probe
+	// never sends a client certificate, so both mean the server wants one.
+	if classifyTLSAlert(err) != causeUnknown {
 		return causeServerSpeaksTLS, " (and it requires client certificates)"
-	case causeClientCertRejected:
-		return causeServerSpeaksTLS, " (and it rejected our client certificate)"
 	}
 	return causeUnknown, ""
 }
@@ -370,10 +386,11 @@ func isIPLiteral(host string) bool {
 	return err == nil
 }
 
-// effectiveServerName returns the name the real gRPC handshake would verify
-// against. When --client-authority is set and no explicit TLS server name is
-// configured, gRPC uses that authority, so a probe that used the address host
-// could report a hostname mismatch the client never hit.
+// effectiveServerName returns the SNI name for the opportunistic probe against
+// a server the CLI is configured to reach in plaintext. The SDK passes
+// WithAuthority on that path, so --client-authority is the authority gRPC
+// would use. It deliberately does not apply to the configured-TLS probe, where
+// the SDK never forwards the authority.
 func effectiveServerName(host, authority string) string {
 	if authority == "" {
 		return host
