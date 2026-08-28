@@ -17,6 +17,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/cli/cliext"
@@ -66,6 +67,34 @@ type CommandContext struct {
 	// Root/current command only set inside of pre-run
 	RootCommand    *TemporalCommand
 	CurrentCommand *cobra.Command
+}
+
+// useColorForStderr reports whether the connection error report should carry
+// ANSI color. The explicit --color policy still wins, but "auto" follows the
+// configured stderr writer rather than the process-wide color.NoColor, which
+// fatih/color derives from os.Stdout. Without this, a run with a terminal
+// stdout and a redirected stderr — or an embedder supplying its own buffer —
+// receives escape sequences in captured output.
+func (c *CommandContext) useColorForStderr() bool {
+	if c.JSONOutput {
+		return false
+	}
+	if c.RootCommand != nil {
+		switch c.RootCommand.Color.Value {
+		case "always":
+			return true
+		case "never":
+			return false
+		}
+	}
+	// color.NoColor still vetoes: it carries NO_COLOR, TERM=dumb, and the
+	// "never" policy applied during pre-run.
+	return !color.NoColor && isTerminalWriter(c.Options.Stderr)
+}
+
+func isTerminalWriter(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	return ok && isatty.IsTerminal(f.Fd())
 }
 
 type IOStreams struct {
@@ -153,6 +182,9 @@ func (c *CommandContext) preprocessOptions() error {
 				// An extension failed after being found and successfully started. Here we defer
 				// to its own error handling logic, and just copy the exit code through.
 				os.Exit(exitError.ExitCode())
+			}
+			if writeConnectionError(c.Options.Stderr, err, c.useColorForStderr()) {
+				os.Exit(1)
 			}
 			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
 			os.Exit(1)
