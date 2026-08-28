@@ -17,6 +17,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/cli/cliext"
@@ -154,7 +155,7 @@ func (c *CommandContext) preprocessOptions() error {
 				// to its own error handling logic, and just copy the exit code through.
 				os.Exit(exitError.ExitCode())
 			}
-			if writeConnectionError(c.Options.Stderr, err, !color.NoColor) {
+			if writeConnectionError(c.Options.Stderr, err, c.connectionErrorUsesColor()) {
 				os.Exit(1)
 			}
 			fmt.Fprintf(c.Options.Stderr, "Error: %v\n", err)
@@ -205,6 +206,36 @@ func (c *CommandContext) preprocessOptions() error {
 	}
 
 	return nil
+}
+
+func (c *CommandContext) connectionErrorUsesColor() bool {
+	if c.JSONOutput {
+		return false
+	}
+	colorMode := "auto"
+	if c.RootCommand != nil {
+		colorMode = c.RootCommand.Color.Value
+	}
+	return connectionErrorColorPolicy(colorMode, c.Options.Stderr, writerIsTerminal)
+}
+
+func connectionErrorColorPolicy(colorMode string, stderr io.Writer, isTerminal func(io.Writer) bool) bool {
+	switch colorMode {
+	case "always":
+		return true
+	case "never":
+		return false
+	case "auto":
+		return os.Getenv("NO_COLOR") == "" && os.Getenv("TERM") != "dumb" && isTerminal(stderr)
+	default:
+		return false
+	}
+}
+
+func writerIsTerminal(w io.Writer) bool {
+	type fdWriter interface{ Fd() uintptr }
+	f, ok := w.(fdWriter)
+	return ok && (isatty.IsTerminal(f.Fd()) || isatty.IsCygwinTerminal(f.Fd()))
 }
 
 const flagEnvVarAnnotation = "__temporal_env_var"

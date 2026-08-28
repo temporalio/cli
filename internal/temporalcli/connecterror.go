@@ -57,8 +57,12 @@ func connectSummary(d *connectDiagnosis, origErr error) string {
 		return "the server requires TLS but the CLI is connecting without it"
 	case causeClientCertRequired:
 		return "TLS handshake failed: server requires client certificate (mTLS)"
+	case causeClientCertRejected:
+		return "TLS handshake failed: server rejected the supplied client certificate"
 	case causeCAVerify:
 		return "cannot verify server TLS certificate"
+	case causeCertificateVerify:
+		return "server TLS certificate verification failed"
 	case causeHostnameMismatch:
 		return "server TLS certificate does not match host"
 	case causeCertFileUnreadable:
@@ -81,12 +85,14 @@ func suggestAction(d *connectDiagnosis, meta connectMeta) *displayAction {
 		return &displayAction{Label: fmt.Sprintf("Cannot read %q — check that the path exists and is readable.", d.Detail)}
 	case causeClientCertRequired:
 		return &displayAction{Label: "The server requires client certificates (mTLS). Configure both --tls-cert-path and --tls-key-path."}
+	case causeClientCertRejected:
+		return &displayAction{Label: "The server rejected the supplied client certificate. Verify its validity, key, and trusted issuer."}
 	case causeUnauthenticated, causePermissionDenied:
 		// client.Options keeps credentials opaque, so no credential-specific
 		// action is authoritative here.
 		return nil
 	case causeServerPlaintext:
-		return &displayAction{Label: fmt.Sprintf("The server at %s does not appear to use TLS. Remove --tls and related TLS flags, or check the address.", meta.Address)}
+		return &displayAction{Label: fmt.Sprintf("The server at %s does not appear to use TLS. Correct the effective TLS setting (profile, environment, API key, or TLS flags), or check the address. If plaintext is intentional, retry with --tls=false.", meta.Address)}
 	case causeServerSpeaksTLS:
 		return &displayAction{Label: "The server requires TLS. Retry with --tls."}
 	case causeDNS:
@@ -101,6 +107,8 @@ func suggestAction(d *connectDiagnosis, meta connectMeta) *displayAction {
 		return &displayAction{Label: fmt.Sprintf("Nothing is listening at %s — verify the address and that the server is running.", meta.Address)}
 	case causeCAVerify:
 		return &displayAction{Label: "The server certificate is not trusted. Configure its CA certificate with --tls-ca-path."}
+	case causeCertificateVerify:
+		return &displayAction{Label: "The server certificate was rejected. Verify its validity, server-auth usage, and configured server name."}
 	case causeHostnameMismatch:
 		return &displayAction{Label: fmt.Sprintf("The server certificate is not valid for %q. Set --tls-server-name to a certificate name.", host)}
 	case causeTCPTimeout:

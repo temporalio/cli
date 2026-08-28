@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"strings"
 	"syscall"
 	"time"
@@ -32,7 +33,9 @@ const (
 	// completed a TLS handshake when offered one.
 	causeServerSpeaksTLS
 	causeClientCertRequired
+	causeClientCertRejected
 	causeCAVerify
+	causeCertificateVerify
 	causeHostnameMismatch
 	causeCertFileUnreadable
 	causeUnauthenticated
@@ -97,8 +100,8 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 		return d
 	}
 
-	// Stage: DNS (skipped for IP literals)
-	if net.ParseIP(host) == nil {
+	// Stage: DNS (skipped for IP literals, including scoped IPv6 addresses).
+	if !isIPLiteral(host) {
 		addrs, err := net.DefaultResolver.LookupHost(ctx, host)
 		if err != nil {
 			if d.interrupted(ctx, "DNS") {
@@ -177,7 +180,7 @@ func diagnoseConnection(ctx context.Context, address string, tlsCfg *tls.Config,
 // catch post-handshake rejections: TLS 1.3 servers requiring client
 // certificates complete the handshake first and only then send an alert.
 func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, host string, tlsCfg *tls.Config) {
-	cfg := tlsCfg.Clone()
+	cfg := tlsProbeConfig(tlsCfg)
 	if cfg.ServerName == "" && !cfg.InsecureSkipVerify {
 		cfg.ServerName = host
 	}
@@ -221,6 +224,7 @@ func (d *connectDiagnosis) classifyTLSError(err error) {
 	var recordErr tls.RecordHeaderError
 	var certErr *tls.CertificateVerificationError
 	var unknownAuthErr x509.UnknownAuthorityError
+	var invalidCertErr x509.CertificateInvalidError
 	var hostnameErr x509.HostnameError
 	switch {
 	case errors.As(err, &recordErr):
@@ -229,12 +233,18 @@ func (d *connectDiagnosis) classifyTLSError(err error) {
 	case errors.As(err, &hostnameErr):
 		d.fail("TLS handshake failed: server certificate is not valid for this host: " + shortErr(err))
 		d.Cause = causeHostnameMismatch
-	case errors.As(err, &unknownAuthErr), errors.As(err, &certErr):
+	case errors.As(err, &unknownAuthErr):
 		d.fail("TLS handshake failed: cannot verify server certificate: " + shortErr(err))
 		d.Cause = causeCAVerify
+	case errors.As(err, &invalidCertErr), errors.As(err, &certErr):
+		d.fail("TLS handshake failed: server certificate verification failed: " + shortErr(err))
+		d.Cause = causeCertificateVerify
 	case classifyTLSAlert(err) == causeClientCertRequired:
 		d.fail("TLS handshake failed: server requires mTLS, no valid client certificate was provided")
 		d.Cause = causeClientCertRequired
+	case classifyTLSAlert(err) == causeClientCertRejected:
+		d.fail("TLS handshake failed: server rejected the supplied client certificate")
+		d.Cause = causeClientCertRejected
 	default:
 		d.fail("TLS handshake failed: " + shortErr(err))
 		d.Cause = causeUnknown
@@ -242,19 +252,20 @@ func (d *connectDiagnosis) classifyTLSError(err error) {
 	}
 }
 
-// classifyTLSAlert detects remote TLS alerts that explicitly indicate the
-// server required or rejected a client certificate. Go does not export alert
-// types for remote errors, so this matches the alert descriptions crypto/tls
-// emits: alert 116 "certificate required" (TLS 1.3) and alert 42 "bad
-// certificate". Generic alerts such as alert 40 "handshake failure" are not
-// sufficient evidence of mTLS. Matching is scoped to TLS probe errors only;
+// classifyTLSAlert detects remote TLS alerts about client certificates. Go does
+// not export alert types for remote errors, so this matches the descriptions
+// crypto/tls emits: alert 116 "certificate required" (TLS 1.3) and alert 42
+// "bad certificate". Generic alerts such as alert 40 "handshake failure" are
+// not sufficient evidence of mTLS. Matching is scoped to TLS probe errors only;
 // if these strings drift in a future Go release, unit tests pin them and the
 // diagnosis degrades to showing the raw error without a suggestion.
 func classifyTLSAlert(err error) connectCause {
 	msg := err.Error()
-	if strings.Contains(msg, "certificate required") ||
-		strings.Contains(msg, "bad certificate") {
+	if strings.Contains(msg, "certificate required") {
 		return causeClientCertRequired
+	}
+	if strings.Contains(msg, "bad certificate") {
+		return causeClientCertRejected
 	}
 	return causeUnknown
 }
@@ -264,15 +275,37 @@ func classifyTLSAlert(err error) connectCause {
 // (or rejects us at the certificate step, which still means it spoke TLS), the
 // mismatch is the likely root cause.
 func probeServerSpeaksTLS(ctx context.Context, conn net.Conn, host string) (connectCause, string) {
-	tlsConn := tls.Client(conn, &tls.Config{InsecureSkipVerify: true, ServerName: host})
+	tlsConn := tls.Client(conn, tlsProbeConfig(&tls.Config{InsecureSkipVerify: true, ServerName: host}))
 	err := tlsConn.HandshakeContext(ctx)
 	if err == nil {
 		return causeServerSpeaksTLS, ""
 	}
-	if classifyTLSAlert(err) == causeClientCertRequired {
+	switch classifyTLSAlert(err) {
+	case causeClientCertRequired:
 		return causeServerSpeaksTLS, " (and it requires client certificates)"
+	case causeClientCertRejected:
+		return causeServerSpeaksTLS, " (and it rejected the offered client certificate)"
 	}
 	return causeUnknown, ""
+}
+
+// tlsProbeConfig clones cfg and advertises h2 just as gRPC's TLS credentials
+// do. Keeping this separate from the caller's config preserves its reuse by
+// the original client dial.
+func tlsProbeConfig(cfg *tls.Config) *tls.Config {
+	probe := cfg.Clone()
+	for _, proto := range probe.NextProtos {
+		if proto == "h2" {
+			return probe
+		}
+	}
+	probe.NextProtos = append(probe.NextProtos, "h2")
+	return probe
+}
+
+func isIPLiteral(host string) bool {
+	_, err := netip.ParseAddr(host)
+	return err == nil
 }
 
 func classifyGRPCError(err error) (connectCause, string) {

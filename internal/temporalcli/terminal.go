@@ -51,6 +51,7 @@ type displayShell int
 const (
 	displayShellPOSIX displayShell = iota
 	displayShellPowerShell
+	displayShellWindows
 )
 
 // writeConnectionError renders err only when it contains a connectError. It
@@ -62,12 +63,16 @@ func writeConnectionError(stderr io.Writer, err error, useColor bool) bool {
 		return false
 	}
 
-	shell := displayShellPOSIX
-	if runtime.GOOS == "windows" {
-		shell = displayShellPowerShell
-	}
+	shell := displayShellForGOOS(runtime.GOOS)
 	_, _ = stderr.Write(renderConnectionReport(connectionErrorReport(connectionErr), useColor, shell))
 	return true
+}
+
+func displayShellForGOOS(goos string) displayShell {
+	if goos == "windows" {
+		return displayShellWindows
+	}
+	return displayShellPOSIX
 }
 
 func connectionErrorReport(err *connectError) connectionReport {
@@ -171,6 +176,10 @@ func renderInvocation(invocation displayInvocation, shell displayShell) (string,
 		parts[i] = escapeTerminalControls(parts[i])
 		if shell == displayShellPowerShell {
 			parts[i] = quotePowerShell(parts[i])
+		} else if shell == displayShellWindows {
+			if !isWindowsShellSafe(parts[i]) {
+				return "", false
+			}
 		} else {
 			parts[i] = quotePOSIX(parts[i])
 		}
@@ -180,6 +189,16 @@ func renderInvocation(invocation displayInvocation, shell displayShell) (string,
 		rendered = "& " + rendered
 	}
 	return rendered, true
+}
+
+// isWindowsShellSafe accepts only words whose unquoted form is interpreted
+// identically by Command Prompt and PowerShell. The CLI's recovery invocations
+// are static; omitting an unsafe future invocation is safer than showing a
+// command that works in only one of the two default Windows shells.
+func isWindowsShellSafe(value string) bool {
+	return value != "" && strings.IndexFunc(value, func(r rune) bool {
+		return !(unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("_@%+=:,./-", r))
+	}) < 0
 }
 
 func quotePOSIX(value string) string {

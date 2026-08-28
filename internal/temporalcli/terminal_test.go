@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"runtime"
+	"io"
 	"strings"
 	"testing"
 
@@ -26,11 +26,7 @@ func TestWriteConnectionErrorHandlesWrappedConnectError(t *testing.T) {
 	assert.Contains(t, stderr.String(), "Error: failed connecting to Temporal server at 127.0.0.1:7233: connection refused")
 	assert.Contains(t, stderr.String(), "Namespace: default")
 	assert.Contains(t, stderr.String(), "✗ TCP connection refused")
-	expectedCommand := "temporal server start-dev"
-	if runtime.GOOS == "windows" {
-		expectedCommand = "& 'temporal' 'server' 'start-dev'"
-	}
-	assert.Contains(t, stderr.String(), expectedCommand)
+	assert.Contains(t, stderr.String(), "temporal server start-dev")
 	assert.NotContains(t, stderr.String(), "\x1b[")
 }
 
@@ -96,6 +92,39 @@ func TestRenderInvocationUsesExplicitShellQuoting(t *testing.T) {
 	)
 	require.True(t, ok)
 	assert.Equal(t, `temporal 'unsafe\nvalue'`, escaped)
+}
+
+func TestRenderInvocationUsesPortableWindowsSyntax(t *testing.T) {
+	assert.Equal(t, displayShellWindows, displayShellForGOOS("windows"))
+	assert.Equal(t, displayShellPOSIX, displayShellForGOOS("linux"))
+
+	rendered, ok := renderInvocation(
+		displayInvocation{Command: []string{"temporal", "server", "start-dev"}},
+		displayShellWindows,
+	)
+	assert.True(t, ok)
+	assert.Equal(t, "temporal server start-dev", rendered)
+
+	_, ok = renderInvocation(
+		displayInvocation{Command: []string{"temporal"}, Args: []string{"unsafe value"}},
+		displayShellWindows,
+	)
+	assert.False(t, ok)
+}
+
+func TestConnectionErrorColorPolicyUsesConfiguredStderr(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("TERM", "xterm")
+	terminal := func(io.Writer) bool { return true }
+	nonTerminal := func(io.Writer) bool { return false }
+	var stderr bytes.Buffer
+
+	assert.True(t, connectionErrorColorPolicy("always", &stderr, nonTerminal))
+	assert.False(t, connectionErrorColorPolicy("never", &stderr, terminal))
+	assert.True(t, connectionErrorColorPolicy("auto", &stderr, terminal))
+	assert.False(t, connectionErrorColorPolicy("auto", &stderr, nonTerminal))
+	t.Setenv("NO_COLOR", "1")
+	assert.False(t, connectionErrorColorPolicy("auto", &stderr, terminal))
 }
 
 func TestConnectErrorCopiesDiagnosisBeforeRendering(t *testing.T) {

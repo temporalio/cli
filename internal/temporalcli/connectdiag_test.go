@@ -110,12 +110,54 @@ func TestDiagnoseConnection_ClientCertRequired(t *testing.T) {
 
 	// Client trusts the server CA but has no client cert.
 	d := testDiagnose(t, addr, &tls.Config{RootCAs: certPool(t, cert)})
-	// This test also pins the authoritative Go crypto/tls alert text
-	// ("certificate required" / "bad certificate") that classifyTLSAlert
-	// depends on; if it fails after a Go upgrade, revisit classifyTLSAlert.
+	// This test pins the authoritative Go crypto/tls alert text "certificate
+	// required" that classifyTLSAlert depends on; if it fails after a Go
+	// upgrade, revisit classifyTLSAlert.
 	assert.Equal(t, causeClientCertRequired, d.Cause)
 	requireStage(t, d, diagOK, "TCP connection established")
 	requireStage(t, d, diagFail, "server requires mTLS")
+}
+
+func TestClassifyTLSAlert_ClientCertificateRejected(t *testing.T) {
+	err := errors.New("remote error: tls: bad certificate")
+	assert.Equal(t, causeClientCertRejected, classifyTLSAlert(err))
+
+	d := &connectDiagnosis{}
+	d.classifyTLSError(err)
+	assert.Equal(t, causeClientCertRejected, d.Cause)
+	requireStage(t, d, diagFail, "rejected the supplied client certificate")
+	action := suggestAction(d, connectMeta{Address: "example:7233"})
+	require.NotNil(t, action)
+	assert.Contains(t, action.Label, "rejected the supplied client certificate")
+	assert.NotContains(t, action.Label, "--tls-cert-path")
+}
+
+func TestClassifyTLSError_CertificateInvalidIsNotCAFailure(t *testing.T) {
+	err := &tls.CertificateVerificationError{
+		Err: x509.CertificateInvalidError{Cert: &x509.Certificate{}, Reason: x509.Expired},
+	}
+	d := &connectDiagnosis{}
+	d.classifyTLSError(err)
+	assert.Equal(t, causeCertificateVerify, d.Cause)
+	requireStage(t, d, diagFail, "server certificate verification failed")
+	action := suggestAction(d, connectMeta{Address: "example:7233"})
+	require.NotNil(t, action)
+	assert.NotContains(t, action.Label, "--tls-ca-path")
+}
+
+func TestTLSProbeConfigAdvertisesH2WithoutMutatingClientConfig(t *testing.T) {
+	clientCfg := &tls.Config{NextProtos: []string{"http/1.1"}}
+	probeCfg := tlsProbeConfig(clientCfg)
+	assert.Equal(t, []string{"http/1.1"}, clientCfg.NextProtos)
+	assert.Equal(t, []string{"http/1.1", "h2"}, probeCfg.NextProtos)
+	assert.Equal(t, []string{"h2"}, tlsProbeConfig(&tls.Config{}).NextProtos)
+	assert.Equal(t, []string{"h2"}, tlsProbeConfig(&tls.Config{NextProtos: []string{"h2"}}).NextProtos)
+}
+
+func TestIsIPLiteralAcceptsScopedIPv6(t *testing.T) {
+	assert.True(t, isIPLiteral("fe80::1%en0"))
+	assert.True(t, isIPLiteral("127.0.0.1"))
+	assert.False(t, isIPLiteral("temporal.example"))
 }
 
 func TestGenericTLSHandshakeFailureDoesNotImplyClientCertificate(t *testing.T) {
@@ -454,6 +496,12 @@ func TestSuggestFix(t *testing.T) {
 			contains: []string{"requires client certificates", "--tls-cert-path", "--tls-key-path"},
 		},
 		{
+			name:     "rejected mTLS certificate does not imply it is missing",
+			diag:     &connectDiagnosis{Cause: causeClientCertRejected},
+			meta:     connectMeta{Address: "myhost:7233"},
+			contains: []string{"rejected the supplied client certificate", "trusted issuer"},
+		},
+		{
 			name:     "refused on local default port",
 			diag:     &connectDiagnosis{Cause: causeTCPRefused},
 			meta:     connectMeta{Address: "127.0.0.1:7233"},
@@ -481,7 +529,13 @@ func TestSuggestFix(t *testing.T) {
 			name:     "server plaintext",
 			diag:     &connectDiagnosis{Cause: causeServerPlaintext},
 			meta:     connectMeta{Address: "myhost:7233", TLSConfigured: true},
-			contains: []string{"does not appear to use TLS"},
+			contains: []string{"does not appear to use TLS", "profile, environment, API key", "--tls=false"},
+		},
+		{
+			name:     "certificate verification failure does not suggest a CA",
+			diag:     &connectDiagnosis{Cause: causeCertificateVerify},
+			meta:     connectMeta{Address: "myhost:7233"},
+			contains: []string{"certificate was rejected", "server-auth usage"},
 		},
 		{
 			name:     "cert file unreadable",
