@@ -167,8 +167,13 @@ func renderInvocation(invocation displayInvocation, shell displayShell) (string,
 	if len(parts) == 0 {
 		return "", false
 	}
+	quoted := false
 	for i := range parts {
 		parts[i] = escapeTerminalControls(parts[i])
+		if isBareWord(parts[i]) {
+			continue
+		}
+		quoted = true
 		if shell == displayShellPowerShell {
 			parts[i] = quotePowerShell(parts[i])
 		} else {
@@ -176,16 +181,24 @@ func renderInvocation(invocation displayInvocation, shell displayShell) (string,
 		}
 	}
 	rendered := strings.Join(parts, " ")
-	if shell == displayShellPowerShell {
+	// The "&" call operator and single quotes are PowerShell-only; cmd.exe
+	// treats both literally. GOOS cannot tell the two apart, so an invocation
+	// that needs no quoting is emitted bare and runs in either shell.
+	if shell == displayShellPowerShell && quoted {
 		rendered = "& " + rendered
 	}
 	return rendered, true
 }
 
-func quotePOSIX(value string) string {
-	if value != "" && strings.IndexFunc(value, func(r rune) bool {
+// isBareWord reports whether a value can be passed to a shell verbatim.
+func isBareWord(value string) bool {
+	return value != "" && strings.IndexFunc(value, func(r rune) bool {
 		return !(unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("_@%+=:,./-", r))
-	}) < 0 {
+	}) < 0
+}
+
+func quotePOSIX(value string) string {
+	if isBareWord(value) {
 		return value
 	}
 	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"

@@ -132,7 +132,13 @@ func dialConnectError(
 	}
 	// Diagnosis uses the remaining command context and applies its own 3s cap.
 	// ClientConnectTimeout governs only the original dial.
-	diag := diagnoseConnection(cctx, clientOpts.HostPort, clientOpts.ConnectionOptions.TLS, origErr)
+	diag := diagnoseConnection(
+		cctx,
+		clientOpts.HostPort,
+		clientOpts.ConnectionOptions.Authority,
+		clientOpts.ConnectionOptions.TLS,
+		origErr,
+	)
 	return newConnectError(diag, connectMetaFromOptions(clientOpts), origErr)
 }
 
