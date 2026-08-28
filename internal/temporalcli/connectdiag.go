@@ -62,11 +62,29 @@ type diagStage struct {
 	Label  string
 }
 
+// connectTarget describes the effective connection settings behind a failed
+// dial, so the diagnosis can follow the same transport path the client did.
+type connectTarget struct {
+	Address   string
+	Authority string
+	TLS       *tls.Config
+	// CustomDialer reports whether the client was given gRPC dial options that
+	// can replace the transport. The configured address is then not what was
+	// dialed, so the probes are skipped rather than blaming it.
+	CustomDialer bool
+}
+
 // connectDiagnosis is the result of probing a failed connection.
 type connectDiagnosis struct {
 	Address string
 	Stages  []diagStage
 	Cause   connectCause
+	// ServerName is the name the TLS probe verified against, which is the
+	// configured --tls-server-name when set, otherwise one derived from the
+	// authority or the address. ServerNameConfigured distinguishes the two,
+	// because the remedy differs: correct an override, or add one.
+	ServerName           string
+	ServerNameConfigured bool
 	// Detail carries cause-specific info (e.g. an unreadable file path or the
 	// raw TLS alert text) for use in stage labels and suggestions.
 	Detail string
@@ -82,7 +100,8 @@ const (
 // must only be called on an already-failed dial: it makes fresh network
 // connections (including, when TLS is not configured, one anonymous TLS
 // handshake to detect a TLS-only server, which may appear in server logs).
-func diagnoseConnection(ctx context.Context, address string, authority string, tlsCfg *tls.Config, origErr error) *connectDiagnosis {
+func diagnoseConnection(ctx context.Context, target connectTarget, origErr error) *connectDiagnosis {
+	address, tlsCfg := target.Address, target.TLS
 	d := &connectDiagnosis{Address: address, Cause: causeUnknown}
 	origCause, origDetail := classifyGRPCError(origErr)
 	switch origCause {
@@ -95,6 +114,16 @@ func diagnoseConnection(ctx context.Context, address string, authority string, t
 		d.fail("gRPC request was denied")
 		return d
 	}
+	// A custom dialer can replace the transport entirely — a Unix socket, a
+	// tunnel, an in-memory pipe — so the configured address is not what was
+	// dialed. Probing it would report DNS or TCP failures for an address the
+	// client never used.
+	if target.CustomDialer {
+		d.skipped("Connection checks skipped: a custom gRPC dialer is configured")
+		d.Cause, d.Detail = origCause, origDetail
+		return d
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, connectDiagnosisBudget)
 	defer cancel()
 
@@ -149,7 +178,7 @@ func diagnoseConnection(ctx context.Context, address string, authority string, t
 	defer conn.Close()
 	d.ok("TCP connection established")
 
-	serverName := effectiveServerName(host, authority)
+	serverName := effectiveServerName(host, target.Authority)
 	if tlsCfg != nil {
 		d.probeTLS(ctx, conn, serverName, tlsCfg)
 		if ctx.Err() != nil {
@@ -187,9 +216,11 @@ func diagnoseConnection(ctx context.Context, address string, authority string, t
 // certificates complete the handshake first and only then send an alert.
 func (d *connectDiagnosis) probeTLS(ctx context.Context, conn net.Conn, serverName string, tlsCfg *tls.Config) {
 	cfg := tlsCfg.Clone()
+	d.ServerNameConfigured = cfg.ServerName != ""
 	if cfg.ServerName == "" && !cfg.InsecureSkipVerify {
 		cfg.ServerName = serverName
 	}
+	d.ServerName = cfg.ServerName
 	// The real gRPC transport advertises h2. A server that requires ALPN
 	// rejects a probe that offers nothing with "no application protocol",
 	// which would be reported as a TLS failure that the client never had.

@@ -104,7 +104,7 @@ func testDiagnose(t *testing.T, address string, tlsCfg *tls.Config) *connectDiag
 	defer cancel()
 	// Mirror the SDK's eager GetSystemInfo failure shape.
 	origErr := fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded"))
-	return diagnoseConnection(ctx, address, "", tlsCfg, origErr)
+	return diagnoseConnection(ctx, connectTarget{Address: address, TLS: tlsCfg}, origErr)
 }
 
 func TestDiagnoseConnection_ClientCertRequired(t *testing.T) {
@@ -276,7 +276,7 @@ func TestDiagnoseConnection_CancellationDuringTLSIsSkippedAndPrompt(t *testing.T
 	diagnosisDone := make(chan *connectDiagnosis, 1)
 	started := time.Now()
 	go func() {
-		diagnosisDone <- diagnoseConnection(ctx, ln.Addr().String(), "", &tls.Config{InsecureSkipVerify: true}, errors.New("dial failed"))
+		diagnosisDone <- diagnoseConnection(ctx, connectTarget{Address: ln.Addr().String(), TLS: &tls.Config{InsecureSkipVerify: true}}, errors.New("dial failed"))
 	}()
 
 	select {
@@ -369,7 +369,7 @@ func TestDiagnoseConnection_AuthStatusesUseTypedOriginalErrorWithoutSpeculativeP
 		{name: "permission denied", code: codes.PermissionDenied, cause: causePermissionDenied, stage: "denied"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			d := diagnoseConnection(t.Context(), "does-not-exist.invalid:7233", "", nil,
+			d := diagnoseConnection(t.Context(), connectTarget{Address: "does-not-exist.invalid:7233"},
 				fmt.Errorf("failed reaching server: %w", status.Error(tt.code, "server-controlled detail")))
 			assert.Equal(t, tt.cause, d.Cause)
 			require.Len(t, d.Stages, 1, "typed auth failures must not trigger post-failure network probes")
@@ -674,5 +674,62 @@ func TestProbesAdvertiseH2(t *testing.T) {
 	require.NotEmpty(t, offered)
 	for i, protos := range offered {
 		assert.Contains(t, protos, "h2", "probe %d must advertise h2", i)
+	}
+}
+
+// With --tls-server-name set to a wrong value, the address host is never
+// verified. Reporting the address host and telling the user to set the flag
+// they already set is not a remedy.
+func TestHostnameMismatchNamesTheVerifiedServerName(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+
+	d := testDiagnose(t, addr, &tls.Config{
+		RootCAs:    certPool(t, cert),
+		ServerName: "wrong.example",
+	})
+	require.Equal(t, causeHostnameMismatch, d.Cause)
+	assert.Equal(t, "wrong.example", d.ServerName)
+	assert.True(t, d.ServerNameConfigured)
+
+	action := suggestAction(d, connectMeta{Address: addr})
+	require.NotNil(t, action)
+	assert.Contains(t, action.Label, `"wrong.example"`)
+	assert.Contains(t, action.Label, "Correct that value")
+	host, _, _ := net.SplitHostPort(addr)
+	assert.NotContains(t, action.Label, host,
+		"the address host was never the name that was verified")
+}
+
+// Without an override the derived name is reported, and the remedy is still to
+// add the flag rather than to correct one.
+func TestHostnameMismatchWithoutOverrideStillSuggestsSettingTheFlag(t *testing.T) {
+	d := &connectDiagnosis{Cause: causeHostnameMismatch}
+	action := suggestAction(d, connectMeta{Address: "myhost:7233"})
+	require.NotNil(t, action)
+	assert.Contains(t, action.Label, `"myhost"`)
+	assert.Contains(t, action.Label, "Set --tls-server-name")
+	assert.NotContains(t, action.Label, "Correct that value")
+}
+
+// A custom gRPC dialer can replace the transport, so the configured address is
+// not what was dialed. Probing it would blame DNS or TCP for an address the
+// client never used.
+func TestCustomDialerSkipsTransportProbes(t *testing.T) {
+	// A deadline reaches the transport stages; an auth status would return
+	// before them and so would not exercise the skip.
+	origErr := fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded"))
+	d := diagnoseConnection(
+		t.Context(),
+		connectTarget{Address: "does-not-exist.invalid:7233", CustomDialer: true},
+		origErr,
+	)
+
+	// The gRPC-level error is still classified.
+	assert.Equal(t, causeTimeout, d.Cause)
+	requireStage(t, d, diagSkipped, "custom gRPC dialer")
+	for _, stage := range d.Stages {
+		assert.NotContains(t, stage.Label, "DNS lookup for")
+		assert.NotContains(t, stage.Label, "TCP connection")
 	}
 }

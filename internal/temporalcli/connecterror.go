@@ -114,7 +114,17 @@ func suggestAction(d *connectDiagnosis, meta connectMeta) *displayAction {
 		}
 		return &displayAction{Label: label}
 	case causeHostnameMismatch:
-		return &displayAction{Label: fmt.Sprintf("The server certificate is not valid for %q. Set --tls-server-name to a certificate name.", host)}
+		// Name what was actually verified. With --tls-server-name set to a
+		// wrong value, the address host was never checked, and telling the
+		// user to set a flag they already set is not a remedy.
+		name := d.ServerName
+		if name == "" {
+			name = host
+		}
+		if d.ServerNameConfigured {
+			return &displayAction{Label: fmt.Sprintf("The server certificate is not valid for %q, which --tls-server-name sets. Correct that value, or remove it to verify against the address host.", name)}
+		}
+		return &displayAction{Label: fmt.Sprintf("The server certificate is not valid for %q. Set --tls-server-name to a certificate name.", name)}
 	case causeTCPTimeout:
 		return &displayAction{Label: fmt.Sprintf("The TCP check timed out. Verify the address and network path to %s.", meta.Address)}
 	}

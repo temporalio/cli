@@ -132,13 +132,14 @@ func dialConnectError(
 	}
 	// Diagnosis uses the remaining command context and applies its own 3s cap.
 	// ClientConnectTimeout governs only the original dial.
-	diag := diagnoseConnection(
-		cctx,
-		clientOpts.HostPort,
-		clientOpts.ConnectionOptions.Authority,
-		clientOpts.ConnectionOptions.TLS,
-		origErr,
-	)
+	diag := diagnoseConnection(cctx, connectTarget{
+		Address:   clientOpts.HostPort,
+		Authority: clientOpts.ConnectionOptions.Authority,
+		TLS:       clientOpts.ConnectionOptions.TLS,
+		// Set by embedders; the CLI itself never supplies dial options that
+		// replace the transport.
+		CustomDialer: len(cctx.Options.AdditionalClientGRPCDialOptions) > 0,
+	}, origErr)
 	return newConnectError(diag, connectMetaFromOptions(clientOpts), origErr)
 }
 
