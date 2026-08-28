@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -29,11 +28,10 @@ func TestWriteConnectionErrorHandlesWrappedConnectError(t *testing.T) {
 	assert.Contains(t, stderr.String(), "Error: failed connecting to Temporal server at 127.0.0.1:7233: connection refused")
 	assert.Contains(t, stderr.String(), "Namespace: default")
 	assert.Contains(t, stderr.String(), "✗ TCP connection refused")
-	expectedCommand := "temporal server start-dev"
-	if runtime.GOOS == "windows" {
-		expectedCommand = "& 'temporal' 'server' 'start-dev'"
-	}
-	assert.Contains(t, stderr.String(), expectedCommand)
+	// Rendered identically on every platform. GOOS cannot distinguish
+	// PowerShell from cmd.exe, so a command needing no quoting is emitted
+	// bare: no call operator and no single quotes, which cmd takes literally.
+	assert.Contains(t, stderr.String(), "\n    temporal server start-dev\n")
 	assert.NotContains(t, stderr.String(), "\x1b[")
 }
 
