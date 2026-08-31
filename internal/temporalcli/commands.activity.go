@@ -924,7 +924,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	} else { // batch operation
 		resetActivitiesOperation := &batch.BatchOperationResetActivities{
 			Identity:               c.Parent.Identity,
-			ResetHeartbeat:         true,
+			ResetHeartbeat:         c.ResetHeartbeats,
 			KeepPaused:             c.KeepPaused,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),
 			RestoreOriginalOptions: c.RestoreOriginalOptions,

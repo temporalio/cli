@@ -39,7 +39,7 @@ func (v *CommonOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.Env, "env", "default", "Active environment name (`ENV`). Env: TEMPORAL_ENV.")
 	f.StringVar(&v.EnvFile, "env-file", "", "Path to environment settings file. Env: TEMPORAL_ENV_FILE.")
 	f.StringVar(&v.ConfigFile, "config-file", "", "TOML config file path. Env: TEMPORAL_CONFIG_FILE.")
-	f.StringVar(&v.Profile, "profile", "", "Configuration profile to use. Overrides the TEMPORAL_PROFILE environment variable and defaults to \"default\". Env: TEMPORAL_PROFILE.")
+	f.StringVar(&v.Profile, "profile", "", "Profile to use for config file. Env: TEMPORAL_PROFILE.")
 	f.BoolVar(&v.DisableConfigFile, "disable-config-file", false, "Disable loading config from file.")
 	f.BoolVar(&v.DisableConfigEnv, "disable-config-env", false, "Disable loading config from environment variables.")
 	v.LogLevel = NewFlagStringEnum([]string{"debug", "info", "warn", "error", "never"}, "never")

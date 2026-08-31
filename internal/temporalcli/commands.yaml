@@ -617,6 +617,9 @@ commands:
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
+      - name: reset-heartbeats
+        type: bool
+        description: Reset the Activity's heartbeats.
       - name: jitter
         type: duration
         description: |
