@@ -1093,6 +1093,19 @@ commands:
           --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID
       ```
 
+      Or pass compute provider information for an AWS Bedrock Agentcore Runtime
+      that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --aws-agentcore-endpoint-arn AgentcoreRuntimeEndpointARN \
+          --aws-agentcore-assume-role-arn AgentcoreAssumeRoleARN \
+          --aws-agentcore-assume-role-external-id AgentcoreAssumeRoleExternalID
+      ```
+
       Or pass compute provider information for a GCP Cloud Run worker pool
       that spawns a Worker in the Worker Deployment:
 
@@ -1150,6 +1163,34 @@ commands:
           --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id
           are required unless this flag is passed, in which case both must be
           omitted.
+      - name: aws-agentcore-endpoint-arn
+        type: string
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+      - name: aws-agentcore-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Agentcore Runtime that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-agentcore-endpoint-arn is
+          specified, and must be omitted when
+          --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-agentcore-assume-role-arn has an
+          aws:ExternalId condition that matches the supplied value. Required
+          when --aws-agentcore-endpoint-arn is specified, and must be omitted
+          when --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
+          and --aws-agentcore-assume-role-external-id are required unless this
+          flag is passed, in which case both must be omitted.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1449,6 +1490,17 @@ commands:
           --aws-lambda-assume-role-arn UpdatedRoleARN
       ```
 
+      To update the AWS Bedrock Agentcore Runtime endpoint associated with an
+      existing Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-agentcore-endpoint-arn UpdatedAgentcoreRuntimeEndpointARN \
+          --aws-agentcore-assume-role-arn UpdatedRoleARN \
+          --aws-agentcore-assume-role-external-id UpdatedExternalID
+      ```
+
       To update the GCP Cloud Run worker pool associated with an existing
       Worker Deployment Version:
 
@@ -1528,6 +1580,34 @@ commands:
           --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id
           are required unless this flag is passed, in which case both must be
           omitted.
+      - name: aws-agentcore-endpoint-arn
+        type: string
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+      - name: aws-agentcore-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Agentcore Runtime that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-agentcore-endpoint-arn is
+          specified, and must be omitted when
+          --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-agentcore-assume-role-arn has an
+          aws:ExternalId condition that matches the supplied value. Required
+          when --aws-agentcore-endpoint-arn is specified, and must be omitted
+          when --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
+          and --aws-agentcore-assume-role-external-id are required unless this
+          flag is passed, in which case both must be omitted.
       - name: gcp-cloud-run-project
         type: string
         description: |
