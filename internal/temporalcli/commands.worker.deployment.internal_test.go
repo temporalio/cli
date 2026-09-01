@@ -17,6 +17,7 @@ func TestScalerTypeForProvider(t *testing.T) {
 		expectErr bool
 	}{
 		{"aws-lambda is invoke-based -> no-sync", "aws-lambda", "no-sync", false},
+		{"aws-agentcore is invoke-based -> no-sync", "aws-agentcore", "no-sync", false},
 		{"gcp-cloud-run is worker-set-based -> rate-based", "gcp-cloud-run", "rate-based", false},
 		{"unknown provider errors", "azure-container-apps", "", true},
 		{"empty provider errors", "", "", true},
@@ -38,7 +39,7 @@ func TestScalerTypeForProvider(t *testing.T) {
 // scaler mapping; a missing entry makes scalerTypeForProvider error before the
 // request is sent, so this guards against forgetting to map a newly-added provider.
 func TestScalerTypeByProviderCoversAllProviders(t *testing.T) {
-	for _, providerType := range []string{"aws-lambda", "gcp-cloud-run"} {
+	for _, providerType := range []string{"aws-lambda", "aws-agentcore", "gcp-cloud-run"} {
 		_, ok := scalerTypeByProvider[providerType]
 		require.Truef(t, ok, "provider %q has no scaler mapping", providerType)
 	}

@@ -1347,6 +1347,76 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "--aws-lambda-skip-role-and-external-id")
 
+	// AWS Agentcore: a single endpoint ARN drives the provider; role and external
+	// id are required (unless skipped)
+	agentcoreEndpointARN := "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/my-runtime-abc123/runtime-endpoint/DEFAULT"
+
+	agentcoreMissingExternalIDBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMissingExternalIDBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Agentcore provider detail: role_external_id")
+
+	agentcoreMissingRoleBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMissingRoleBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Agentcore provider detail: role")
+
+	// --aws-agentcore-skip-role-and-external-id and the role/external-id flags are
+	// mutually exclusive: passing both is rejected client-side.
+	agentcoreSkipWithRoleBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreSkipWithRoleBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
+		"--aws-agentcore-skip-role-and-external-id",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--aws-agentcore-skip-role-and-external-id")
+
+	// AWS Agentcore and GCP Cloud Run providers are mutually exclusive on create.
+	agentcoreMixedProvidersBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMixedProvidersBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+
+	// AWS Agentcore and Lambda providers are mutually exclusive on create.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMixedProvidersBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+
 	// --gcp-cloud-run-worker-pool requires project, region, and
 	// service-account; the first missing detail key is reported.
 	missingGCPProjectBuildID := uuid.NewString()
@@ -1388,7 +1458,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
 
 	// Attempting to update the compute config for a non-existent WDV
 	// should fail.
@@ -1428,7 +1498,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
 
 	// --remove cannot be combined with GCP Cloud Run flags.
 	res = s.Execute(
@@ -1907,6 +1977,124 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfi
 		"--aws-lambda-function-arn", invokeARN2,
 		"--aws-lambda-assume-role-arn", assumeRoleARN2,
 		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")
+
+	// As well as remove the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--remove",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully removed worker deployment version compute config")
+}
+
+// TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
+// fixtures since the CLI test harness uses a real Temporal Server and a real
+// Temporal Server validates any supplied AWS Lambda Function and Assume Role
+// ARNs are good...
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_AgentCoreComputeConfig() {
+	s.T().Skip("AWS AgentCore Runtime, Endpoint and Assume Role fixtures needed.")
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_AgentCoreComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Now that we know the worker deployment exists (because the above
+	// lazily-created worker deployment version ended up creating it), we will
+	// manually create a new worker deployment version using the `temporal
+	// worker deployment create-version` CLI command.
+	//
+	// Create a WDV with a valid Compute Config specified and verify that the
+	// compute config provider is displayed in the output of `temporal worker
+	// deployment describe-version`
+	computeConfigBuildID := uuid.NewString()
+
+	endpointARN := "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/my-runtime-abc123/runtime-endpoint/myEndpoint"
+	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
+	assumeRoleExternalID := "external-id"
+
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-agentcore-endpoint-arn", endpointARN,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", computeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Check that there is a compute config returned for this WDV
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	jsonOut := jsonDeploymentVersionInfoType{}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut.ComputeConfig, "ComputeConfig should not be nil.")
+
+	// We should be able to update the compute config.
+	endpointARN2 := "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/my-runtime-abc123/runtime-endpoint/myEndpoint2"
+	assumeRoleARN2 := "arn:aws:iam::123456789012:role/MyServiceRole2"
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-agentcore-endpoint-arn", endpointARN2,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN2,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")

@@ -1035,8 +1035,9 @@ func awsLambdaProviderDetailsPayload(
 ) (*commonpb.Payload, error) {
 	// Map keys from temporal-auto-scaled-workers:
 	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
-	providerDetails := map[string]any{
-		"arn": functionARN,
+	providerDetails := map[string]any{}
+	if functionARN != "" {
+		providerDetails["arn"] = functionARN
 	}
 	if assumeRoleARN != "" {
 		providerDetails["role"] = assumeRoleARN
@@ -1045,6 +1046,51 @@ func awsLambdaProviderDetailsPayload(
 		providerDetails["role_external_id"] = assumeRoleExternalID
 	}
 	err := validateAWSLambdaProviderDetails(providerDetails, skipRoleAndExternalID)
+	if err != nil {
+		return nil, err
+	}
+	dc := converter.GetDefaultDataConverter()
+	return dc.ToPayload(&providerDetails)
+}
+
+func validateAWSAgentcoreProviderDetails(details map[string]any, skipRoleAndExternalID bool) error {
+	if v, ok := details["endpoint_arn"].(string); !ok || v == "" {
+		return fmt.Errorf("missing required AWS Agentcore provider detail: endpoint_arn")
+	}
+	if skipRoleAndExternalID {
+		for _, key := range []string{"role", "role_external_id"} {
+			if _, ok := details[key]; ok {
+				return fmt.Errorf("AWS Agentcore provider detail %q must not be set when --aws-agentcore-skip-role-and-external-id is passed", key)
+			}
+		}
+		return nil
+	}
+	for _, key := range []string{"role", "role_external_id"} {
+		if v, ok := details[key].(string); !ok || v == "" {
+			return fmt.Errorf("missing required AWS Agentcore provider detail: %s", key)
+		}
+	}
+	return nil
+}
+
+// awsAgentcoreProviderDetailsPayload validates the AWS AgentCore inputs and returns encoded payload
+func awsAgentcoreProviderDetailsPayload(
+	endpointARN string,
+	assumeRoleARN string,
+	assumeRoleExternalID string,
+	skipRoleAndExternalID bool,
+) (*commonpb.Payload, error) {
+	providerDetails := map[string]any{}
+	if endpointARN != "" {
+		providerDetails["endpoint_arn"] = endpointARN
+	}
+	if assumeRoleARN != "" {
+		providerDetails["role"] = assumeRoleARN
+	}
+	if assumeRoleExternalID != "" {
+		providerDetails["role_external_id"] = assumeRoleExternalID
+	}
+	err := validateAWSAgentcoreProviderDetails(providerDetails, skipRoleAndExternalID)
 	if err != nil {
 		return nil, err
 	}
@@ -1087,43 +1133,87 @@ func gcpCloudRunProviderDetailsPayload(
 	return dc.ToPayload(&providerDetails)
 }
 
+// ComputeConfigArgs holds ComputeConfig specific args along with helpers for distinguishing between desired compute
+// provider
+type ComputeConfigArgs struct {
+	awsLambdaFunctionArn              string
+	awsLambdaAssumeRoleArn            string
+	awsLambdaAssumeRoleExternalId     string
+	awsLambdaSkipRoleAndExternalId    bool
+	awsAgentcoreEndpointArn           string
+	awsAgentcoreAssumeRoleArn         string
+	awsAgentcoreAssumeRoleExternalId  string
+	awsAgentcoreSkipRoleAndExternalId bool
+	gcpCloudRunProject                string
+	gcpCloudRunRegion                 string
+	gcpCloudRunWorkerPool             string
+	gcpCloudRunServiceAccount         string
+}
+
+func (c *ComputeConfigArgs) hasAwsLambdaArgs() bool {
+	return c.awsLambdaFunctionArn != "" ||
+		c.awsLambdaAssumeRoleArn != "" ||
+		c.awsLambdaAssumeRoleExternalId != "" ||
+		c.awsLambdaSkipRoleAndExternalId
+}
+
+func (c *ComputeConfigArgs) hasAwsAgentcoreArgs() bool {
+	return c.awsAgentcoreEndpointArn != "" ||
+		c.awsAgentcoreAssumeRoleArn != "" ||
+		c.awsAgentcoreAssumeRoleExternalId != "" ||
+		c.awsAgentcoreSkipRoleAndExternalId
+}
+
+func (c *ComputeConfigArgs) hasGcpCloudRunArgs() bool {
+	return c.gcpCloudRunProject != "" ||
+		c.gcpCloudRunRegion != "" ||
+		c.gcpCloudRunWorkerPool != "" ||
+		c.gcpCloudRunServiceAccount != ""
+}
+
 // computeProviderConfig selects the single compute provider for a Worker
 // Deployment Version's "default" scaling group from the command's flags. It
-// enforces that AWS Lambda and GCP Cloud Run flags are not mixed, then
-// dispatches on the trigger flag (--aws-lambda-function-arn /
+// enforces that flags for different providers are not mixed, then dispatches on
+// the trigger flag (--aws-lambda-function-arn / --aws-agentcore-endpoint-arn /
 // --gcp-cloud-run-worker-pool). Returns an empty providerType when no provider
 // flags are set, leaving the "no configuration" decision to the caller.
-func computeProviderConfig(
-	awsLambdaFunctionARN string,
-	awsLambdaAssumeRoleARN string,
-	awsLambdaAssumeRoleExternalID string,
-	awsLambdaSkipRoleAndExternalID bool,
-	gcpCloudRunProject string,
-	gcpCloudRunRegion string,
-	gcpCloudRunWorkerPool string,
-	gcpCloudRunServiceAccount string,
-) (providerType string, detailsPayload *commonpb.Payload, err error) {
-	awsSet := awsLambdaFunctionARN != "" || awsLambdaAssumeRoleARN != "" || awsLambdaAssumeRoleExternalID != ""
-	gcpSet := gcpCloudRunProject != "" || gcpCloudRunRegion != "" || gcpCloudRunWorkerPool != "" || gcpCloudRunServiceAccount != ""
-	if awsSet && gcpSet {
-		return "", nil, fmt.Errorf("cannot combine --aws-lambda-* and --gcp-cloud-run-* flags; a Worker Deployment Version supports a single compute provider")
+func computeProviderConfig(c *ComputeConfigArgs) (providerType string, detailsPayload *commonpb.Payload, err error) {
+	awsLambdaSet := c.hasAwsLambdaArgs()
+	awsAgentcoreSet := c.hasAwsAgentcoreArgs()
+	gcpSet := c.hasGcpCloudRunArgs()
+	setCount := 0
+	for _, set := range []bool{awsLambdaSet, awsAgentcoreSet, gcpSet} {
+		if set {
+			setCount++
+		}
+	}
+	if setCount > 1 {
+		return "", nil, fmt.Errorf("cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags; a Worker Deployment Version supports a single compute provider")
 	}
 
 	switch {
-	case awsLambdaFunctionARN != "":
+	case c.hasAwsLambdaArgs():
 		p, err := awsLambdaProviderDetailsPayload(
-			awsLambdaFunctionARN,
-			awsLambdaAssumeRoleARN,
-			awsLambdaAssumeRoleExternalID,
-			awsLambdaSkipRoleAndExternalID,
+			c.awsLambdaFunctionArn,
+			c.awsLambdaAssumeRoleArn,
+			c.awsLambdaAssumeRoleExternalId,
+			c.awsLambdaSkipRoleAndExternalId,
 		)
 		return "aws-lambda", p, err
-	case gcpCloudRunWorkerPool != "":
+	case c.hasAwsAgentcoreArgs():
+		p, err := awsAgentcoreProviderDetailsPayload(
+			c.awsAgentcoreEndpointArn,
+			c.awsAgentcoreAssumeRoleArn,
+			c.awsAgentcoreAssumeRoleExternalId,
+			c.awsAgentcoreSkipRoleAndExternalId,
+		)
+		return "aws-agentcore", p, err
+	case c.hasGcpCloudRunArgs():
 		p, err := gcpCloudRunProviderDetailsPayload(
-			gcpCloudRunProject,
-			gcpCloudRunRegion,
-			gcpCloudRunWorkerPool,
-			gcpCloudRunServiceAccount,
+			c.gcpCloudRunProject,
+			c.gcpCloudRunRegion,
+			c.gcpCloudRunWorkerPool,
+			c.gcpCloudRunServiceAccount,
 		)
 		return "gcp-cloud-run", p, err
 	default:
@@ -1137,6 +1227,7 @@ func computeProviderConfig(
 // WCI rejects an incompatible pairing at CreateWorkerDeploymentVersion.
 var scalerTypeByProvider = map[string]string{
 	"aws-lambda":    "no-sync",
+	"aws-agentcore": "no-sync",
 	"gcp-cloud-run": "rate-based",
 }
 
@@ -1258,16 +1349,20 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	deploymentName := c.DeploymentName
 	requestID := uuid.NewString()
 
-	providerType, detailsPayload, err := computeProviderConfig(
-		c.AwsLambdaFunctionArn,
-		c.AwsLambdaAssumeRoleArn,
-		c.AwsLambdaAssumeRoleExternalId,
-		c.AwsLambdaSkipRoleAndExternalId,
-		c.GcpCloudRunProject,
-		c.GcpCloudRunRegion,
-		c.GcpCloudRunWorkerPool,
-		c.GcpCloudRunServiceAccount,
-	)
+	providerType, detailsPayload, err := computeProviderConfig(&ComputeConfigArgs{
+		awsLambdaFunctionArn: c.AwsLambdaFunctionArn,
+		awsLambdaAssumeRoleArn: c.AwsLambdaAssumeRoleArn,
+		awsLambdaAssumeRoleExternalId: c.AwsLambdaAssumeRoleExternalId,
+		awsLambdaSkipRoleAndExternalId: c.AwsLambdaSkipRoleAndExternalId,
+		awsAgentcoreEndpointArn: c.AwsAgentcoreEndpointArn,
+		awsAgentcoreAssumeRoleArn: c.AwsAgentcoreAssumeRoleArn,
+		awsAgentcoreAssumeRoleExternalId: c.AwsAgentcoreAssumeRoleExternalId,
+		awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
+		gcpCloudRunProject: c.GcpCloudRunProject,
+		gcpCloudRunRegion: c.GcpCloudRunRegion,
+		gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
+		gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
+	})
 	if err != nil {
 		return err
 	}
@@ -1351,24 +1446,29 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 		RequestId: requestID,
 	}
 
+	computeConfigArgs := &ComputeConfigArgs{
+			awsLambdaFunctionArn: c.AwsLambdaFunctionArn,
+			awsLambdaAssumeRoleArn: c.AwsLambdaAssumeRoleArn,
+			awsLambdaAssumeRoleExternalId: c.AwsLambdaAssumeRoleExternalId,
+			awsLambdaSkipRoleAndExternalId: c.AwsLambdaSkipRoleAndExternalId,
+			awsAgentcoreEndpointArn: c.AwsAgentcoreEndpointArn,
+			awsAgentcoreAssumeRoleArn: c.AwsAgentcoreAssumeRoleArn,
+			awsAgentcoreAssumeRoleExternalId: c.AwsAgentcoreAssumeRoleExternalId,
+			awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
+			gcpCloudRunProject: c.GcpCloudRunProject,
+			gcpCloudRunRegion: c.GcpCloudRunRegion,
+			gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
+			gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
+		}
+
 	if c.Remove {
-		if c.AwsLambdaFunctionArn != "" || c.AwsLambdaAssumeRoleArn != "" || c.AwsLambdaAssumeRoleExternalId != "" ||
-			c.GcpCloudRunProject != "" || c.GcpCloudRunRegion != "" || c.GcpCloudRunWorkerPool != "" || c.GcpCloudRunServiceAccount != "" ||
+		if computeConfigArgs.hasAwsLambdaArgs() || computeConfigArgs.hasAwsAgentcoreArgs() || computeConfigArgs.hasGcpCloudRunArgs() ||
 			c.gcpScalerFlags().anySet() {
-			return fmt.Errorf("--remove cannot be combined with --aws-lambda-* or --gcp-cloud-run-* flags")
+			return fmt.Errorf("--remove cannot be combined with --aws-lambda-*, --aws-agentcore-*, or --gcp-cloud-run-* flags")
 		}
 		request.RemoveComputeConfigScalingGroups = []string{"default"}
 	} else {
-		providerType, detailsPayload, err := computeProviderConfig(
-			c.AwsLambdaFunctionArn,
-			c.AwsLambdaAssumeRoleArn,
-			c.AwsLambdaAssumeRoleExternalId,
-			c.AwsLambdaSkipRoleAndExternalId,
-			c.GcpCloudRunProject,
-			c.GcpCloudRunRegion,
-			c.GcpCloudRunWorkerPool,
-			c.GcpCloudRunServiceAccount,
-		)
+		providerType, detailsPayload, err := computeProviderConfig(computeConfigArgs)
 		if err != nil {
 			return err
 		}
