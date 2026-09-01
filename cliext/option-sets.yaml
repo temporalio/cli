@@ -43,7 +43,9 @@ option-sets:
           - warn
           - error
           - never
-        description: Log level.
+        description: |
+          Log level.
+          Default is "never" for most commands and "warn" for "server start-dev".
         default: never
       - name: log-format
         type: string-enum
