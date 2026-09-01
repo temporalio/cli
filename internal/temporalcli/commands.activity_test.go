@@ -1798,36 +1798,116 @@ func (s *SharedServerSuite) TestActivity_SearchAttributes_InvalidKeywordList() {
 }
 
 func (s *SharedServerSuite) TestActivity_List_Pagination() {
+	runningActivityStarted := make(chan struct{}, 2)
+	releaseRunningActivities := make(chan struct{})
+	var releaseRunningActivitiesOnce sync.Once
+	releaseRunning := func() {
+		releaseRunningActivitiesOnce.Do(func() { close(releaseRunningActivities) })
+	}
+	defer releaseRunning()
+
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		if strings.Contains(activity.GetInfo(ctx).ActivityID, "-running-") {
+			runningActivityStarted <- struct{}{}
+			select {
+			case <-releaseRunningActivities:
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
 		return "paginated", nil
 	})
 
 	uniqueKW := "page-" + uuid.NewString()[:8]
-	for i := 0; i < 5; i++ {
-		s.startActivity(fmt.Sprintf("page-test-%d", i),
+	query := fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW)
+	completedActivityIDs := []string{
+		"page-test-completed-0",
+		"page-test-completed-1",
+		"page-test-completed-2",
+	}
+	for _, activityID := range completedActivityIDs {
+		started := s.startActivity(activityID,
 			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
 		)
+		handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			ActivityID: activityID,
+			RunID:      started["runId"].(string),
+		})
+		s.NoError(handle.Get(s.Context, nil))
 	}
 
-	// Wait for all 5 to be visible
+	runningActivityIDs := []string{
+		"page-test-running-0",
+		"page-test-running-1",
+	}
+	runningActivityHandles := make([]client.ActivityHandle, 0, len(runningActivityIDs))
+	for _, activityID := range runningActivityIDs {
+		started := s.startActivity(activityID,
+			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+		)
+		runningActivityHandles = append(runningActivityHandles, s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			ActivityID: activityID,
+			RunID:      started["runId"].(string),
+		}))
+	}
+	runningActivityStartTimeout := time.After(5 * time.Second)
+	for range runningActivityIDs {
+		select {
+		case <-runningActivityStarted:
+		case <-runningActivityStartTimeout:
+			s.Fail("running activities did not start within timeout")
+			return
+		}
+	}
+
+	// Wait for visibility to contain the stable mix that pagination will traverse.
+	visibilityReady := false
 	s.Eventually(func() bool {
 		res := s.Execute(
 			"activity", "list",
+			"-o", "json",
 			"--address", s.Address(),
-			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+			"--query", query,
 		)
-		return res.Err == nil && strings.Count(res.Stdout.String(), "page-test-") >= 5
-	}, 5*time.Second, 200*time.Millisecond)
+		if res.Err != nil {
+			return false
+		}
+		var activities []struct {
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal(res.Stdout.Bytes(), &activities); err != nil {
+			return false
+		}
+		statusCounts := make(map[string]int)
+		for _, activity := range activities {
+			statusCounts[activity.Status]++
+		}
+		visibilityReady = len(activities) == 5 &&
+			statusCounts["ACTIVITY_EXECUTION_STATUS_COMPLETED"] == len(completedActivityIDs) &&
+			statusCounts["ACTIVITY_EXECUTION_STATUS_RUNNING"] == len(runningActivityIDs)
+		return visibilityReady
+	}, 10*time.Second, 200*time.Millisecond)
+	if !visibilityReady {
+		return
+	}
 
-	// Small page size forces multi-page fetching; verify all 5 appear
+	// Small page size forces multi-page fetching across both running and completed activities.
 	res := s.Execute(
 		"activity", "list",
 		"--page-size", "2",
 		"--address", s.Address(),
-		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+		"--query", query,
 	)
 	s.NoError(res.Err)
-	s.Equal(5, strings.Count(res.Stdout.String(), "page-test-"))
+	out := res.Stdout.String()
+	for _, activityID := range completedActivityIDs {
+		s.ContainsOnSameLine(out, "Completed", activityID)
+		s.Equal(1, strings.Count(out, activityID))
+	}
+	for _, activityID := range runningActivityIDs {
+		s.ContainsOnSameLine(out, "Running", activityID)
+		s.Equal(1, strings.Count(out, activityID))
+	}
 
 	// --limit 3 with page-size 2 should return exactly 3
 	res = s.Execute(
@@ -1835,10 +1915,15 @@ func (s *SharedServerSuite) TestActivity_List_Pagination() {
 		"--page-size", "2",
 		"--limit", "3",
 		"--address", s.Address(),
-		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+		"--query", query,
 	)
 	s.NoError(res.Err)
 	s.Equal(3, strings.Count(res.Stdout.String(), "page-test-"))
+
+	releaseRunning()
+	for _, handle := range runningActivityHandles {
+		s.NoError(handle.Get(s.Context, nil))
+	}
 }
 
 func (s *SharedServerSuite) TestActivity_Terminate_DefaultReason_NoUnknownUser() {
