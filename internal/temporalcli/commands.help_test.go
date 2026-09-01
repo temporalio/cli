@@ -31,6 +31,15 @@ func TestHelp_Subcommand(t *testing.T) {
 	assert.NoError(t, res.Err)
 }
 
+func TestOptions_LogLevelDescribesStartDevDefault(t *testing.T) {
+	h := NewCommandHarness(t)
+
+	res := h.Execute("options")
+
+	assert.Contains(t, res.Stdout.String(), `Default is "never" for most commands and "warn" for "server start-dev".`)
+	assert.NoError(t, res.Err)
+}
+
 func TestHelp_WithValueFlag(t *testing.T) {
 	h := NewCommandHarness(t)
 
