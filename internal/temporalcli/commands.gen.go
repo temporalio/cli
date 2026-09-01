@@ -247,9 +247,9 @@ func (v *SharedWorkflowStartOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringArrayVar(&v.Memo, "memo", nil, "Memo using 'KEY=\"VALUE\"' pairs. Use JSON values.")
 	f.StringVar(&v.StaticSummary, "static-summary", "", "Static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
 	f.StringVar(&v.StaticDetails, "static-details", "", "Static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
-	f.IntVar(&v.PriorityKey, "priority-key", 0, "Priority key (1-5, lower numbers = higher priority). Tasks in a queue should be processed in close-to-priority-order. Default is 3 when not specified.")
-	f.StringVar(&v.FairnessKey, "fairness-key", "", "Fairness key (max 64 bytes) for proportional task dispatch. Tasks with same key share capacity based on their weight.")
-	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight [0.001-1000] for this fairness key. Keys are dispatched proportionally to their weights.")
+	f.IntVar(&v.PriorityKey, "priority-key", 0, "Priority key passed to the server. Lower values have higher priority. Zero uses the server-configured default.")
+	f.StringVar(&v.FairnessKey, "fairness-key", "", "Fairness key for proportional task dispatch. Tasks with same key share capacity based on their weight.")
+	f.Float32Var(&v.FairnessWeight, "fairness-weight", 0, "Weight for this fairness key. Keys are dispatched proportionally to their weights.")
 }
 
 type WorkflowStartOptions struct {
@@ -2496,6 +2496,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalSchedulePatchCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -2697,6 +2698,107 @@ func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *T
 	return &s
 }
 
+type TemporalSchedulePatchCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	OverlapPolicyOptions
+	CatchupWindow         cliext.FlagDuration
+	UnsetCatchupWindow    bool
+	PauseOnFailure        bool
+	Notes                 string
+	UnsetNotes            bool
+	Paused                bool
+	RemainingActions      int
+	Calendar              []string
+	Cron                  []string
+	Interval              []string
+	SpecClearAll          bool
+	StartTime             cliext.FlagTimestamp
+	UnsetStartTime        bool
+	EndTime               cliext.FlagTimestamp
+	UnsetEndTime          bool
+	Jitter                cliext.FlagDuration
+	UnsetJitter           bool
+	TimeZone              string
+	UnsetTimeZone         bool
+	WorkflowId            string
+	Type                  string
+	TaskQueue             string
+	ExecutionTimeout      cliext.FlagDuration
+	UnsetExecutionTimeout bool
+	RunTimeout            cliext.FlagDuration
+	UnsetRunTimeout       bool
+	TaskTimeout           cliext.FlagDuration
+	UnsetTaskTimeout      bool
+	StaticSummary         string
+	UnsetStaticSummary    bool
+	StaticDetails         string
+	UnsetStaticDetails    bool
+}
+
+func NewTemporalSchedulePatchCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalSchedulePatchCommand {
+	var s TemporalSchedulePatchCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "patch [flags]"
+	s.Command.Short = "Change selected Schedule fields"
+	if hasHighlighting {
+		s.Command.Long = "Change selected fields on an existing Schedule while preserving\nunspecified fields.\n\nFor example:\n\n\x1b[1mtemporal schedule patch \\\n    --schedule-id \"YourScheduleId\" \\\n    --notes \"Runs every hour\" \\\n    --interval \"1h\"\x1b[0m\n\nA successful command confirms that the patch was submitted, not that it\nhas been applied on every backend.\n\nWhen none of \x1b[1m--calendar\x1b[0m, \x1b[1m--cron\x1b[0m, or \x1b[1m--interval\x1b[0m is supplied,\nexisting calendar, cron, and interval specifications are preserved.\nSupplying any of them replaces all existing calendar, cron, and interval\nspecifications. \x1b[1m--spec-clear-all\x1b[0m removes all existing calendar, cron,\nand interval specifications.\nExclusion calendars, start time, end time, jitter, and time zone are\npreserved unless separately changed."
+	} else {
+		s.Command.Long = "Change selected fields on an existing Schedule while preserving\nunspecified fields.\n\nFor example:\n\n```\ntemporal schedule patch \\\n    --schedule-id \"YourScheduleId\" \\\n    --notes \"Runs every hour\" \\\n    --interval \"1h\"\n```\n\nA successful command confirms that the patch was submitted, not that it\nhas been applied on every backend.\n\nWhen none of `--calendar`, `--cron`, or `--interval` is supplied,\nexisting calendar, cron, and interval specifications are preserved.\nSupplying any of them replaces all existing calendar, cron, and interval\nspecifications. `--spec-clear-all` removes all existing calendar, cron,\nand interval specifications.\nExclusion calendars, start time, end time, jitter, and time zone are\npreserved unless separately changed."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.CatchupWindow = 0
+	s.Command.Flags().Var(&s.CatchupWindow, "catchup-window", "Maximum catch-up time for when the Service is unavailable.")
+	s.Command.Flags().BoolVar(&s.UnsetCatchupWindow, "unset-catchup-window", false, "Restore the default catch-up window behavior.")
+	s.Command.Flags().BoolVar(&s.PauseOnFailure, "pause-on-failure", false, "Pause the Schedule after Workflow failures.")
+	s.Command.Flags().StringVar(&s.Notes, "notes", "", "Set the Schedule notes field.")
+	s.Command.Flags().BoolVar(&s.UnsetNotes, "unset-notes", false, "Clear the Schedule notes field.")
+	s.Command.Flags().BoolVar(&s.Paused, "paused", false, "Set whether the Schedule is paused.")
+	s.Command.Flags().IntVar(&s.RemainingActions, "remaining-actions", 0, "Total allowed actions. Zero means unlimited.")
+	s.Command.Flags().StringArrayVar(&s.Calendar, "calendar", nil, "Calendar JSON specification. May be passed multiple times. Supplying any calendar, cron, or interval value replaces all existing calendar, cron, and interval specifications.")
+	s.Command.Flags().StringArrayVar(&s.Cron, "cron", nil, "Cron expression. May be passed multiple times. Supplying any calendar, cron, or interval value replaces all existing calendar, cron, and interval specifications.")
+	s.Command.Flags().StringArrayVar(&s.Interval, "interval", nil, "Interval specification. May be passed multiple times. Supplying any calendar, cron, or interval value replaces all existing calendar, cron, and interval specifications.")
+	s.Command.Flags().BoolVar(&s.SpecClearAll, "spec-clear-all", false, "Clear all calendar, cron, and interval specifications from the Schedule Spec. Exclusion calendars and other Schedule Spec fields are preserved. Requires the resulting Schedule to be paused.")
+	s.Command.Flags().Var(&s.StartTime, "start-time", "Set the Schedule start time.")
+	s.Command.Flags().BoolVar(&s.UnsetStartTime, "unset-start-time", false, "Clear the Schedule start time.")
+	s.Command.Flags().Var(&s.EndTime, "end-time", "Set the Schedule end time.")
+	s.Command.Flags().BoolVar(&s.UnsetEndTime, "unset-end-time", false, "Clear the Schedule end time.")
+	s.Jitter = 0
+	s.Command.Flags().Var(&s.Jitter, "jitter", "Set the Schedule jitter.")
+	s.Command.Flags().BoolVar(&s.UnsetJitter, "unset-jitter", false, "Clear the Schedule jitter.")
+	s.Command.Flags().StringVar(&s.TimeZone, "time-zone", "", "Set the Schedule time zone.")
+	s.Command.Flags().BoolVar(&s.UnsetTimeZone, "unset-time-zone", false, "Restore default Schedule time zone interpretation.")
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Set the Workflow ID. An empty value is invalid.")
+	s.Command.Flags().StringVar(&s.Type, "type", "", "Set the Workflow Type name. An empty value is invalid. Aliased as \"--name\".")
+	s.Command.Flags().StringVarP(&s.TaskQueue, "task-queue", "t", "", "Set the Workflow Task queue. An empty value is invalid.")
+	s.ExecutionTimeout = 0
+	s.Command.Flags().Var(&s.ExecutionTimeout, "execution-timeout", "Set the Workflow Execution timeout.")
+	s.Command.Flags().BoolVar(&s.UnsetExecutionTimeout, "unset-execution-timeout", false, "Remove the explicit Workflow Execution timeout.")
+	s.RunTimeout = 0
+	s.Command.Flags().Var(&s.RunTimeout, "run-timeout", "Set the Workflow Run timeout.")
+	s.Command.Flags().BoolVar(&s.UnsetRunTimeout, "unset-run-timeout", false, "Restore the inherited Workflow Run timeout.")
+	s.TaskTimeout = cliext.MustParseFlagDuration("10s")
+	s.Command.Flags().Var(&s.TaskTimeout, "task-timeout", "Set the Workflow Task timeout.")
+	s.Command.Flags().BoolVar(&s.UnsetTaskTimeout, "unset-task-timeout", false, "Restore the 10-second default Workflow Task timeout.")
+	s.Command.Flags().StringVar(&s.StaticSummary, "static-summary", "", "Set the static Workflow summary for human consumption in UIs. Uses Temporal Markdown formatting, should be a single line. EXPERIMENTAL.")
+	s.Command.Flags().BoolVar(&s.UnsetStaticSummary, "unset-static-summary", false, "Remove the static Workflow summary.")
+	s.Command.Flags().StringVar(&s.StaticDetails, "static-details", "", "Set the static Workflow details for human consumption in UIs. Uses Temporal Markdown formatting, may be multiple lines. EXPERIMENTAL.")
+	s.Command.Flags().BoolVar(&s.UnsetStaticDetails, "unset-static-details", false, "Remove the static Workflow details.")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
+	s.Command.Flags().SetNormalizeFunc(aliasNormalizer(map[string]string{
+		"name": "type",
+	}))
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalScheduleToggleCommand struct {
 	Parent  *TemporalScheduleCommand
 	Command cobra.Command
@@ -2776,9 +2878,9 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update Schedule details"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\x1b[0m\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n\x1b[1mtemporal schedule describe\x1b[0m before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\x1b[0m\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n\x1b[1mtemporal schedule describe\x1b[0m before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates.\n\nFor field-preserving changes to individual fields, use\n\x1b[1mtemporal schedule patch\x1b[0m."
 	} else {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\n```\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n`temporal schedule describe` before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\n```\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n`temporal schedule describe` before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates.\n\nFor field-preserving changes to individual fields, use\n`temporal schedule patch`."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())

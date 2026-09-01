@@ -3247,12 +3247,161 @@ commands:
       Schedule memo and search attributes cannot be updated with this
       command. They are set only during Schedule creation and are not affected
       by updates.
+
+      For field-preserving changes to individual fields, use
+      `temporal schedule patch`.
     option-sets:
       - schedule-configuration
       - schedule-id
       - overlap-policy
       - shared-workflow-start
       - payload-input
+
+  - name: temporal schedule patch
+    summary: Change selected Schedule fields
+    description: |
+      Change selected fields on an existing Schedule while preserving
+      unspecified fields.
+
+      For example:
+
+      ```
+      temporal schedule patch \
+          --schedule-id "YourScheduleId" \
+          --notes "Runs every hour" \
+          --interval "1h"
+      ```
+
+      A successful command confirms that the patch was submitted, not that it
+      has been applied on every backend.
+
+      When none of `--calendar`, `--cron`, or `--interval` is supplied,
+      existing calendar, cron, and interval specifications are preserved.
+      Supplying any of them replaces all existing calendar, cron, and interval
+      specifications. `--spec-clear-all` removes all existing calendar, cron,
+      and interval specifications.
+      Exclusion calendars, start time, end time, jitter, and time zone are
+      preserved unless separately changed.
+    option-sets:
+      - schedule-id
+      - overlap-policy
+    options:
+      - name: catchup-window
+        type: duration
+        description: Maximum catch-up time for when the Service is unavailable.
+      - name: unset-catchup-window
+        type: bool
+        description: Restore the default catch-up window behavior.
+      - name: pause-on-failure
+        type: bool
+        description: Pause the Schedule after Workflow failures.
+      - name: notes
+        type: string
+        description: Set the Schedule notes field.
+      - name: unset-notes
+        type: bool
+        description: Clear the Schedule notes field.
+      - name: paused
+        type: bool
+        description: Set whether the Schedule is paused.
+      - name: remaining-actions
+        type: int
+        description: Total allowed actions. Zero means unlimited.
+      - name: calendar
+        type: string[]
+        description: |
+          Calendar JSON specification. May be passed multiple times.
+          Supplying any calendar, cron, or interval value replaces all existing
+          calendar, cron, and interval specifications.
+      - name: cron
+        type: string[]
+        description: |
+          Cron expression. May be passed multiple times.
+          Supplying any calendar, cron, or interval value replaces all existing
+          calendar, cron, and interval specifications.
+      - name: interval
+        type: string[]
+        description: |
+          Interval specification. May be passed multiple times.
+          Supplying any calendar, cron, or interval value replaces all existing
+          calendar, cron, and interval specifications.
+      - name: spec-clear-all
+        type: bool
+        description: Clear all calendar, cron, and interval specifications from the Schedule Spec. Exclusion calendars and other Schedule Spec fields are preserved. Requires the resulting Schedule to be paused.
+      - name: start-time
+        type: timestamp
+        description: Set the Schedule start time.
+      - name: unset-start-time
+        type: bool
+        description: Clear the Schedule start time.
+      - name: end-time
+        type: timestamp
+        description: Set the Schedule end time.
+      - name: unset-end-time
+        type: bool
+        description: Clear the Schedule end time.
+      - name: jitter
+        type: duration
+        description: Set the Schedule jitter.
+      - name: unset-jitter
+        type: bool
+        description: Clear the Schedule jitter.
+      - name: time-zone
+        type: string
+        description: Set the Schedule time zone.
+      - name: unset-time-zone
+        type: bool
+        description: Restore default Schedule time zone interpretation.
+      - name: workflow-id
+        type: string
+        short: w
+        description: Set the Workflow ID. An empty value is invalid.
+      - name: type
+        type: string
+        description: Set the Workflow Type name. An empty value is invalid.
+        aliases:
+          - name
+      - name: task-queue
+        type: string
+        short: t
+        description: Set the Workflow Task queue. An empty value is invalid.
+      - name: execution-timeout
+        type: duration
+        description: Set the Workflow Execution timeout.
+      - name: unset-execution-timeout
+        type: bool
+        description: Remove the explicit Workflow Execution timeout.
+      - name: run-timeout
+        type: duration
+        description: Set the Workflow Run timeout.
+      - name: unset-run-timeout
+        type: bool
+        description: Restore the inherited Workflow Run timeout.
+      - name: task-timeout
+        type: duration
+        default: 10s
+        description: Set the Workflow Task timeout.
+      - name: unset-task-timeout
+        type: bool
+        description: Restore the 10-second default Workflow Task timeout.
+      - name: static-summary
+        type: string
+        experimental: true
+        description: |
+          Set the static Workflow summary for human consumption in UIs.
+          Uses Temporal Markdown formatting, should be a single line.
+      - name: unset-static-summary
+        type: bool
+        description: Remove the static Workflow summary.
+      - name: static-details
+        type: string
+        experimental: true
+        description: |
+          Set the static Workflow details for human consumption in UIs.
+          Uses Temporal Markdown formatting, may be multiple lines.
+      - name: unset-static-details
+        type: bool
+        description: Remove the static Workflow details.
 
   - name: temporal server
     summary: Run Temporal Server
@@ -5611,18 +5760,17 @@ option-sets:
       - name: priority-key
         type: int
         description: |
-          Priority key (1-5, lower numbers = higher priority).
-          Tasks in a queue should be processed in close-to-priority-order.
-          Default is 3 when not specified.
+          Priority key passed to the server. Lower values have higher priority.
+          Zero uses the server-configured default.
       - name: fairness-key
         type: string
         description: |
-          Fairness key (max 64 bytes) for proportional task dispatch.
+          Fairness key for proportional task dispatch.
           Tasks with same key share capacity based on their weight.
       - name: fairness-weight
         type: float
         description: |
-          Weight [0.001-1000] for this fairness key.
+          Weight for this fairness key.
           Keys are dispatched proportionally to their weights.
 
   - name: workflow-start
