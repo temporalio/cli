@@ -141,6 +141,10 @@ commands:
             `temporal server start-dev`
       * View help: pass `--help` to any command:
             `temporal activity complete --help`
+      * Return structured output with `-o`:
+            `temporal workflow list -o json`
+      * View global and connection options:
+            `temporal options`
     has-init: true
     option-sets:
       - common
@@ -561,10 +565,9 @@ commands:
     summary: Reset an Activity
     description: |
       Reset an activity. Not supported for Standalone Activities.
-      This restarts the activity as if it were first being
-      scheduled. That is, it will reset both the number of attempts and the
-      activity timeout, as well as, optionally, the
-      [heartbeat details](#reset-heartbeats).
+      This restarts the activity as if it were first being scheduled: the
+      attempt count returns to one, its per-attempt timeouts are re-armed, and
+      its [heartbeat details](#reset-heartbeats) are cleared.
 
       If the activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
@@ -614,9 +617,6 @@ commands:
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
-      - name: reset-attempts
-        type: bool
-        description: Reset the activity attempts.
       - name: reset-heartbeats
         type: bool
         description: Reset the Activity's heartbeats.
@@ -1093,6 +1093,19 @@ commands:
           --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID
       ```
 
+      Or pass compute provider information for an AWS Bedrock Agentcore Runtime
+      that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --aws-agentcore-endpoint-arn AgentcoreRuntimeEndpointARN \
+          --aws-agentcore-assume-role-arn AgentcoreAssumeRoleARN \
+          --aws-agentcore-assume-role-external-id AgentcoreAssumeRoleExternalID
+      ```
+
       Or pass compute provider information for a GCP Cloud Run worker pool
       that spawns a Worker in the Worker Deployment:
 
@@ -1108,7 +1121,8 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       If a Worker Deployment Version with the supplied BuildID already exists,
@@ -1132,14 +1146,51 @@ commands:
           AWS IAM role ARN that the Temporal server will assume when invoking
           the Lambda function that spawns a new Worker in this Worker
           Deployment Version. Required when --aws-lambda-function-arn is
-          specified.
+          specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
       - name: aws-lambda-assume-role-external-id
         type: string
         description: |
           Temporal server will enforce that the AWS IAM trust policy associated
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
-          when --aws-lambda-function-arn is specified.
+          when --aws-lambda-function-arn is specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
+      - name: aws-lambda-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-lambda-function-arn is specified,
+          --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id
+          are required unless this flag is passed, in which case both must be
+          omitted.
+      - name: aws-agentcore-endpoint-arn
+        type: string
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+      - name: aws-agentcore-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Agentcore Runtime that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-agentcore-endpoint-arn is
+          specified, and must be omitted when
+          --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-agentcore-assume-role-arn has an
+          aws:ExternalId condition that matches the supplied value. Required
+          when --aws-agentcore-endpoint-arn is specified, and must be omitted
+          when --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
+          and --aws-agentcore-assume-role-external-id are required unless this
+          flag is passed, in which case both must be omitted.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1166,24 +1217,27 @@ commands:
         description: |
           Minimum number of Cloud Run worker pool instances the scaler will
           maintain. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Defaults
           to 0 when unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-max-instances
         type: int
         description: |
           Maximum number of Cloud Run worker pool instances the scaler may
           scale up to. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Defaults
           to 30 when unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-initial-instances
         type: int
         description: |
           Number of Cloud Run worker pool instances the scaler starts with.
           Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together, and this
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together, and this
           value must be between the min and max (inclusive). Defaults to 0 when
           unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-utilization-target
@@ -1191,10 +1245,23 @@ commands:
         description: |
           Target average worker utilization the scaler aims for, as a fraction
           in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Lower
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Lower
           values keep more spare capacity per worker. Defaults to 0.8 when
           unset. Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-scale-down-stabilization-duration
+        type: duration
+        description: |
+          Duration the scaler waits after it last saw unmet task demand
+          before it may scale the Cloud Run worker pool down. Raise this to
+          keep the pool from scaling down before long-running or bursty
+          activities finish. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. A
+          value of 0s disables the wait. Defaults to 90s when unset. Only
+          valid with --gcp-cloud-run-worker-pool.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
@@ -1423,6 +1490,17 @@ commands:
           --aws-lambda-assume-role-arn UpdatedRoleARN
       ```
 
+      To update the AWS Bedrock Agentcore Runtime endpoint associated with an
+      existing Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-agentcore-endpoint-arn UpdatedAgentcoreRuntimeEndpointARN \
+          --aws-agentcore-assume-role-arn UpdatedRoleARN \
+          --aws-agentcore-assume-role-external-id UpdatedExternalID
+      ```
+
       To update the GCP Cloud Run worker pool associated with an existing
       Worker Deployment Version:
 
@@ -1436,12 +1514,13 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       To update only the scaling settings on an existing GCP Cloud Run Worker
-      Deployment Version, supply the four scaler flags without the provider
-      fields (all four must be set together):
+      Deployment Version, supply the five scaler flags without the provider
+      fields (all five must be set together):
 
       ```
        temporal worker deployment update-version-compute-config \
@@ -1449,7 +1528,8 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       Provider fields are only required when changing the compute provider.
@@ -1483,14 +1563,51 @@ commands:
           AWS IAM role ARN that the Temporal server will assume when invoking
           the Lambda function that spawns a new Worker in this Worker
           Deployment Version. Required when --aws-lambda-function-arn is
-          specified.
+          specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
       - name: aws-lambda-assume-role-external-id
         type: string
         description: |
           Temporal server will enforce that the AWS IAM trust policy associated
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
-          when --aws-lambda-function-arn is specified.
+          when --aws-lambda-function-arn is specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
+      - name: aws-lambda-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-lambda-function-arn is specified,
+          --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id
+          are required unless this flag is passed, in which case both must be
+          omitted.
+      - name: aws-agentcore-endpoint-arn
+        type: string
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+      - name: aws-agentcore-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Agentcore Runtime that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-agentcore-endpoint-arn is
+          specified, and must be omitted when
+          --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-agentcore-assume-role-arn has an
+          aws:ExternalId condition that matches the supplied value. Required
+          when --aws-agentcore-endpoint-arn is specified, and must be omitted
+          when --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
+          and --aws-agentcore-assume-role-external-id are required unless this
+          flag is passed, in which case both must be omitted.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1517,39 +1634,56 @@ commands:
         description: |
           Minimum number of Cloud Run worker pool instances the scaler will
           maintain. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. If
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. If
           omitted, the version's existing scaling settings are left unchanged.
-          Only valid with --gcp-cloud-run-worker-pool.
+          Only applies to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-max-instances
         type: int
         description: |
           Maximum number of Cloud Run worker pool instances the scaler may
           scale up to. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. If
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. If
           omitted, the version's existing scaling settings are left unchanged.
-          Only valid with --gcp-cloud-run-worker-pool.
+          Only applies to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-initial-instances
         type: int
         description: |
           Number of Cloud Run worker pool instances the scaler starts with.
           Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together, and this
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together, and this
           value must be between the min and max (inclusive). If omitted, the
-          version's existing scaling settings are left unchanged. Only valid
-          with --gcp-cloud-run-worker-pool.
+          version's existing scaling settings are left unchanged. Only applies
+          to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-utilization-target
         type: float
         description: |
           Target average worker utilization the scaler aims for, as a fraction
           in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Lower
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Lower
           values keep more spare capacity per worker. If omitted, the version's
-          existing scaling settings are left unchanged. Only valid with
-          --gcp-cloud-run-worker-pool.
+          existing scaling settings are left unchanged. Only applies to a
+          GCP Cloud Run worker pool.
+      - name: gcp-cloud-run-scale-down-stabilization-duration
+        type: duration
+        description: |
+          Duration the scaler waits after it last saw unmet task demand
+          before it may scale the Cloud Run worker pool down. Raise this to
+          keep the pool from scaling down before long-running or bursty
+          activities finish. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. A
+          value of 0s disables the wait. If omitted, the version's existing
+          scaling settings are left unchanged. Only applies to a
+          GCP Cloud Run worker pool.
       - name: remove
         type: bool
         description: |
@@ -4748,6 +4882,7 @@ option-sets:
     external-package: github.com/temporalio/cli/cliext
   - name: client
     external-package: github.com/temporalio/cli/cliext
+    hide-from-help: true
 
   - name: overlap-policy
     options:

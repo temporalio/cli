@@ -643,7 +643,7 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 
 	if c.Command.Flags().Changed("task-queue") {
 		activityOptions.TaskQueue = &taskqueuepb.TaskQueue{Name: c.TaskQueue}
-		updatePath = append(updatePath, "task_queue_name")
+		updatePath = append(updatePath, "task_queue.name")
 	}
 
 	if c.Command.Flags().Changed("schedule-to-close-timeout") {
@@ -924,7 +924,6 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	} else { // batch operation
 		resetActivitiesOperation := &batch.BatchOperationResetActivities{
 			Identity:               c.Parent.Identity,
-			ResetAttempts:          c.ResetAttempts,
 			ResetHeartbeat:         c.ResetHeartbeats,
 			KeepPaused:             c.KeepPaused,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),

@@ -151,11 +151,23 @@ type CommandResult struct {
 }
 
 func (h *CommandHarness) Execute(args ...string) *CommandResult {
+	ctx, cancel := context.WithCancel(h.Context)
+	h.t.Cleanup(cancel)
+	defer cancel()
+	return h.execute(ctx, &h.Stdin, args...)
+}
+
+func (h *CommandHarness) ExecuteWithContext(ctx context.Context, args ...string) *CommandResult {
+	var stdin bytes.Buffer
+	return h.execute(ctx, &stdin, args...)
+}
+
+func (h *CommandHarness) execute(ctx context.Context, stdin io.Reader, args ...string) *CommandResult {
 	// Copy options, update as needed
 	res := &CommandResult{}
 	options := h.Options
 	// Set stdio
-	options.Stdin = &h.Stdin
+	options.Stdin = stdin
 	options.Stdout = &res.Stdout
 	options.Stderr = &res.Stderr
 	// Set args
@@ -175,10 +187,6 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 		res.Err = err
 	}
 
-	// Run
-	ctx, cancel := context.WithCancel(h.Context)
-	h.t.Cleanup(cancel)
-	defer cancel()
 	h.t.Logf("Calling: %v", strings.Join(args, " "))
 	temporalcli.Execute(ctx, options)
 	if res.Stdout.Len() > 0 {
