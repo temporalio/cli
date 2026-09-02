@@ -3,12 +3,70 @@ package temporalcli_test
 import (
 	"fmt"
 	"os"
+	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 )
+
+func TestNamespaceUpdate_ActiveClusterRejectsOtherUpdates(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		wantError string
+	}{
+		{name: "cluster", args: []string{"--cluster", "cluster-a"}, wantError: "--active-cluster cannot be combined with --cluster"},
+		{name: "data", args: []string{"--data", "key=value"}, wantError: "--active-cluster cannot be combined with --data"},
+		{name: "description", args: []string{"--description", "description"}, wantError: "--active-cluster cannot be combined with --description"},
+		{name: "email", args: []string{"--email", "owner@example.com"}, wantError: "--active-cluster cannot be combined with --email"},
+		{name: "promote global", args: []string{"--promote-global"}, wantError: "both --promote-global and --active-cluster flags cannot be set together"},
+		{name: "history archival state", args: []string{"--history-archival-state", "enabled"}, wantError: "--active-cluster cannot be combined with --history-archival-state"},
+		{name: "history URI", args: []string{"--history-uri", "file:///tmp/history"}, wantError: "--active-cluster cannot be combined with --history-uri"},
+		{name: "replication state", args: []string{"--replication-state", "normal"}, wantError: "--active-cluster cannot be combined with --replication-state"},
+		{name: "retention", args: []string{"--retention", "24h"}, wantError: "--active-cluster cannot be combined with --retention"},
+		{name: "visibility archival state", args: []string{"--visibility-archival-state", "enabled"}, wantError: "--active-cluster cannot be combined with --visibility-archival-state"},
+		{name: "visibility URI", args: []string{"--visibility-uri", "file:///tmp/visibility"}, wantError: "--active-cluster cannot be combined with --visibility-uri"},
+	}
+
+	for _, output := range []string{"text", "json"} {
+		t.Run(output, func(t *testing.T) {
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					h := NewCommandHarness(t)
+					args := []string{
+						"operator", "namespace", "update",
+						"--address", "127.0.0.1:1",
+						"--namespace", "test-namespace",
+						"--active-cluster", "cluster-b",
+						"--output", output,
+					}
+					res := h.Execute(append(args, test.args...)...)
+
+					require.ErrorContains(t, res.Err, test.wantError)
+					require.Empty(t, res.Stdout.String())
+				})
+			}
+		})
+	}
+}
+
+func TestNamespaceUpdate_ActiveClusterReportsAllConflicts(t *testing.T) {
+	h := NewCommandHarness(t)
+	res := h.Execute(
+		"operator", "namespace", "update",
+		"--address", "127.0.0.1:1",
+		"--namespace", "test-namespace",
+		"--active-cluster", "cluster-b",
+		"--cluster", "cluster-a",
+		"--description", "description",
+	)
+
+	require.ErrorContains(t, res.Err, "--active-cluster cannot be combined with --cluster, --description")
+	require.Empty(t, res.Stdout.String())
+}
 
 func (s *SharedServerSuite) TestOperator_NamespaceCreateListAndDescribe() {
 	nsName := "test_namespace"
@@ -105,6 +163,27 @@ func (s *SharedServerSuite) TestNamespaceUpdate() {
 	s.Equal("v1", describeResp.NamespaceInfo.Data["k1"])
 	s.Equal("v2", describeResp.NamespaceInfo.Data["k2"])
 	s.Equal("v3", describeResp.NamespaceInfo.Data["k3"])
+}
+
+func (s *SharedServerSuite) TestNamespaceUpdate_ActiveClusterAlone() {
+	nsName := "test-namespace-update-active-cluster"
+	res := s.Execute(
+		"operator", "namespace", "create",
+		"--address", s.Address(),
+		"--namespace", nsName,
+		"--global",
+		"--active-cluster", "active",
+		"--cluster", "active",
+	)
+	require.NoError(s.T(), res.Err)
+
+	res = s.Execute(
+		"operator", "namespace", "update",
+		"--address", s.Address(),
+		"--namespace", nsName,
+		"--active-cluster", "active",
+	)
+	require.NoError(s.T(), res.Err)
 }
 
 func (s *SharedServerSuite) TestNamespaceUpdate_NamespaceDontExist() {
