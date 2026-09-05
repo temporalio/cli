@@ -63,6 +63,7 @@ func (t *TemporalServerStartBridgeCommand) run(cctx *CommandContext, _ []string)
 				Logger:        cctx.Logger,
 			})
 			if err != nil {
+				cctx.Logger.Warn("Local execution bridge startup failed", "error", err)
 				return localexecution.BridgeBootstrapResponse{}, err
 			}
 			bridgeMutex.Lock()

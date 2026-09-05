@@ -351,7 +351,12 @@ func (s *StartOptions) buildSQLConfig() (*config.SQL, error) {
 	// Create namespaces
 	namespaces := make([]*sqliteschema.NamespaceConfig, len(s.Namespaces))
 	for i, ns := range s.Namespaces {
-		nsConfig, err := sqlite.NewNamespaceConfig(s.CurrentClusterName, ns, false, s.SearchAttributes)
+		nsConfig, err := sqlite.NewNamespaceConfig(
+			s.CurrentClusterName,
+			ns,
+			s.EnableGlobalNamespace,
+			s.SearchAttributes,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating namespace config: %w", err)
 		}

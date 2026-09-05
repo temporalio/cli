@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/server/api/adminservice/v1"
+	"go.temporal.io/server/common/dynamicconfig"
 	"go.temporal.io/server/service/localexecution"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -76,6 +77,7 @@ func Start(ctx context.Context, options StartOptions) (_ *Server, retError error
 	if err != nil {
 		return nil, err
 	}
+	options.Logger.Info("Connected local execution bridge to upstream namespace")
 	defer func() {
 		if retError != nil {
 			upstreamClient.Close()
@@ -96,10 +98,15 @@ func Start(ctx context.Context, options StartOptions) (_ *Server, retError error
 		DatabaseFile:           options.StateStore.DatabasePath(),
 		MetricsPort:            metricsPort,
 		EnableGlobalNamespace:  true,
+		DynamicConfigValues: map[string]any{
+			dynamicconfig.LocalExecutionBridgeTaskQueue.Key().String():     options.Configuration.Registrations.TaskQueue,
+			dynamicconfig.LocalExecutionBridgeActivityTypes.Key().String(): options.Configuration.Registrations.ActivityTypes,
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("start local Temporal server: %w", err)
 	}
+	options.Logger.Info("Started local execution bridge Temporal server")
 	defer func() {
 		if retError != nil {
 			local.Stop()
@@ -115,6 +122,7 @@ func Start(ctx context.Context, options StartOptions) (_ *Server, retError error
 	if err != nil {
 		return nil, err
 	}
+	options.Logger.Info("Connected local execution bridge runtime to local namespace")
 	defer func() {
 		if retError != nil {
 			_ = localConnection.Close()
@@ -139,6 +147,7 @@ func Start(ctx context.Context, options StartOptions) (_ *Server, retError error
 		cancelRuntime()
 		return nil, fmt.Errorf("start bridge runtime: %w", err)
 	}
+	options.Logger.Info("Started local execution bridge runtime")
 	return &Server{
 		cancel:             cancelRuntime,
 		done:               done,
@@ -187,6 +196,7 @@ func connectUpstream(
 	clientOptions := client.Options{
 		HostPort:        configuration.Upstream.Address,
 		Namespace:       configuration.Namespace,
+		Identity:        configuration.Upstream.Identity,
 		HeadersProvider: staticHeaders(configuration.Upstream.Headers),
 	}
 	if configuration.Upstream.APIKey != "" {
