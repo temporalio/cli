@@ -1,9 +1,14 @@
 package temporalcli_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,13 +22,157 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/internal/devserver"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/server/service/localexecution"
 )
 
 // TODO(cretz): To test:
 // * Start server with UI
 // * Server reuse existing database file
+
+func TestServer_StartBridgeRequiresPersistentStateAndBootstrapToken(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	result := h.Execute("server", "start-bridge", "--help")
+	require.NoError(t, result.Err)
+	assert.Contains(t, result.Stdout.String(), "--state-dir string")
+	assert.Contains(t, result.Stdout.String(), "--bootstrap-token-file string")
+	assert.NotContains(t, result.Stdout.String(), "--db-filename")
+}
+
+func TestServer_StartBridgeRejectsInvalidBootstrapPort(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+
+	result := h.Execute(
+		"server", "start-bridge",
+		"--state-dir", t.TempDir(),
+		"--bootstrap-token-file", filepath.Join(t.TempDir(), "token"),
+		"--bootstrap-port", "0",
+	)
+	require.EqualError(t, result.Err, "bootstrap port must be between 1 and 65535")
+}
+
+func TestServer_StartBridgeBootstrapLifecycle(t *testing.T) {
+	upstreamPort := devserver.MustGetFreePort("127.0.0.1")
+	upstream, err := devserver.Start(devserver.StartOptions{
+		FrontendIP:             "127.0.0.1",
+		FrontendPort:           upstreamPort,
+		Namespaces:             []string{"namespace"},
+		ClusterID:              uuid.NewString(),
+		MasterClusterName:      "active",
+		CurrentClusterName:     "active",
+		InitialFailoverVersion: 1,
+		Logger:                 slog.New(slog.NewTextHandler(io.Discard, nil)),
+		LogLevel:               100,
+		MetricsPort:            devserver.MustGetFreePort("127.0.0.1"),
+		EnableGlobalNamespace:  true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(upstream.Stop)
+
+	stateDirectory := filepath.Join(t.TempDir(), "bridge")
+	require.NoError(t, os.Mkdir(stateDirectory, 0o700))
+	require.NoError(t, os.Chmod(stateDirectory, 0o700))
+	token := "0123456789abcdef0123456789abcdef"
+	tokenFile := filepath.Join(t.TempDir(), "token")
+	require.NoError(t, os.WriteFile(tokenFile, []byte(token), 0o600))
+	bootstrapPort := devserver.MustGetFreePort("127.0.0.1")
+
+	h := NewCommandHarness(t)
+	defer h.Close()
+	resultChannel := make(chan *CommandResult, 1)
+	go func() {
+		resultChannel <- h.Execute(
+			"server", "start-bridge",
+			"--state-dir", stateDirectory,
+			"--bootstrap-token-file", tokenFile,
+			"--bootstrap-port", strconv.Itoa(bootstrapPort),
+			"--log-level", "never",
+		)
+	}()
+	bootstrapAddress := fmt.Sprintf("http://127.0.0.1:%d%s", bootstrapPort, localexecution.BridgeBootstrapPath)
+	h.EventuallyWithT(func(t *assert.CollectT) {
+		connection, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", bootstrapPort), 100*time.Millisecond)
+		assert.NoError(t, err)
+		if err == nil {
+			assert.NoError(t, connection.Close())
+		}
+	}, 10*time.Second, 100*time.Millisecond)
+
+	configuration := localexecution.BridgeConfiguration{
+		Namespace: "namespace",
+		Upstream: localexecution.UpstreamConnectionProfile{
+			Address: fmt.Sprintf("127.0.0.1:%d", upstreamPort),
+			Headers: map[string]string{"x-bridge-test": "secret-header-value"},
+		},
+		Options: localexecution.BridgeLocalFirstOptions{
+			SyncIntervalMilliseconds:    1_000,
+			MaximumUnsynchronizedEvents: 10_240,
+			MaximumUnsynchronizedBytes:  8 << 20,
+		},
+		Registrations: localexecution.WorkerRegistrationManifest{
+			TaskQueue: "task-queue",
+		},
+	}
+	response := sendBridgeBootstrap(t, bootstrapAddress, token, configuration)
+	require.Equal(t, http.StatusOK, response.StatusCode)
+	var bootstrapResult localexecution.BridgeBootstrapResponse
+	require.NoError(t, json.NewDecoder(response.Body).Decode(&bootstrapResult))
+	require.NoError(t, response.Body.Close())
+	require.NotEmpty(t, bootstrapResult.LocalServerID)
+	require.NotEmpty(t, bootstrapResult.FrontendAddress)
+	_, err = os.Stat(tokenFile)
+	require.ErrorIs(t, err, os.ErrNotExist)
+
+	localClient, err := client.Dial(client.Options{
+		HostPort:  bootstrapResult.FrontendAddress,
+		Namespace: "namespace",
+	})
+	require.NoError(t, err)
+	defer localClient.Close()
+	_, err = localClient.WorkflowService().DescribeNamespace(
+		t.Context(),
+		&workflowservice.DescribeNamespaceRequest{Namespace: "namespace"},
+	)
+	require.NoError(t, err)
+
+	reused := sendBridgeBootstrap(t, bootstrapAddress, token, configuration)
+	require.Equal(t, http.StatusUnauthorized, reused.StatusCode)
+	require.NoError(t, reused.Body.Close())
+	h.CancelContext()
+	select {
+	case result := <-resultChannel:
+		require.NoError(t, result.Err)
+		require.NotContains(t, result.Stdout.String(), token)
+		require.NotContains(t, result.Stderr.String(), token)
+		require.NotContains(t, result.Stdout.String(), "secret-header-value")
+		require.NotContains(t, result.Stderr.String(), "secret-header-value")
+	case <-time.After(20 * time.Second):
+		require.Fail(t, "bridge command did not stop")
+	}
+}
+
+func sendBridgeBootstrap(
+	t *testing.T,
+	address string,
+	token string,
+	configuration localexecution.BridgeConfiguration,
+) *http.Response {
+	t.Helper()
+	body, err := json.Marshal(configuration)
+	require.NoError(t, err)
+	request, err := http.NewRequestWithContext(t.Context(), http.MethodPost, address, bytes.NewReader(body))
+	require.NoError(t, err)
+	request.Header.Set("Authorization", "Bearer "+token)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := http.DefaultClient.Do(request)
+	require.NoError(t, err)
+	return response
+}
 
 func TestServer_StartDev_Simple(t *testing.T) {
 	port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))

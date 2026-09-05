@@ -2813,7 +2813,40 @@ func NewTemporalServerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 		s.Command.Long = "Run a development Temporal Server on your local system.\n\n```\n+------------------------------------------------------------------------+\n| WARNING: The development server is not intended for production use.    |\n| It skips certain HTTP security checks to make local use simpler.       |\n|                                                                        |\n| For production use, see:                                               |\n| https://docs.temporal.io/production-deployment                         |\n+------------------------------------------------------------------------+\n```\n\nView the Web UI for the default configuration at: http://localhost:8233\n\n```\ntemporal server start-dev\n```\n\nAdd persistence for Workflow Executions across runs:\n\n```\ntemporal server start-dev \\\n    --db-filename path-to-your-local-persistent-store\n```\n\nSet the port from the front-end gRPC Service (7233 default):\n\n```\ntemporal server start-dev \\\n    --port 7234 \\\n    --ui-port 8234 \\\n    --metrics-port 57271\n```\n\nUse a custom port for the Web UI. The default is the gRPC port (7233 default)\nplus 1000 (8233):\n\n```\ntemporal server start-dev \\\n    --ui-port 3000\n```"
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalServerStartBridgeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalServerStartDevCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalServerStartBridgeCommand struct {
+	Parent             *TemporalServerCommand
+	Command            cobra.Command
+	StateDir           string
+	BootstrapTokenFile string
+	BootstrapPort      int
+	Port               int
+}
+
+func NewTemporalServerStartBridgeCommand(cctx *CommandContext, parent *TemporalServerCommand) *TemporalServerStartBridgeCommand {
+	var s TemporalServerStartBridgeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "start-bridge [flags]"
+	s.Command.Short = "Start a local-execution bridge server"
+	s.Command.Long = "Run the experimental local-execution bridge used by Core-based Workers.\n\nCore normally starts this command and supplies the upstream connection,\nlocal-first options, and Worker registrations through an authenticated\nloopback bootstrap request."
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.StateDir, "state-dir", "", "Private directory for durable bridge and Temporal state. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "state-dir")
+	s.Command.Flags().StringVar(&s.BootstrapTokenFile, "bootstrap-token-file", "", "Path to the protected one-time bootstrap token file. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "bootstrap-token-file")
+	s.Command.Flags().IntVar(&s.BootstrapPort, "bootstrap-port", 0, "Port for the loopback bootstrap HTTP endpoint. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "bootstrap-port")
+	s.Command.Flags().IntVar(&s.Port, "port", 0, "Port for the local Temporal frontend. Defaults to a random free port.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 

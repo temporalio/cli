@@ -3438,6 +3438,33 @@ commands:
           attribute type, which is one of the following:
           Text, Keyword, Int, Double, Bool, Datetime, KeywordList.
 
+  - name: temporal server start-bridge
+    summary: Start a local-execution bridge server
+    description: |
+      Run the experimental local-execution bridge used by Core-based Workers.
+
+      Core normally starts this command and supplies the upstream connection,
+      local-first options, and Worker registrations through an authenticated
+      loopback bootstrap request.
+    options:
+      - name: state-dir
+        type: string
+        required: true
+        description: Private directory for durable bridge and Temporal state.
+      - name: bootstrap-token-file
+        type: string
+        required: true
+        description: Path to the protected one-time bootstrap token file.
+      - name: bootstrap-port
+        type: int
+        required: true
+        description: Port for the loopback bootstrap HTTP endpoint.
+      - name: port
+        type: int
+        description: |
+          Port for the local Temporal frontend.
+          Defaults to a random free port.
+
   - name: temporal task-queue
     summary: Manage Task Queues
     description: |
