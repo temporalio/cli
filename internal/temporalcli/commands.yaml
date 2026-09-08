@@ -880,7 +880,6 @@ commands:
         Use Temporal CLI to manage multiple Workflow or Standalone Activity
         Executions with Batch Jobs. Filter and monitor Batch Jobs effectively.
       keywords:
-        - activity batch
         - batch
         - batch describe
         - batch list
@@ -891,7 +890,6 @@ commands:
         - standalone activity
         - temporal cli
       tags:
-        - Activities
         - Temporal CLI
 
   - name: temporal batch describe
