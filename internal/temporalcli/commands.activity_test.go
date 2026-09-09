@@ -293,7 +293,6 @@ func (s *SharedServerSuite) TestActivityCommandFailed_BothWorkflowIdAndQuery() {
 			"activity", command,
 			"--workflow-id", run.GetID(),
 			"--query", "WorkflowType='DevWorkflow'",
-			"--activity-id", activityId,
 			"--address", s.Address(),
 		)
 		s.ErrorContains(res.Err, "cannot set query when workflow ID is set")
@@ -599,6 +598,7 @@ func (s *SharedServerSuite) TestActivityInvalidTargeting() {
 		{name: "workflow-id and query", workflowID: "w-id", query: q},
 		{name: "workflow-id and run-id, no activity-id", workflowID: "w-id", runID: "r-id"},
 		{name: "workflow-id, run-id, and query", workflowID: "w-id", runID: "r-id", query: q},
+		{name: "activity-id and query", activityID: "a-id", query: q},
 		{name: "activity-id, run-id, and query", activityID: "a-id", runID: "r-id", query: q},
 		{name: "activity-id, workflow-id, and query", activityID: "a-id", workflowID: "w-id", query: q},
 		{name: "all flags set", activityID: "a-id", workflowID: "w-id", runID: "r-id", query: q},
@@ -640,10 +640,13 @@ func (s *SharedServerSuite) TestActivityReset_WorkflowActivityLatestRun() {
 	s.ContainsOnSameLine(res.Stdout.String(), "ServerResponse", "true")
 }
 
-// TestActivityReset_ActivityIdWithQueryStartsBatch covers --activity-id +
-// --query: the activity ID is ignored and a batch over the matching workflows
-// is started instead.
-func (s *SharedServerSuite) TestActivityReset_ActivityIdWithQueryStartsBatch() {
+// TestActivityIdWithQueryRejected covers --activity-id + --query for every
+// batch-capable operation: the flags are mutually exclusive (single-Activity
+// vs. batch targeting), so the command is rejected before any RPC and no batch
+// is started. --yes is passed so that, absent the up-front validation, the
+// batch confirmation prompt would be auto-accepted and a batch would fire —
+// which is exactly the footgun being guarded against.
+func (s *SharedServerSuite) TestActivityIdWithQueryRejected() {
 	run := s.waitActivityStarted()
 
 	var startedBatch atomic.Bool
@@ -661,15 +664,19 @@ func (s *SharedServerSuite) TestActivityReset_ActivityIdWithQueryStartsBatch() {
 		}),
 	)
 
-	res := s.Execute(
-		"activity", "reset",
-		"--activity-id", "ignored-activity-id",
-		"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
-		"--yes",
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
-	s.True(startedBatch.Load(), "a batch operation should have been started")
+	for _, command := range []string{"unpause", "reset", "update-options"} {
+		startedBatch.Store(false)
+		res := s.Execute(
+			"activity", command,
+			"--activity-id", "some-activity-id",
+			"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+			"--yes",
+			"--address", s.Address(),
+		)
+		s.Error(res.Err, "command %q should reject --activity-id with --query", command)
+		s.ErrorContains(res.Err, "--query")
+		s.False(startedBatch.Load(), "command %q should not start a batch", command)
+	}
 }
 
 // Test helpers
