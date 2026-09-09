@@ -5451,9 +5451,9 @@ option-sets:
         type: string
         short: q
         description: |
-          Content for an SQL-like `QUERY` List Filter.
+          EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter.
+          This behavior may change in the future.
           You must set either --activity-id or --query.
-          Note: Using --query for batch activity operations is an experimental feature and may change in the future.
       - name: rps
         type: float
         description: |
@@ -5476,9 +5476,9 @@ option-sets:
         type: string
         short: q
         description: |
-          Content for an SQL-like `QUERY` List Filter.
+          EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter.
+          This behavior may change in the future.
           You must set either --workflow-id or --query.
-          Note: Using --query for batch activity operations is an experimental feature and may change in the future.
       - name: run-id
         type: string
         short: r

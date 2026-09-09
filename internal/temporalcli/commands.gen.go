@@ -163,7 +163,7 @@ func (v *ActivityReferenceOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.ActivityId, "activity-id", "a", "", "Activity ID. You must set either --activity-id or --query.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Activity Run ID. If not set, targets the latest run. Only use with --activity-id. Cannot use with --query.")
-	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --activity-id or --query. Note: Using --query for batch activity operations is an experimental feature and may change in the future.")
+	f.StringVarP(&v.Query, "query", "q", "", "EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter. This behavior may change in the future. You must set either --activity-id or --query.")
 	f.Float32Var(&v.Rps, "rps", 0, "Limit batch's requests per second. Only allowed when --query is present.")
 }
 
@@ -181,7 +181,7 @@ type SingleActivityOrBatchOptions struct {
 func (v *SingleActivityOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Set to target a workflow Activity. Omit to target a standalone Activity. For a Workflow Activity you must set either --workflow-id or --query.")
-	f.StringVarP(&v.Query, "query", "q", "", "Content for an SQL-like `QUERY` List Filter. You must set either --workflow-id or --query. Note: Using --query for batch activity operations is an experimental feature and may change in the future.")
+	f.StringVarP(&v.Query, "query", "q", "", "EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter. This behavior may change in the future. You must set either --workflow-id or --query.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. Only use with --workflow-id or --activity-id. Cannot use with --query.")
 	f.StringVar(&v.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to user name.")
 	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm the batch operation. Only allowed when --query is present.")
