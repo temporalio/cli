@@ -5478,8 +5478,8 @@ option-sets:
         description: |
           EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter.
           This behavior may change in the future.
-          Targets a batch of Activities; cannot be combined with --workflow-id,
-          --run-id, or --activity-id.
+          Set either --activity-id (single Activity) or --query (batch). --query
+          cannot be combined with --workflow-id or --run-id.
       - name: run-id
         type: string
         short: r

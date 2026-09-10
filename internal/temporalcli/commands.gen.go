@@ -181,7 +181,7 @@ type SingleActivityOrBatchOptions struct {
 func (v *SingleActivityOrBatchOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
 	f.StringVarP(&v.WorkflowId, "workflow-id", "w", "", "Workflow ID. Set to target a Workflow Activity. Omit to target a standalone Activity (by --activity-id). Only for Workflow Activities; cannot be combined with --query.")
-	f.StringVarP(&v.Query, "query", "q", "", "EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter. This behavior may change in the future. Targets a batch of Activities; cannot be combined with --workflow-id, --run-id, or --activity-id.")
+	f.StringVarP(&v.Query, "query", "q", "", "EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter. This behavior may change in the future. Set either --activity-id (single Activity) or --query (batch). --query cannot be combined with --workflow-id or --run-id.")
 	f.StringVarP(&v.RunId, "run-id", "r", "", "Run ID. Only use with --workflow-id or --activity-id. Cannot use with --query.")
 	f.StringVar(&v.Reason, "reason", "", "Reason for batch operation. Only use with --query. Defaults to user name.")
 	f.BoolVarP(&v.Yes, "yes", "y", false, "Don't prompt to confirm the batch operation. Only allowed when --query is present.")
