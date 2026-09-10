@@ -844,6 +844,14 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 	return nil
 }
 
+func validateActivityBatchTarget(activityId, query string) error {
+	if activityId != "" && query != "" {
+		return errors.New("--activity-id targets a single Activity and cannot be " +
+			"combined with --query, which targets a batch of Activities")
+	}
+	return nil
+}
+
 func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -913,6 +921,10 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	if c.Command.Flags().Changed("retry-maximum-attempts") {
 		activityOptions.RetryPolicy.MaximumAttempts = int32(c.RetryMaximumAttempts)
 		updatePath = append(updatePath, "retry_policy.maximum_attempts")
+	}
+
+	if err := validateActivityBatchTarget(c.ActivityId, c.Query); err != nil {
+		return err
 	}
 
 	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
@@ -1058,6 +1070,10 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 	}
 	defer cl.Close()
 
+	if err := validateActivityBatchTarget(c.ActivityId, c.Query); err != nil {
+		return err
+	}
+
 	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
 	// manual copy from the embedded SingleActivityOrBatchOptions fields.
 	opts := SingleWorkflowOrBatchOptions{
@@ -1137,6 +1153,10 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		return err
 	}
 	defer cl.Close()
+
+	if err := validateActivityBatchTarget(c.ActivityId, c.Query); err != nil {
+		return err
+	}
 
 	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
 	// manual copy from the embedded SingleActivityOrBatchOptions fields.
