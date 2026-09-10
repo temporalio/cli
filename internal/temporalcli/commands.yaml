@@ -646,8 +646,9 @@ commands:
       Note: This is an experimental feature and may change in the future.
 
       This restarts the Activity as if it were first being scheduled: the
-      attempt count returns to one, its per-attempt timeouts are re-armed, and
-      its [heartbeat details](#reset-heartbeats) are cleared.
+      attempt count returns to one, its per-attempt timeouts are re-armed.
+      Use `--clear-heartbeat-details` to also clear its
+      [heartbeat details](#clear-heartbeat-details).
 
       If the Activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
@@ -660,7 +661,7 @@ commands:
       Either `--activity-id` (with `--workflow-id` for a workflow Activity, or
       alone for a standalone Activity) or `--query` must be specified.
 
-      ### Resetting activities that heartbeat {#reset-heartbeats}
+      ### Resetting activities that heartbeat {#clear-heartbeat-details}
 
       Activities that heartbeat will receive a
       [Canceled failure](/references/failures#cancelled-failure) the next time
@@ -669,7 +670,8 @@ commands:
       If, in your Activity, you need to do any cleanup when an Activity is
       reset, handle this error and then re-throw it when you've cleaned up.
 
-      Reset always clears the heartbeat details.
+      Use `--clear-heartbeat-details` to clear the heartbeat details as part of
+      the reset.
 
       Specify the Activity and Workflow IDs:
 
@@ -702,6 +704,9 @@ commands:
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
+      - name: clear-heartbeat-details
+        type: bool
+        description: Clear the Activity's heartbeat details.
       - name: jitter
         type: duration
         description: |

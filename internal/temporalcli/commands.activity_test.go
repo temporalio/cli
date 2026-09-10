@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
@@ -679,7 +680,172 @@ func (s *SharedServerSuite) TestActivityIdWithQueryRejected() {
 	}
 }
 
+// TestActivityReset_ClearHeartbeatDetailsFlag asserts --clear-heartbeat-details
+// maps onto the request's ResetHeartbeat field for a single activity, and that
+// heartbeat details are left alone when the flag is absent.
+func (s *SharedServerSuite) TestActivityReset_ClearHeartbeatDetailsFlag() {
+	run := s.waitActivityStarted()
+
+	var lastRequestLock sync.Mutex
+	var resetRequest *workflowservice.ResetActivityExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.ResetActivityExecutionRequest); ok {
+				resetRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	tests := []struct {
+		name     string
+		extra    []string
+		expected bool
+	}{
+		{name: "flag omitted", expected: false},
+		{name: "flag set", extra: []string{"--clear-heartbeat-details"}, expected: true},
+	}
+	for _, tc := range tests {
+		lastRequestLock.Lock()
+		resetRequest = nil
+		lastRequestLock.Unlock()
+
+		args := append([]string{"--activity-id", activityId}, tc.extra...)
+		res := sendActivityCommand("reset", run, s, args...)
+		s.NoError(res.Err, tc.name)
+
+		lastRequestLock.Lock()
+		req := resetRequest
+		lastRequestLock.Unlock()
+		s.NotNil(req, tc.name)
+		s.Equal(tc.expected, req.GetResetHeartbeat(), tc.name)
+	}
+}
+
+// TestActivityReset_ClearHeartbeatDetailsFlagBatch is the batch (--query)
+// counterpart: the flag drives ResetHeartbeat on the batch operation, which is
+// false unless asked for.
+func (s *SharedServerSuite) TestActivityReset_ClearHeartbeatDetailsFlagBatch() {
+	run := s.waitActivityStarted()
+
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	tests := []struct {
+		name     string
+		extra    []string
+		expected bool
+	}{
+		{name: "flag omitted", expected: false},
+		{name: "flag set", extra: []string{"--clear-heartbeat-details"}, expected: true},
+	}
+	for _, tc := range tests {
+		lastRequestLock.Lock()
+		startBatchRequest = nil
+		lastRequestLock.Unlock()
+
+		args := []string{
+			"activity", "reset",
+			"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+			"--yes",
+			"--address", s.Address(),
+		}
+		res := s.Execute(append(args, tc.extra...)...)
+		s.NoError(res.Err, tc.name)
+
+		lastRequestLock.Lock()
+		req := startBatchRequest
+		lastRequestLock.Unlock()
+		s.NotNil(req, tc.name)
+		s.Equal(tc.expected, req.GetResetActivitiesOperation().GetResetHeartbeat(), tc.name)
+	}
+}
+
+// TestActivityReset_ClearHeartbeatDetailsEffect checks the end-to-end effect on
+// the server: the recorded heartbeat details survive a plain reset and are gone
+// after a reset with --clear-heartbeat-details.
+func (s *SharedServerSuite) TestActivityReset_ClearHeartbeatDetailsEffect() {
+	var recordHeartbeat atomic.Bool
+	recordHeartbeat.Store(true)
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// Only the first attempt records heartbeat details; later attempts fail
+		// without heartbeating, so nothing re-populates what a reset clears.
+		if recordHeartbeat.Load() {
+			activity.RecordHeartbeat(ctx, "heartbeat-details")
+		}
+		return nil, fmt.Errorf("intentional failure to keep the activity retrying")
+	})
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		// A long retry interval parks the activity in retry backoff, where a
+		// reset applies immediately.
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			ActivityID:          activityId,
+			StartToCloseTimeout: 1 * time.Minute,
+			RetryPolicy: &temporal.RetryPolicy{
+				InitialInterval: 30 * time.Second,
+				MaximumAttempts: 0,
+			},
+		})
+		var res any
+		err := workflow.ExecuteActivity(ctx, DevActivity).Get(ctx, &res)
+		return res, err
+	})
+
+	run := waitWorkflowStarted(s)
+	s.Eventually(func() bool {
+		return len(s.pendingActivityHeartbeatDetails(run)) > 0
+	}, 10*time.Second, 200*time.Millisecond, "activity should have recorded heartbeat details")
+	recordHeartbeat.Store(false)
+
+	// Without the flag, the reset leaves the heartbeat details in place.
+	res := sendActivityCommand("reset", run, s, "--activity-id", activityId)
+	s.NoError(res.Err)
+	s.Never(func() bool {
+		return len(s.pendingActivityHeartbeatDetails(run)) == 0
+	}, 2*time.Second, 200*time.Millisecond, "heartbeat details should survive a plain reset")
+
+	// With the flag, they are cleared.
+	res = sendActivityCommand("reset", run, s, "--activity-id", activityId, "--clear-heartbeat-details")
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return len(s.pendingActivityHeartbeatDetails(run)) == 0
+	}, 10*time.Second, 200*time.Millisecond, "--clear-heartbeat-details should clear the heartbeat details")
+}
+
 // Test helpers
+
+func (s *SharedServerSuite) pendingActivityHeartbeatDetails(run client.WorkflowRun) []*common.Payload {
+	resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+	s.NoError(err)
+	for _, act := range resp.GetPendingActivities() {
+		if act.GetActivityId() == activityId {
+			return act.GetHeartbeatDetails().GetPayloads()
+		}
+	}
+	return nil
+}
 
 func (s *SharedServerSuite) waitActivityStarted() client.WorkflowRun {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
