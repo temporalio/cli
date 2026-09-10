@@ -191,7 +191,7 @@ commands:
         - Temporal CLI
 
   - name: temporal activity cancel
-    summary: Request cancellation of a Standalone Activity (Experimental)
+    summary: Request cancellation of a Standalone Activity
     description: |
       Request cancellation of a Standalone Activity.
 
@@ -275,7 +275,7 @@ commands:
         required: true
 
   - name: temporal activity count
-    summary: Count Standalone Activities matching a query (Experimental)
+    summary: Count Standalone Activities matching a query
     description: |
       Return a count of Standalone Activities. Use `--query` to filter
       the activities to be counted.
@@ -295,7 +295,7 @@ commands:
           Query to filter Activity Executions to count.
 
   - name: temporal activity describe
-    summary: Show detailed info for a Standalone Activity (Experimental)
+    summary: Show detailed info for a Standalone Activity
     description: |
       Display information about a Standalone Activity.
 
@@ -313,7 +313,7 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal activity execute
-    summary: Start a new Standalone Activity and wait for its result (Experimental)
+    summary: Start a new Standalone Activity and wait for its result
     description: |
       Start a new Standalone Activity and block until it completes.
       The result is output to stdout.
@@ -377,7 +377,7 @@ commands:
           Failure reason. Attached as the failure message.
 
   - name: temporal activity list
-    summary: List Standalone Activities matching a query (Experimental)
+    summary: List Standalone Activities matching a query
     description: |
       List Standalone Activities. Use `--query` to filter results.
 
@@ -405,10 +405,12 @@ commands:
           at a time from the server.
 
   - name: temporal activity update-options
-    summary: Change the values of options affecting an Activity
+    summary: Change the values of options affecting an Activity (Experimental)
     description: |
       Update an Activity's options. Updates are incremental, only changing the
       specified options.
+
+      Note: This is an experimental feature and may change in the future.
 
       For example:
 
@@ -517,7 +519,7 @@ commands:
           Maximum number of attempts. When exceeded the retries stop even if not
           expired yet.
           Setting this value to 1 disables retries. Setting this value to 0
-          means unlimited attempts(up to the timeouts).
+          means unlimited attempts (up to the timeouts).
       - name: restore-original-options
         type: bool
         description: Restore the original options of the activity.
@@ -525,9 +527,11 @@ commands:
       - single-activity-or-batch
 
   - name: temporal activity pause
-    summary: Pause an Activity
+    summary: Pause an Activity (Experimental)
     description: |
       Pause an Activity.
+
+      Note: This is an experimental feature and may change in the future.
 
       If the Activity is not currently running (e.g. because it previously
       failed), it will not be run again until it is unpaused.
@@ -586,9 +590,11 @@ commands:
         description: Reason for pausing the Activity.
 
   - name: temporal activity unpause
-    summary: Unpause an Activity
+    summary: Unpause an Activity (Experimental)
     description: |
       Re-schedule a previously-paused Activity for execution.
+
+      Note: This is an experimental feature and may change in the future.
 
       If the Activity is not running and is past its retry timeout, it will be
       scheduled immediately. Otherwise, it will be scheduled after its retry
@@ -633,24 +639,23 @@ commands:
       - single-activity-or-batch
 
   - name: temporal activity reset
-    summary: Reset an Activity
+    summary: Reset an Activity (Experimental)
     description: |
-      Reset an activity.
-      This restarts the activity as if it were first being scheduled: the
+      Reset an Activity.
+
+      Note: This is an experimental feature and may change in the future.
+
+      This restarts the Activity as if it were first being scheduled: the
       attempt count returns to one, its per-attempt timeouts are re-armed, and
       its [heartbeat details](#reset-heartbeats) are cleared.
 
-      If the activity may be executing (i.e. it has not yet timed out), the
+      If the Activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
-      If is waiting for a retry (i.e. has failed or timed out), the reset
+      If the Activity is waiting for a retry (i.e. has failed or timed out), the reset
       will apply immediately.
 
-      If the activity is already paused, it will be unpaused by default.
+      If the Activity is already paused, it will be unpaused by default.
       You can specify `--keep-paused` to prevent this.
-
-      If the activity is paused and the `--keep-paused` flag is not provided,
-      it will be unpaused. If the activity is paused and the `--keep-paused`
-      flag is provided, it will stay paused.
 
       Either `--activity-id` (with `--workflow-id` for a workflow Activity, or
       alone for a standalone Activity) or `--query` must be specified.
@@ -710,7 +715,7 @@ commands:
       - single-activity-or-batch
 
   - name: temporal activity result
-    summary: Wait for and output the result of a Standalone Activity (Experimental)
+    summary: Wait for and output the result of a Standalone Activity
     description: |
       Wait for a Standalone Activity to complete and output the
       result.
@@ -725,7 +730,7 @@ commands:
       - activity-reference
 
   - name: temporal activity start
-    summary: Start a new Standalone Activity (Experimental)
+    summary: Start a new Standalone Activity
     description: |
       Start a new Standalone Activity. Outputs the Activity ID and
       Run ID.
@@ -745,7 +750,7 @@ commands:
       - payload-input
 
   - name: temporal activity terminate
-    summary: Forcefully end a Standalone Activity (Experimental)
+    summary: Forcefully end a Standalone Activity
     description: |
       Terminate a Standalone Activity.
 
@@ -785,7 +790,7 @@ commands:
           Only allowed when --query is present.
 
   - name: temporal activity delete
-    summary: Delete a Standalone Activity Execution (Experimental)
+    summary: Delete a Standalone Activity Execution
     description: |
       Delete a Standalone Activity Execution and its Event History.
 
@@ -827,13 +832,22 @@ commands:
     description: |
       List or terminate running batch jobs.
 
-      A batch job executes a command on multiple Workflow Executions at once. Create
-      batch jobs by passing `--query` to commands that support it. For example, to
-      create a batch job to cancel a set of Workflow Executions:
+      A batch job executes a command on multiple Workflow or Standalone Activity
+      Executions at once. Create batch jobs by passing `--query` to commands that
+      support it. For example, to create a batch job to cancel a set of Workflow
+      Executions:
 
       ```
       temporal workflow cancel \
         --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
+        --reason "Testing"
+      ```
+
+      To cancel a set of Standalone Activity Executions:
+
+      ```
+      temporal activity cancel \
+        --query 'ExecutionStatus = "Running" AND ActivityType="YourActivity"' \
         --reason "Testing"
       ```
 
@@ -863,9 +877,8 @@ commands:
       - client
     docs:
       description-header: >-
-        Use Temporal CLI to manage multiple Workflow Executions with Batch
-        Jobs that can Cancel, Signal, or Terminate Workflows. Filter and monitor
-        Batch Jobs effectively.
+        Use Temporal CLI to manage multiple Workflow or Standalone Activity
+        Executions with Batch Jobs. Filter and monitor Batch Jobs effectively.
       keywords:
         - batch
         - batch describe
@@ -874,6 +887,7 @@ commands:
         - cli reference
         - cli-feature
         - command-line-interface-cli
+        - standalone activity
         - temporal cli
       tags:
         - Temporal CLI
@@ -5437,9 +5451,9 @@ option-sets:
         type: string
         short: q
         description: |
-          Content for an SQL-like `QUERY` List Filter.
+          EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter.
+          This behavior may change in the future.
           You must set either --activity-id or --query.
-          Note: Using --query for batch activity operations is an experimental feature and may change in the future.
       - name: rps
         type: float
         description: |
@@ -5455,16 +5469,17 @@ option-sets:
         type: string
         short: w
         description: |
-          Workflow ID. Set to target a workflow Activity. Omit to target a
-          standalone Activity. For a Workflow Activity you must set either
-          --workflow-id or --query.
+          Workflow ID. Set to target a Workflow Activity. Omit to target a
+          standalone Activity (by --activity-id). Only for Workflow Activities;
+          cannot be combined with --query.
       - name: query
         type: string
         short: q
         description: |
-          Content for an SQL-like `QUERY` List Filter.
-          You must set either --workflow-id or --query.
-          Note: Using --query for batch activity operations is an experimental feature and may change in the future.
+          EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter.
+          This behavior may change in the future.
+          Set either --activity-id (single Activity) or --query (batch). --query
+          cannot be combined with --workflow-id or --run-id.
       - name: run-id
         type: string
         short: r
@@ -5482,13 +5497,13 @@ option-sets:
         type: bool
         short: y
         description: |
-          Don't prompt to confirm signaling.
+          Don't prompt to confirm the batch operation.
           Only allowed when --query is present.
       - name: rps
         type: float
         description: |
           Limit batch's requests per second.
-          Only allowed if query is present.
+          Only allowed when --query is present.
       - name: headers
         type: string[]
         description: |
