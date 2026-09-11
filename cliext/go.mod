@@ -7,7 +7,7 @@ require (
 	github.com/mattn/go-isatty v0.0.23
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	go.temporal.io/sdk v1.46.1-0.20260720184640-f34dc3da35ab
+	go.temporal.io/sdk v1.47.0
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/grpc v1.82.1
