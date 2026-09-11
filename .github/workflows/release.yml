@@ -7,6 +7,10 @@ on:
         description: "Release tag to build"
         required: true
         type: string
+      previous_tag:
+        description: "Previous release tag"
+        required: true
+        type: string
   release:
     types:
       - published
@@ -60,6 +64,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          GORELEASER_PREVIOUS_TAG: ${{ inputs.previous_tag }}
           BUILD_DATE: ${{ steps.date.outputs.date }}
           BUILD_TS_UNIX: ${{ steps.timestamp.outputs.timestamp }}
           GIT_BRANCH: ${{ steps.branch.outputs.branch }}
