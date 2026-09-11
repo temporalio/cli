@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/temporalio/cli/internal/printer"
@@ -193,6 +194,10 @@ func (c *TemporalOperatorNamespaceListCommand) run(cctx *CommandContext, args []
 }
 
 func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args []string) error {
+	if err := c.validateFlags(); err != nil {
+		return err
+	}
+
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
@@ -206,10 +211,6 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 
 	var updateRequest *workflowservice.UpdateNamespaceRequest
 
-	if c.PromoteGlobal && len(c.ActiveCluster) > 0 {
-		return fmt.Errorf("both --promote-global and --active-cluster flags cannot be set together")
-	}
-
 	if c.PromoteGlobal {
 		cctx.Printer.Printlnf("Will promote local namespace to global namespace for:%s, other flag will be omitted. "+
 			"If it is already global namespace, this will be no-op.\n", nsName)
@@ -218,7 +219,7 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 			PromoteNamespace: true,
 		}
 	} else if len(c.ActiveCluster) > 0 {
-		cctx.Printer.Printlnf("Will set active cluster name to: %s, other flag will be omitted.\n", c.ActiveCluster)
+		cctx.Printer.Printlnf("Will set active cluster name to: %s.\n", c.ActiveCluster)
 		replicationConfig := &replication.NamespaceReplicationConfig{
 			ActiveClusterName: c.ActiveCluster,
 		}
@@ -302,6 +303,42 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 	cctx.Printer.Println(color.GreenString("Namespace %s update succeeded.", nsName))
 
 	return nil
+}
+
+func (c *TemporalOperatorNamespaceUpdateCommand) validateFlags() error {
+	if len(c.ActiveCluster) == 0 {
+		return nil
+	}
+	if c.PromoteGlobal {
+		return fmt.Errorf("both --promote-global and --active-cluster flags cannot be set together")
+	}
+
+	incompatibleFlagNames := [...]string{
+		"cluster",
+		"data",
+		"description",
+		"email",
+		"history-archival-state",
+		"history-uri",
+		"replication-state",
+		"retention",
+		"visibility-archival-state",
+		"visibility-uri",
+	}
+	var incompatibleFlags []string
+	for _, flag := range incompatibleFlagNames {
+		if c.Command.Flags().Changed(flag) {
+			incompatibleFlags = append(incompatibleFlags, "--"+flag)
+		}
+	}
+	if len(incompatibleFlags) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"--active-cluster cannot be combined with %s; update namespace configuration before changing the active cluster",
+		strings.Join(incompatibleFlags, ", "),
+	)
 }
 
 func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowservice.DescribeNamespaceResponse) error {
