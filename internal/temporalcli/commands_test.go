@@ -411,6 +411,8 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["system.enableDeployments"] = true
 	d.Options.DynamicConfigValues["system.enableDeploymentVersions"] = true
+	d.Options.DynamicConfigValues["workercontroller.enabled"] = true
+	d.Options.DynamicConfigValues["workercontroller.compute_providers.enabled"] = []string{"aws-lambda", "gcp-cloud-run", "aws-agentcore"}
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000
