@@ -388,10 +388,13 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 	defer cl.Close()
 
 	resp, err := cl.WorkflowService().DescribeActivityExecution(cctx, &workflowservice.DescribeActivityExecutionRequest{
-		Namespace:          c.Parent.Namespace,
-		ActivityId:         c.ActivityId,
-		RunId:              c.RunId,
-		IncludeLastFailure: true,
+		Namespace:               c.Parent.Namespace,
+		ActivityId:              c.ActivityId,
+		RunId:                   c.RunId,
+		IncludeInput:            cctx.JSONOutput,
+		IncludeOutcome:          cctx.JSONOutput,
+		IncludeHeartbeatDetails: cctx.JSONOutput,
+		IncludeLastFailure:      true,
 	})
 	if err != nil {
 		return fmt.Errorf("failed describing activity: %w", err)

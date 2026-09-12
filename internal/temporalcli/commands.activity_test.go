@@ -7,9 +7,11 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
@@ -1441,67 +1443,117 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 	runID := started["runId"].(string)
 	<-activityStarted
 
-	// Text
-	res := s.Execute(
-		"activity", "describe",
-		"--activity-id", "describe-test",
-		"--run-id", runID,
-		"--address", s.Address(),
+	var requestLock sync.Mutex
+	var describeRequest *workflowservice.DescribeActivityExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			requestLock.Lock()
+			if r, ok := req.(*workflowservice.DescribeActivityExecutionRequest); ok {
+				describeRequest = r
+			}
+			requestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
 	)
-	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "ActivityId", "describe-test")
-	s.ContainsOnSameLine(out, "Type", "DevActivity")
-	s.ContainsOnSameLine(out, "Status", "Running")
-	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
-	s.ContainsOnSameLine(out, "StartToCloseTimeout", "30s")
-	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s")
-	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s")
-	s.ContainsOnSameLine(out, "HeartbeatTimeout", "15s")
-	s.ContainsOnSameLine(out, "Attempt", "1")
-	s.Contains(out, "LastWorkerIdentity")
-	s.NotContains(out, `{"name":`)
+	assertDescribeRequest := func(t *testing.T, includeInspectionPayloads bool) {
+		requestLock.Lock()
+		req := describeRequest
+		describeRequest = nil
+		requestLock.Unlock()
+		require.NotNil(t, req)
+		require.Equal(t, includeInspectionPayloads, req.GetIncludeInput())
+		require.Equal(t, includeInspectionPayloads, req.GetIncludeOutcome())
+		require.Equal(t, includeInspectionPayloads, req.GetIncludeHeartbeatDetails())
+		require.True(t, req.GetIncludeLastFailure())
+	}
 
-	// JSON
-	res = s.Execute(
-		"activity", "describe",
-		"-o", "json",
-		"--activity-id", "describe-test",
-		"--run-id", runID,
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
-	var jsonOut map[string]any
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.NotEmpty(jsonOut["longPollToken"])
-	info, ok := jsonOut["info"].(map[string]any)
-	s.True(ok, "info should be present in JSON describe")
-	s.Equal("describe-test", info["activityId"])
-	s.NotNil(info["activityType"])
-	s.NotNil(info["taskQueue"])
-	s.Equal("300s", info["scheduleToCloseTimeout"])
-	s.Equal("60s", info["scheduleToStartTimeout"])
-	s.Equal("30s", info["startToCloseTimeout"])
-	s.Equal("15s", info["heartbeatTimeout"])
-	retryPolicy, ok := info["retryPolicy"].(map[string]any)
-	s.True(ok, "retryPolicy should be present in JSON describe")
-	s.Equal(float64(5), retryPolicy["maximumAttempts"])
-	s.Equal("2s", retryPolicy["initialInterval"])
-	s.Equal(float64(3), retryPolicy["backoffCoefficient"])
-	s.Equal("120s", retryPolicy["maximumInterval"])
+	s.T().Run("text", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		out := res.Stdout.String()
+		require.NoError(t, AssertContainsOnSameLine(out, "ActivityId", "describe-test"))
+		require.NoError(t, AssertContainsOnSameLine(out, "Type", "DevActivity"))
+		require.NoError(t, AssertContainsOnSameLine(out, "Status", "Running"))
+		require.NoError(t, AssertContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue))
+		require.NoError(t, AssertContainsOnSameLine(out, "StartToCloseTimeout", "30s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "HeartbeatTimeout", "15s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "Attempt", "1"))
+		require.Contains(t, out, "LastWorkerIdentity")
+		require.NotContains(t, out, `{"name":`)
+		assertDescribeRequest(t, false)
+	})
 
-	// Raw: should contain proto JSON format
-	res = s.Execute(
-		"activity", "describe",
-		"--raw",
-		"--activity-id", "describe-test",
-		"--run-id", runID,
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
-	rawOut := res.Stdout.String()
-	s.Contains(rawOut, "describe-test")
-	s.Contains(rawOut, `{"name":"DevActivity"}`)
+	s.T().Run("json", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"-o", "json",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		var jsonOut map[string]any
+		require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		require.NotEmpty(t, jsonOut["longPollToken"])
+		info, ok := jsonOut["info"].(map[string]any)
+		require.True(t, ok, "info should be present in JSON describe")
+		require.Equal(t, "describe-test", info["activityId"])
+		require.NotNil(t, info["activityType"])
+		require.NotNil(t, info["taskQueue"])
+		require.Equal(t, "300s", info["scheduleToCloseTimeout"])
+		require.Equal(t, "60s", info["scheduleToStartTimeout"])
+		require.Equal(t, "30s", info["startToCloseTimeout"])
+		require.Equal(t, "15s", info["heartbeatTimeout"])
+		retryPolicy, ok := info["retryPolicy"].(map[string]any)
+		require.True(t, ok, "retryPolicy should be present in JSON describe")
+		require.Equal(t, float64(5), retryPolicy["maximumAttempts"])
+		require.Equal(t, "2s", retryPolicy["initialInterval"])
+		require.Equal(t, float64(3), retryPolicy["backoffCoefficient"])
+		require.Equal(t, "120s", retryPolicy["maximumInterval"])
+		assertDescribeRequest(t, true)
+	})
+
+	s.T().Run("jsonl", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"-o", "jsonl",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		var jsonlOut map[string]any
+		require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &jsonlOut))
+		require.Equal(t, runID, jsonlOut["runId"])
+		assertDescribeRequest(t, true)
+	})
+
+	s.T().Run("raw", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"--raw",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		rawOut := res.Stdout.String()
+		require.Contains(t, rawOut, "describe-test")
+		require.Contains(t, rawOut, `{"name":"DevActivity"}`)
+		assertDescribeRequest(t, false)
+	})
 }
 
 func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
@@ -1548,7 +1600,48 @@ func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
 	s.ContainsOnSameLine(rawOut, "startDelay", `"2s"`)
 }
 
-// Text-only: verifies LastFailure is rendered as text not JSON.
+func (s *SharedServerSuite) TestActivity_Describe_StructuredOutputIncludesPayloads() {
+	s.Worker().OnDevActivity(func(ctx context.Context, input any) (any, error) {
+		activity.RecordHeartbeat(ctx, "describe-heartbeat")
+		return "describe-result:" + input.(string), nil
+	})
+
+	started := s.startActivity("describe-payloads-test", "--input", `"describe-input"`)
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "describe-payloads-test",
+		RunID:      started["runId"].(string),
+	})
+	var result string
+	s.NoError(handle.Get(s.Context, &result))
+	s.Equal("describe-result:describe-input", result)
+
+	for _, output := range []string{"json", "jsonl"} {
+		s.T().Run(output, func(t *testing.T) {
+			res := s.Execute(
+				"activity", "describe",
+				"--output", output,
+				"--activity-id", "describe-payloads-test",
+				"--run-id", started["runId"].(string),
+				"--address", s.Address(),
+			)
+			require.NoError(t, res.Err)
+
+			var describe map[string]any
+			require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &describe))
+			require.Equal(t, []any{"describe-input"}, describe["input"])
+
+			info, ok := describe["info"].(map[string]any)
+			require.True(t, ok, "info should be present in structured describe output")
+			require.Equal(t, []any{"describe-heartbeat"}, info["heartbeatDetails"])
+
+			outcome, ok := describe["outcome"].(map[string]any)
+			require.True(t, ok, "outcome should be present in structured describe output")
+			require.Equal(t, []any{"describe-result:describe-input"}, outcome["result"])
+		})
+	}
+}
+
+// Verifies LastFailure is rendered as text, and structured output includes the failure outcome.
 func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("describe-failure-msg")
@@ -1574,6 +1667,40 @@ func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
 	// LastFailure should be human-readable, not raw JSON
 	s.Contains(out, "describe-failure-msg")
 	s.NotContains(out, `"message":"describe-failure-msg"`)
+
+	// JSON includes the terminal failure outcome.
+	res = s.Execute(
+		"activity", "describe",
+		"-o", "json",
+		"--activity-id", "describe-fail-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	outcome, ok := jsonOut["outcome"].(map[string]any)
+	s.True(ok, "outcome should be present in JSON describe")
+	failure, ok := outcome["failure"].(map[string]any)
+	s.True(ok, "failure should be present in JSON outcome")
+	s.Equal("describe-failure-msg", failure["message"])
+
+	// JSONL includes the same terminal failure outcome.
+	res = s.Execute(
+		"activity", "describe",
+		"-o", "jsonl",
+		"--activity-id", "describe-fail-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonlOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonlOut))
+	outcome, ok = jsonlOut["outcome"].(map[string]any)
+	s.True(ok, "outcome should be present in JSONL describe")
+	failure, ok = outcome["failure"].(map[string]any)
+	s.True(ok, "failure should be present in JSONL outcome")
+	s.Equal("describe-failure-msg", failure["message"])
 }
 
 func (s *SharedServerSuite) TestActivity_List() {
