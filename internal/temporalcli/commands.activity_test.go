@@ -1439,6 +1439,7 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 		"--retry-initial-interval", "2s",
 		"--retry-backoff-coefficient", "3",
 		"--retry-maximum-interval", "120s",
+		"--search-attribute", `CustomKeywordField="describe"`,
 	)
 	runID := started["runId"].(string)
 	<-activityStarted
@@ -1484,11 +1485,15 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 		require.NoError(t, AssertContainsOnSameLine(out, "ActivityId", "describe-test"))
 		require.NoError(t, AssertContainsOnSameLine(out, "Type", "DevActivity"))
 		require.NoError(t, AssertContainsOnSameLine(out, "Status", "Running"))
+		require.NoError(t, AssertContainsOnSameLine(out, "Namespace", "default"))
 		require.NoError(t, AssertContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue))
 		require.NoError(t, AssertContainsOnSameLine(out, "StartToCloseTimeout", "30s"))
 		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s"))
 		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s"))
 		require.NoError(t, AssertContainsOnSameLine(out, "HeartbeatTimeout", "15s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "ExecutionTime"))
+		require.NoError(t, AssertContainsOnSameLine(out,
+			"SearchAttributes", "CustomKeywordField", `data:"\"describe\""`))
 		require.NoError(t, AssertContainsOnSameLine(out, "Attempt", "1"))
 		require.Contains(t, out, "LastWorkerIdentity")
 		require.NotContains(t, out, `{"name":`)

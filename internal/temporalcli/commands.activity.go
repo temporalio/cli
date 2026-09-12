@@ -402,10 +402,14 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 	if c.Raw || cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	return printActivityDescription(cctx, resp)
+	return printActivityDescription(cctx, resp, c.Parent.Namespace)
 }
 
-func printActivityDescription(cctx *CommandContext, resp *workflowservice.DescribeActivityExecutionResponse) error {
+func printActivityDescription(
+	cctx *CommandContext,
+	resp *workflowservice.DescribeActivityExecutionResponse,
+	namespace string,
+) error {
 	info := resp.GetInfo()
 	statusShorthand := func(s enumspb.ActivityExecutionStatus) string {
 		for name, val := range enumspb.ActivityExecutionStatus_shorthandValue {
@@ -428,6 +432,7 @@ func printActivityDescription(cctx *CommandContext, resp *workflowservice.Descri
 		ActivityId              string
 		RunId                   string
 		Type                    string
+		Namespace               string
 		Status                  string
 		RunState                string `cli:",cardOmitEmpty"`
 		TaskQueue               string
@@ -437,18 +442,21 @@ func printActivityDescription(cctx *CommandContext, resp *workflowservice.Descri
 		HeartbeatTimeout        time.Duration `cli:",cardOmitEmpty"`
 		StartDelay              time.Duration `cli:",cardOmitEmpty"`
 		LastStartedTime         time.Time     `cli:",cardOmitEmpty"`
+		ExecutionTime           time.Time     `cli:",cardOmitEmpty"`
 		Attempt                 int32
-		ExecutionDuration       time.Duration `cli:",cardOmitEmpty"`
-		ScheduleTime            time.Time     `cli:",cardOmitEmpty"`
-		CloseTime               time.Time     `cli:",cardOmitEmpty"`
-		LastFailure             string        `cli:",cardOmitEmpty"`
-		LastWorkerIdentity      string        `cli:",cardOmitEmpty"`
-		LastAttemptCompleteTime time.Time     `cli:",cardOmitEmpty"`
+		ExecutionDuration       time.Duration              `cli:",cardOmitEmpty"`
+		ScheduleTime            time.Time                  `cli:",cardOmitEmpty"`
+		CloseTime               time.Time                  `cli:",cardOmitEmpty"`
+		SearchAttributes        map[string]*common.Payload `cli:",cardOmitEmpty"`
+		LastFailure             string                     `cli:",cardOmitEmpty"`
+		LastWorkerIdentity      string                     `cli:",cardOmitEmpty"`
+		LastAttemptCompleteTime time.Time                  `cli:",cardOmitEmpty"`
 		StateTransitionCount    int64
 	}{
 		ActivityId:              info.GetActivityId(),
 		RunId:                   info.GetRunId(),
 		Type:                    info.GetActivityType().GetName(),
+		Namespace:               namespace,
 		Status:                  statusShorthand(info.GetStatus()),
 		RunState:                runStateShorthand(info.GetRunState()),
 		TaskQueue:               info.GetTaskQueue(),
@@ -458,10 +466,12 @@ func printActivityDescription(cctx *CommandContext, resp *workflowservice.Descri
 		HeartbeatTimeout:        info.GetHeartbeatTimeout().AsDuration(),
 		StartDelay:              info.GetStartDelay().AsDuration(),
 		LastStartedTime:         timestampToTime(info.GetLastStartedTime()),
+		ExecutionTime:           timestampToTime(info.GetExecutionTime()),
 		Attempt:                 info.GetAttempt(),
 		ExecutionDuration:       info.GetExecutionDuration().AsDuration(),
 		ScheduleTime:            timestampToTime(info.GetScheduleTime()),
 		CloseTime:               timestampToTime(info.GetCloseTime()),
+		SearchAttributes:        info.GetSearchAttributes().GetIndexedFields(),
 		LastWorkerIdentity:      info.GetLastWorkerIdentity(),
 		LastAttemptCompleteTime: timestampToTime(info.GetLastAttemptCompleteTime()),
 		StateTransitionCount:    info.GetStateTransitionCount(),
