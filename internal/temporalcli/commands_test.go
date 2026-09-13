@@ -242,7 +242,7 @@ func (s *SharedServerSuite) SetupSuite() {
 				// Disable DescribeTaskQueue cache.
 				"frontend.activityAPIsEnabled": true,
 				"history.enableChasm":          true,
-				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
+				// Required by TestWorkflow_Show_SystemNexusOperationWithCodec
 				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
 				// the __temporal_system endpoint from inside a workflow.
 				"history.enableSignalWithStartFromWorkflow":        true,

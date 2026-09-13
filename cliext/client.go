@@ -29,11 +29,6 @@ type ClientOptionsBuilder struct {
 	// Logger is the slog logger to use for the client. If set, it will be
 	// wrapped with the SDK's structured logger adapter.
 	Logger *slog.Logger
-
-	// PayloadCodec is populated by Build when a remote payload codec is
-	// configured. Callers can use it to decode payloads outside the gRPC
-	// interceptor chain (e.g. payloads nested inside opaque proto bytes).
-	PayloadCodec converter.PayloadCodec
 }
 
 type oauthCredentials struct {
@@ -269,7 +264,6 @@ func (b *ClientOptionsBuilder) Build(ctx context.Context) (client.Options, error
 		}
 		clientOpts.ConnectionOptions.DialOptions = append(
 			clientOpts.ConnectionOptions.DialOptions, grpc.WithChainUnaryInterceptor(interceptor))
-		b.PayloadCodec = payloadCodec
 	}
 
 	// Set connect timeout for GetSystemInfo if provided.
@@ -294,8 +288,7 @@ func parseKeyValuePairs(pairs []string) (map[string]string, error) {
 }
 
 // newRemotePayloadCodec constructs a remote payload codec from the configured endpoint,
-// auth, and headers. The returned codec can be used both inside a gRPC interceptor and
-// to decode payloads nested inside opaque proto bytes (e.g. system Nexus operation inputs).
+// auth, and headers.
 func newRemotePayloadCodec(
 	namespace string,
 	codecEndpoint string,
