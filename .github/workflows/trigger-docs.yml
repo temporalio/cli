@@ -1,6 +1,11 @@
 name: Trigger CLI docs update
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "CLI release tag to generate docs from (for example, v1.9.0)."
+        required: true
+        type: string
   release:
     # `released` fires when a release is published as a full release, and when an
     # existing pre-release is promoted to a full release. It never fires for
@@ -30,6 +35,11 @@ jobs:
               && startsWith(github.event.release.tag_name, 'v')
               && !contains(github.event.release.tag_name, '-')))
     runs-on: ubuntu-latest
+    env:
+      # Read the tag from the release payload rather than github.ref_name, which
+      # resolves to the selected branch on a manual run (run #37 dispatched
+      # cli_release_tag=main to temporalio/documentation as a result).
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
     defaults:
       run:
         shell: bash
@@ -74,7 +84,7 @@ jobs:
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
             -r main \
-            -f cli_release_tag="${{ github.ref_name }}" \
+            -f cli_release_tag="${RELEASE_TAG}" \
             -f commit_author="${{ steps.get_user.outputs.GIT_NAME }}" \
             -f commit_author_email="${{ steps.get_user.outputs.GIT_EMAIL }}" \
-            -f commit_message="Update CLI docs for release ${{ github.ref_name }}"
+            -f commit_message="Update CLI docs for release ${RELEASE_TAG}"
