@@ -53,6 +53,37 @@ func TestNamespaceUpdate_ActiveClusterRejectsOtherUpdates(t *testing.T) {
 	}
 }
 
+func TestNamespaceUpdate_ActiveClusterRejectsEmptyValue(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "alone"},
+		{name: "with another update", args: []string{"--description", "description"}},
+	}
+
+	for _, output := range []string{"text", "json"} {
+		t.Run(output, func(t *testing.T) {
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					h := NewCommandHarness(t)
+					args := []string{
+						"operator", "namespace", "update",
+						"--address", "127.0.0.1:1",
+						"--namespace", "test-namespace",
+						"--active-cluster=",
+						"--output", output,
+					}
+					res := h.Execute(append(args, test.args...)...)
+
+					require.ErrorContains(t, res.Err, "--active-cluster must not be empty")
+					require.Empty(t, res.Stdout.String())
+				})
+			}
+		})
+	}
+}
+
 func TestNamespaceUpdate_ActiveClusterReportsAllConflicts(t *testing.T) {
 	h := NewCommandHarness(t)
 	res := h.Execute(

@@ -306,8 +306,11 @@ func (c *TemporalOperatorNamespaceUpdateCommand) run(cctx *CommandContext, args 
 }
 
 func (c *TemporalOperatorNamespaceUpdateCommand) validateFlags() error {
-	if len(c.ActiveCluster) == 0 {
+	if !c.Command.Flags().Changed("active-cluster") {
 		return nil
+	}
+	if len(c.ActiveCluster) == 0 {
+		return fmt.Errorf("--active-cluster must not be empty")
 	}
 	if c.PromoteGlobal {
 		return fmt.Errorf("both --promote-global and --active-cluster flags cannot be set together")
