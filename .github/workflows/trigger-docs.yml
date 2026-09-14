@@ -48,10 +48,11 @@ jobs:
         id: get_user
         env:
           GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "GitHub actor: ${GITHUB_ACTOR}"
           # Query the GitHub API for the user's details.
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
             "https://api.github.com/users/${GITHUB_ACTOR}" > user.json
 
           # Extract the user's full name if available, default to the username otherwise.
@@ -80,11 +81,14 @@ jobs:
       - name: Trigger Documentation Workflow
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          GIT_NAME: ${{ steps.get_user.outputs.GIT_NAME }}
+          GIT_EMAIL: ${{ steps.get_user.outputs.GIT_EMAIL }}
         run: |
+          echo "Dispatching CLI docs update for ${RELEASE_TAG}"
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
             -r main \
             -f cli_release_tag="${RELEASE_TAG}" \
-            -f commit_author="${{ steps.get_user.outputs.GIT_NAME }}" \
-            -f commit_author_email="${{ steps.get_user.outputs.GIT_EMAIL }}" \
+            -f commit_author="${GIT_NAME}" \
+            -f commit_author_email="${GIT_EMAIL}" \
             -f commit_message="Update CLI docs for release ${RELEASE_TAG}"
