@@ -141,7 +141,7 @@ func TestPrintActivityDescription_LinksAndCallbacks(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, printActivityDescription(cctx, resp))
+	require.NoError(t, printActivityDescription(cctx, resp, "ns"))
 	out := buf.String()
 
 	// Execution info.
