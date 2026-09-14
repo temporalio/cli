@@ -2,14 +2,33 @@ name: Trigger CLI docs update
 on:
   workflow_dispatch:
   release:
-    types: [published]
+    # `released` fires when a release is published as a full release, and when an
+    # existing pre-release is promoted to a full release. It never fires for
+    # pre-releases. `published` is deliberately not listed: it fires for
+    # pre-releases too, and listing both would double-fire on a full release.
+    types: [released]
 
 permissions:
   contents: read
 
 jobs:
   update:
-    if: github.repository == 'temporalio/cli'
+    # Belt-and-braces guard behind `types: [released]`:
+    #   - prerelease/draft: rejects a pre-release even if `released` ever fires for one.
+    #   - tag shape: rejects side-channel tags built from feature branches
+    #     (v1.8.3-server-1.32.0-162.0, v1.7.4-standalone-nexus-operations,
+    #     v1.6.3-serverless), which are published from non-mainline code and must
+    #     not regenerate published docs.
+    # workflow_dispatch is exempt so docs can be backfilled for any tag on demand;
+    # the tag it passes is validated by the receiving workflow in
+    # temporalio/documentation.
+    if: |
+      github.repository == 'temporalio/cli'
+      && (github.event_name == 'workflow_dispatch'
+          || (github.event.release.prerelease == false
+              && github.event.release.draft == false
+              && startsWith(github.event.release.tag_name, 'v')
+              && !contains(github.event.release.tag_name, '-')))
     runs-on: ubuntu-latest
     defaults:
       run:
