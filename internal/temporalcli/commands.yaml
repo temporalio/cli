@@ -458,9 +458,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to update options. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to update options. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -627,9 +627,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to unpause. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to unpause. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: jitter
         type: duration
         description: |
@@ -698,9 +698,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to reset. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to reset. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
