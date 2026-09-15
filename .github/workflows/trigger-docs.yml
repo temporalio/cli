@@ -44,8 +44,27 @@ jobs:
       run:
         shell: bash
     steps:
+      - name: Check release is the latest release
+        # prerelease/draft/tag-shape alone don't rule out a hotfix to an older
+        # minor line (for example patching v1.7.x after v1.8.0 is GA), which is
+        # a real full release but would overwrite newer docs if it triggered
+        # generation. The release payload has no "is latest" field, so compare
+        # against /releases/latest instead. workflow_dispatch is exempt, same
+        # as the job-level gate: backfilling an older tag on purpose is fine.
+        if: github.event_name != 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest_tag="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name)"
+          if [ "$latest_tag" != "$RELEASE_TAG" ]; then
+            echo "::notice::${RELEASE_TAG} is not the latest release (latest is ${latest_tag}); skipping so older docs don't overwrite newer ones."
+            echo "IS_LATEST=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Get user info from GitHub API
         id: get_user
+        if: env.IS_LATEST != 'false'
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,6 +88,7 @@ jobs:
 
       - name: Generate token
         id: generate_token
+        if: env.IS_LATEST != 'false'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
@@ -79,6 +99,7 @@ jobs:
             documentation
 
       - name: Trigger Documentation Workflow
+        if: env.IS_LATEST != 'false'
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           GIT_NAME: ${{ steps.get_user.outputs.GIT_NAME }}
