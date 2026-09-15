@@ -57,13 +57,19 @@ jobs:
         # version order. An older-line hotfix published with --latest=true
         # would satisfy an equality check against /releases/latest while
         # still being exactly the release this step exists to reject.
+        #
+        # The tag-shape filter here has to match the job-level gate's: a
+        # side-channel tag (v2.0.0-serverless) that ever slipped through as
+        # prerelease: false would still sort above the real v2.0.0 under
+        # sort -V (confirmed: v2.0.0-serverless > v2.0.0), silently skipping
+        # the real GA release's docs update on every future comparison.
         if: github.event_name != 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           highest="$(gh api "repos/${{ github.repository }}/releases" --paginate \
-            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
+            --jq '.[] | select(.draft == false and .prerelease == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' \
             | sort -V | tail -n1)"
           if [ "$(printf '%s\n%s\n' "$highest" "$RELEASE_TAG" | sort -V | tail -n1)" != "$RELEASE_TAG" ]; then
             echo "::notice::${RELEASE_TAG} is not the highest published GA version (highest is ${highest}); skipping so older docs don't overwrite newer ones."
