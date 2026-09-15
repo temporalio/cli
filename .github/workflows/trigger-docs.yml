@@ -48,17 +48,25 @@ jobs:
         # prerelease/draft/tag-shape alone don't rule out a hotfix to an older
         # minor line (for example patching v1.7.x after v1.8.0 is GA), which is
         # a real full release but would overwrite newer docs if it triggered
-        # generation. The release payload has no "is latest" field, so compare
-        # against /releases/latest instead. workflow_dispatch is exempt, same
-        # as the job-level gate: backfilling an older tag on purpose is fine.
+        # generation. workflow_dispatch is exempt, same as the job-level gate:
+        # backfilling an older tag on purpose is fine.
+        #
+        # Compare against the highest published GA version rather than
+        # /releases/latest: that endpoint reflects the make_latest marker,
+        # which is metadata someone can set (or mis-set) independently of
+        # version order. An older-line hotfix published with --latest=true
+        # would satisfy an equality check against /releases/latest while
+        # still being exactly the release this step exists to reject.
         if: github.event_name != 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          latest_tag="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name)"
-          if [ "$latest_tag" != "$RELEASE_TAG" ]; then
-            echo "::notice::${RELEASE_TAG} is not the latest release (latest is ${latest_tag}); skipping so older docs don't overwrite newer ones."
+          highest="$(gh api "repos/${{ github.repository }}/releases" --paginate \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
+            | sort -V | tail -n1)"
+          if [ "$(printf '%s\n%s\n' "$highest" "$RELEASE_TAG" | sort -V | tail -n1)" != "$RELEASE_TAG" ]; then
+            echo "::notice::${RELEASE_TAG} is not the highest published GA version (highest is ${highest}); skipping so older docs don't overwrite newer ones."
             echo "IS_LATEST=false" >> "$GITHUB_ENV"
           fi
 
