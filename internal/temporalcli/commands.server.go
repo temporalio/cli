@@ -29,6 +29,14 @@ var defaultDynamicConfigValues = map[string]any{
 	// established in the defaults.
 	"frontend.persistenceMaxQPS": 10000,
 	"history.persistenceMaxQPS":  45000,
+
+	// The Nexus Ergonomics pre-release requires these callback, CHASM backlink,
+	// and standalone Nexus features when developing against the local server.
+	"history.enableUpdateCallbacks":             true,
+	"history.enableCHASMSignalBacklinks":        true,
+	"history.enableSignalWithStartFromWorkflow": true,
+	"nexusoperation.enableStandalone":           true,
+	"activity.enableCallbacks":                  true,
 }
 
 func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string) error {
