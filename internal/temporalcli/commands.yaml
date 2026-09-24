@@ -3546,6 +3546,10 @@ commands:
       these two metrics, the derived metric of `BacklogIncreaseRate` is accurate
       for backlogs older than a few seconds.
 
+      Use `--report-priority-stats` to show the same statistics by priority key.
+      These figures include all build IDs for each task queue type, even when a
+      build ID selection flag is used.
+
       Safely retire Workers assigned a Build ID by checking reachability across
       all task types. Use the flag `--report-reachability`:
 
@@ -3631,6 +3635,11 @@ commands:
       - name: disable-stats
         type: bool
         description: Disable task queue statistics.
+      - name: report-priority-stats
+        type: bool
+        description: |
+          Show statistics by priority key across all build IDs.
+          This makes an extra server request for each task queue type.
       - name: report-config
         type: bool
         description: |
@@ -4194,6 +4203,8 @@ commands:
       - Fairness key rate limit defaults: Default rate limits for fairness keys.
         If set, each individual fairness key will be limited to this rate,
         scaled by the weight of the fairness key.
+      - Fairness key weight overrides: Custom weights for specific fairness keys.
+        These control the relative share of dispatches each key receives.
 
     options:
       - name: task-queue
