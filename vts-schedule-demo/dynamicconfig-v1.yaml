@@ -1,0 +1,14 @@
+history.enableCHASMSchedulerCreation:
+  - value: false
+    constraints:
+      namespace: fx-test
+
+history.chasmSchedulerCreationRolloutPercent:
+  - value: 0
+    constraints:
+      namespace: fx-test
+
+history.enableCHASMSchedulerRouting:
+  - value: false
+    constraints:
+      namespace: fx-test

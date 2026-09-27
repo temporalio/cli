@@ -1,0 +1,29 @@
+history.enableCHASMSchedulerCreation:
+  - value: true
+    constraints:
+      namespace: fx-test
+
+history.chasmSchedulerCreationRolloutPercent:
+  - value: 100
+    constraints:
+      namespace: fx-test
+
+history.enableCHASMSchedulerRouting:
+  - value: true
+    constraints:
+      namespace: fx-test
+
+frontend.WorkflowTimeSkippingEnabled:
+  - value: true
+    constraints:
+      namespace: fx-test
+
+frontend.ScheduleV2TimeSkippingEnabled:
+  - value: true
+    constraints:
+      namespace: fx-test
+
+frontend.enablePrincipalPropagation:
+  - value: true
+    constraints:
+      namespace: fx-test
