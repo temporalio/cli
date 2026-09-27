@@ -51,6 +51,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		MasterClusterName:      "active",
 		CurrentClusterName:     "active",
 		InitialFailoverVersion: 1,
+		InternalPrincipalAuth:  t.InternalPrincipalAuth,
 	}
 	// Set the log level value of the server to the overall log level given to the
 	// CLI. But if it is "never" we have to do a special value, and if it was

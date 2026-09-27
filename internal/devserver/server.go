@@ -88,6 +88,7 @@ type StartOptions struct {
 	SearchAttributes      map[string]enums.IndexedValueType
 	LogConfig             func([]byte)
 	GRPCInterceptors      []grpc.UnaryServerInterceptor
+	InternalPrincipalAuth bool
 }
 
 type Server struct {
@@ -218,6 +219,10 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	claimMapper, err := authorization.GetClaimMapperFromConfig(&conf.Global.Authorization, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed creating claim mapper: %w", err)
+	}
+	if s.InternalPrincipalAuth {
+		authorizer = authorization.NewDefaultAuthorizer()
+		claimMapper = authorization.NewInternalClaimMapper()
 	}
 	opts := []temporal.ServerOption{
 		temporal.WithConfig(conf),

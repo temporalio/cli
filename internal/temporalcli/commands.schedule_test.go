@@ -60,8 +60,12 @@ func (s *SharedServerSuite) TestSchedule_Create() {
 }
 
 func (s *SharedServerSuite) TestSchedule_CreateFastForward() {
-	_, _, res := s.createSchedule("--interval", "10d", "--paused", "--ff", "5h")
+	_, _, res := s.createSchedule("--interval", "10d", "--paused", "--ff", "5h", "--max-skip-count", "17")
 	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: enabled")
+	s.Contains(res.Stdout.String(), "Fast-forward duration: 5h 0m 0s")
+	s.Contains(res.Stdout.String(), "Fast-forward ID:")
+	s.Contains(res.Stdout.String(), "Maximum skips per session: 17")
 }
 
 func (s *SharedServerSuite) TestSchedule_Delete() {
@@ -532,6 +536,53 @@ func (s *SharedServerSuite) TestSchedule_UpdateFastForward() {
 		"--fast-forward", "6h",
 	)
 	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: enabled")
+	s.Contains(res.Stdout.String(), "Fast-forward ID:")
+
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "TimeSkipping")
+	s.Contains(res.Stdout.String(), `"ConfiguredEnabled":true`)
+	s.Contains(res.Stdout.String(), `"EffectiveEnabled":true`)
+	s.Contains(res.Stdout.String(), `"FastForward":`)
+
+	res = s.Execute(
+		"schedule", "update",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--time-skipping", "disabled",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: disabled")
+
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var description struct {
+		Schedule struct {
+			Action struct {
+				StartWorkflow struct {
+					WorkflowType struct {
+						Name string `json:"name"`
+					} `json:"workflowType"`
+				} `json:"startWorkflow"`
+			} `json:"action"`
+			TimeSkippingConfig struct {
+				Enabled bool `json:"enabled"`
+			} `json:"timeSkippingConfig"`
+		} `json:"schedule"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &description))
+	s.Equal("DevWorkflow", description.Schedule.Action.StartWorkflow.WorkflowType.Name)
+	s.False(description.Schedule.TimeSkippingConfig.Enabled)
 }
 
 func (s *SharedServerSuite) TestSchedule_Memo_Update() {

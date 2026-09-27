@@ -569,6 +569,12 @@ func (c *TemporalWorkflowCommand) startWorkflow(
 }
 
 func buildStartOptions(sw *SharedWorkflowStartOptions, w *WorkflowStartOptions) (client.StartWorkflowOptions, error) {
+	if sw.Type == "" {
+		return client.StartWorkflowOptions{}, errors.New("--type is required")
+	}
+	if sw.TaskQueue == "" {
+		return client.StartWorkflowOptions{}, errors.New("--task-queue is required")
+	}
 	o := client.StartWorkflowOptions{
 		ID:                                       sw.WorkflowId,
 		TaskQueue:                                sw.TaskQueue,

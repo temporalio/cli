@@ -3316,6 +3316,11 @@ commands:
         description: |
           Path to a dynamic configuration YAML file. Values passed with
           `--dynamic-config-value` take precedence over values from this file.
+      - name: internal-principal-auth
+        type: bool
+        description: |
+          Authenticate development-server frontend calls as Temporal's internal
+          principal. Intended for testing internal-only server features.
       - name: log-config
         type: bool
         description: Print the server config to stderr.
@@ -5200,6 +5205,19 @@ option-sets:
         description: |
           Enable time skipping and fast-forward the Schedule by this duration.
           Experimental.
+      - name: time-skipping
+        type: string-enum
+        enum-values:
+          - enabled
+          - disabled
+        description: |
+          Explicitly enable or disable Schedule time skipping.
+          Experimental.
+      - name: max-skip-count
+        type: int
+        description: |
+          Override the maximum number of time skips allowed in one session.
+          Most users should rely on the server default. Experimental.
       - name: interval
         type: string[]
         description: |
@@ -5450,13 +5468,11 @@ option-sets:
       - name: type
         type: string
         description: Workflow Type name.
-        required: true
         aliases:
           - name
       - name: task-queue
         type: string
         description: Workflow Task queue.
-        required: true
         short: t
       - name: run-timeout
         type: duration

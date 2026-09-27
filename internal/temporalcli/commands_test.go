@@ -236,7 +236,10 @@ func (s *SharedServerSuite) SetupSuite() {
 			EnableGlobalNamespace: true,
 			DynamicConfigValues: map[string]any{
 				"frontend.WorkflowTimeSkippingEnabled":                true,
-				"frontend.ScheduleTimeSkippingEnabled":                true,
+				"frontend.ScheduleV2TimeSkippingEnabled":              true,
+				"history.enableCHASMSchedulerCreation":                 true,
+				"history.chasmSchedulerCreationRolloutPercent":         100,
+				"history.enableCHASMSchedulerRouting":                  true,
 				"frontend.enableUpdateWorkflowExecutionAsyncAccepted": true,
 				// Allow a high rate of change to namespaces, particularly
 				// for the task-queue command tests.
