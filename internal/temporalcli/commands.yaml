@@ -2335,6 +2335,7 @@ commands:
     options:
       - name: yes
         type: bool
+        short: y
         description: Don't prompt to confirm deletion.
 
   - name: temporal nexus operation list

@@ -3,6 +3,7 @@ package temporalcli_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
@@ -318,7 +320,7 @@ func (s *SharedServerSuite) TestNexusOperationDelete() {
 			"--address", s.Address(),
 			"--operation-id", opID,
 		)
-		return res.Err != nil
+		return isNotFoundErr(res.Err)
 	}, 30*time.Second, 500*time.Millisecond)
 }
 
@@ -380,13 +382,20 @@ func (s *SharedServerSuite) TestNexusOperationDelete_RunID_JSON() {
 			"--operation-id", opID,
 			"--run-id", started.RunId,
 		)
-		return res.Err != nil
+		return isNotFoundErr(res.Err)
 	}, 30*time.Second, 500*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestNexusOperationDelete_MissingOperationID() {
-	res := s.Execute("nexus", "operation", "delete", "--yes")
-	s.Error(res.Err)
+	res := s.Execute("nexus", "operation", "delete", "--address", s.Address(), "--yes")
+	s.ErrorContains(res.Err, "operation-id")
+}
+
+// isNotFoundErr reports whether err is the server's NotFound, so deletion waits
+// don't treat a transient RPC failure as proof the execution is gone.
+func isNotFoundErr(err error) bool {
+	var notFound *serviceerror.NotFound
+	return errors.As(err, &notFound)
 }
 
 func (s *SharedServerSuite) TestNexusOperationList() {

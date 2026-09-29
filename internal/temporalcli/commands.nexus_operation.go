@@ -353,18 +353,11 @@ func (c *TemporalNexusOperationTerminateCommand) run(cctx *CommandContext, args 
 }
 
 func (c *TemporalNexusOperationDeleteCommand) run(cctx *CommandContext, _ []string) error {
-	if !c.Yes {
-		message := fmt.Sprintf("Delete Nexus Operation %q", c.OperationId)
-		if c.RunId != "" {
-			message += fmt.Sprintf(" with Run ID %q", c.RunId)
-		}
-		yes, err := cctx.promptYes(message+"? y/N", false)
-		if err != nil {
-			return err
-		}
-		if !yes {
-			return fmt.Errorf("user denied confirmation")
-		}
+	yes, err := cctx.promptYes(nexusOperationDeleteConfirmationMessage(c.OperationId, c.RunId), c.Yes)
+	if err != nil {
+		return err
+	} else if !yes {
+		return fmt.Errorf("user denied confirmation")
 	}
 
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
@@ -394,6 +387,14 @@ func (c *TemporalNexusOperationDeleteCommand) run(cctx *CommandContext, _ []stri
 	}
 	cctx.Printer.Println("Nexus Operation deletion requested")
 	return nil
+}
+
+func nexusOperationDeleteConfirmationMessage(operationID, runID string) string {
+	action := fmt.Sprintf("Delete Nexus Operation %q", operationID)
+	if runID != "" {
+		action += fmt.Sprintf(" with Run ID %q", runID)
+	}
+	return fmt.Sprintf("%s? y/N", action)
 }
 
 func (c *TemporalNexusOperationListCommand) run(cctx *CommandContext, _ []string) error {
