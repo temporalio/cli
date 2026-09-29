@@ -352,6 +352,50 @@ func (c *TemporalNexusOperationTerminateCommand) run(cctx *CommandContext, args 
 	return nil
 }
 
+func (c *TemporalNexusOperationDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	if !c.Yes {
+		message := fmt.Sprintf("Delete Nexus Operation %q", c.OperationId)
+		if c.RunId != "" {
+			message += fmt.Sprintf(" with Run ID %q", c.RunId)
+		}
+		yes, err := cctx.promptYes(message+"? y/N", false)
+		if err != nil {
+			return err
+		}
+		if !yes {
+			return fmt.Errorf("user denied confirmation")
+		}
+	}
+
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	_, err = cl.WorkflowService().DeleteNexusOperationExecution(cctx, &workflowservice.DeleteNexusOperationExecutionRequest{
+		Namespace:   c.Parent.Parent.Namespace,
+		OperationId: c.OperationId,
+		RunId:       c.RunId,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete nexus operation: %w", err)
+	}
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(struct {
+			OperationId string `json:"operationId"`
+			RunId       string `json:"runId,omitempty"`
+			Status      string `json:"status"`
+		}{
+			OperationId: c.OperationId,
+			RunId:       c.RunId,
+			Status:      "DELETE_REQUESTED",
+		}, printer.StructuredOptions{})
+	}
+	cctx.Printer.Println("Nexus Operation deletion requested")
+	return nil
+}
+
 func (c *TemporalNexusOperationListCommand) run(cctx *CommandContext, _ []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {

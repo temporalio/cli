@@ -1523,6 +1523,7 @@ func NewTemporalNexusOperationCommand(cctx *CommandContext, parent *TemporalNexu
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalNexusOperationCancelCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationCountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationListCommand(cctx, &s).Command)
@@ -1580,6 +1581,35 @@ func NewTemporalNexusOperationCountCommand(cctx *CommandContext, parent *Tempora
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Nexus Operation Executions to count.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationDeleteCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Yes bool
+}
+
+func NewTemporalNexusOperationDeleteCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationDeleteCommand {
+	var s TemporalNexusOperationDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Remove a Nexus Operation Execution (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Nexus Operation Execution and its history. The request runs\nasynchronously. If the Operation is running, the Service terminates it\nbefore deletion. Without a Run ID, the latest run is deleted.\n\n\x1b[1mtemporal nexus operation delete \\\n    --operation-id YourOperationId \\\n    --yes\x1b[0m\n\nUse \"--run-id\" to delete a specific run. Confirmation is required unless\n\"--yes\" is passed."
+	} else {
+		s.Command.Long = "Delete a Nexus Operation Execution and its history. The request runs\nasynchronously. If the Operation is running, the Service terminates it\nbefore deletion. Without a Run ID, the latest run is deleted.\n\n```\ntemporal nexus operation delete \\\n    --operation-id YourOperationId \\\n    --yes\n```\n\nUse \"--run-id\" to delete a specific run. Confirmation is required unless\n\"--yes\" is passed."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.Yes, "yes", false, "Don't prompt to confirm deletion.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

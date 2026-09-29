@@ -270,6 +270,113 @@ func (s *SharedServerSuite) TestNexusOperationTerminate() {
 	s.Contains(res.Stdout.String(), "Nexus Operation terminated")
 }
 
+func (s *SharedServerSuite) TestNexusOperationDelete() {
+	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
+	defer w.Stop()
+
+	opID := "delete-op-" + uuid.NewString()[:8]
+	res := s.Execute(
+		"nexus", "operation", "start",
+		"--address", s.Address(),
+		"--endpoint", endpointName,
+		"--service", "test-service",
+		"--operation", "test-op",
+		"--operation-id", opID,
+		"--input", `"hello"`,
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+	)
+	s.EqualError(res.Err, "user denied confirmation")
+	s.Contains(res.Stdout.String(), opID)
+
+	res = s.Execute(
+		"nexus", "operation", "describe",
+		"--address", s.Address(),
+		"--operation-id", opID,
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--yes",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Nexus Operation deletion requested")
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+		)
+		return res.Err != nil
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestNexusOperationDelete_RunID_JSON() {
+	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
+	defer w.Stop()
+
+	opID := "delete-run-op-" + uuid.NewString()[:8]
+	res := s.Execute(
+		"nexus", "operation", "start",
+		"--address", s.Address(),
+		"--endpoint", endpointName,
+		"--service", "test-service",
+		"--operation", "test-op",
+		"--operation-id", opID,
+		"--input", `"hello"`,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var started struct {
+		RunId string `json:"runId"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &started))
+	s.NotEmpty(started.RunId)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--run-id", started.RunId,
+		"--yes",
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var deleted struct {
+		OperationId string `json:"operationId"`
+		RunId       string `json:"runId"`
+		Status      string `json:"status"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &deleted))
+	s.Equal(opID, deleted.OperationId)
+	s.Equal(started.RunId, deleted.RunId)
+	s.Equal("DELETE_REQUESTED", deleted.Status)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", started.RunId,
+		)
+		return res.Err != nil
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestNexusOperationDelete_MissingOperationID() {
+	res := s.Execute("nexus", "operation", "delete", "--yes")
+	s.Error(res.Err)
+}
+
 func (s *SharedServerSuite) TestNexusOperationList() {
 	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
 	defer w.Stop()
@@ -793,4 +900,3 @@ func (s *SharedServerSuite) TestNexusOperationStart_InvalidSearchAttribute() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "invalid search attribute")
 }
-

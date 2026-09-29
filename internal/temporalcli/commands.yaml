@@ -2200,6 +2200,7 @@ commands:
         - nexus operation describe
         - nexus operation cancel
         - nexus operation terminate
+        - nexus operation delete
         - nexus operation list
         - nexus operation count
         - cli reference
@@ -2313,6 +2314,28 @@ commands:
         description: |
           Reason for termination.
           Defaults to a message with the current user's name.
+
+  - name: temporal nexus operation delete
+    summary: Remove a Nexus Operation Execution (Experimental)
+    description: |
+      Delete a Nexus Operation Execution and its history. The request runs
+      asynchronously. If the Operation is running, the Service terminates it
+      before deletion. Without a Run ID, the latest run is deleted.
+
+      ```
+      temporal nexus operation delete \
+          --operation-id YourOperationId \
+          --yes
+      ```
+
+      Use "--run-id" to delete a specific run. Confirmation is required unless
+      "--yes" is passed.
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: yes
+        type: bool
+        description: Don't prompt to confirm deletion.
 
   - name: temporal nexus operation list
     summary: List Nexus Operations matching a query (Experimental)
