@@ -40,6 +40,7 @@ import (
 	uiserveroptions "github.com/temporalio/ui-server/v2/server/server_options"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/server/chasm/lib/activity"
+	"go.temporal.io/server/chasm/lib/nexusoperation"
 	"go.temporal.io/server/common/authorization"
 	"go.temporal.io/server/common/cluster"
 	"go.temporal.io/server/common/config"
@@ -249,6 +250,9 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	dynConf[activity.Enabled.Key()] = true
 	dynConf[activity.EnableStandaloneActivityOperatorCommands.Key()] = true
 	dynConf[dynamicconfig.FrontendEnableBatchOperationsForStandaloneActivities.Key()] = true
+
+	// Enable SANO; this can be removed when SANO is on by default.
+	dynConf[nexusoperation.Enabled.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
