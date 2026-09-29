@@ -18,6 +18,8 @@ import (
 	"go.temporal.io/sdk/converter"
 )
 
+const nexusOperationDeleteWarning = "WARNING: Deleting Nexus Operation Executions in a global Namespace removes them from all replicas. Requests sent to a passive cluster are forwarded to the active cluster by default; to target the passive cluster directly, specify `--grpc-meta xdc-redirection=false`."
+
 func (c *TemporalNexusOperationStartCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
@@ -353,18 +355,26 @@ func (c *TemporalNexusOperationTerminateCommand) run(cctx *CommandContext, args 
 }
 
 func (c *TemporalNexusOperationDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Only warn when the namespace is global, or can't get the namespace info
+	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: c.Parent.Parent.Namespace,
+	})
+	if nsErr != nil || nsResp.GetIsGlobalNamespace() {
+		fmt.Fprintln(cctx.Options.Stderr, nexusOperationDeleteWarning)
+	}
+
 	yes, err := cctx.promptYes(nexusOperationDeleteConfirmationMessage(c.OperationId, c.RunId), c.Yes)
 	if err != nil {
 		return err
 	} else if !yes {
 		return fmt.Errorf("user denied confirmation")
 	}
-
-	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
-	if err != nil {
-		return err
-	}
-	defer cl.Close()
 
 	_, err = cl.WorkflowService().DeleteNexusOperationExecution(cctx, &workflowservice.DeleteNexusOperationExecutionRequest{
 		Namespace:   c.Parent.Parent.Namespace,
