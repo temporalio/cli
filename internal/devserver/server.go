@@ -179,6 +179,7 @@ func (s *StartOptions) buildUIServer() *uiserver.Server {
 		CORS:                uiconfig.CORS{CookieInsecure: true},
 		HideLogs:            true,
 		DisableNewsFetch:    s.UIDisableNewsFetch,
+		NotifyOnNewVersion:  true,
 		Distribution:        "cli",
 		DistributionVersion: s.UIVersion,
 	}))
