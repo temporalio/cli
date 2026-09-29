@@ -224,8 +224,7 @@ func getLastWorkflowTaskEventID(ctx context.Context, namespace, wid, rid string,
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_COMPLETED {
-				workflowTaskEventID = e.GetEventId()
-				break
+				return resetBaseRunID, e.GetEventId(), nil
 			} else if e.GetEventType() == enums.EVENT_TYPE_WORKFLOW_TASK_SCHEDULED {
 				// if there is no task completed event, set it to first scheduled event + 1
 				workflowTaskEventID = e.GetEventId() + 1
