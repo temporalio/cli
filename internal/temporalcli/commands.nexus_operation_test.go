@@ -286,6 +286,15 @@ func (s *SharedServerSuite) TestNexusOperationDelete() {
 	)
 	s.NoError(res.Err)
 
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
+
 	res = s.Execute(
 		"nexus", "operation", "delete",
 		"--address", s.Address(),
@@ -293,13 +302,6 @@ func (s *SharedServerSuite) TestNexusOperationDelete() {
 	)
 	s.EqualError(res.Err, "user denied confirmation")
 	s.Contains(res.Stdout.String(), opID)
-
-	res = s.Execute(
-		"nexus", "operation", "describe",
-		"--address", s.Address(),
-		"--operation-id", opID,
-	)
-	s.NoError(res.Err)
 
 	res = s.Execute(
 		"nexus", "operation", "delete",
@@ -341,6 +343,16 @@ func (s *SharedServerSuite) TestNexusOperationDelete_RunID_JSON() {
 	}
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &started))
 	s.NotEmpty(started.RunId)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", started.RunId,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
 
 	res = s.Execute(
 		"nexus", "operation", "delete",
