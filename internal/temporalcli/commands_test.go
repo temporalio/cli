@@ -241,12 +241,10 @@ func (s *SharedServerSuite) SetupSuite() {
 				"frontend.namespaceRPS.visibility": 10000,
 				// Disable DescribeTaskQueue cache.
 				"frontend.activityAPIsEnabled": true,
-				"history.enableChasm":          true,
 				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
 				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
 				// the __temporal_system endpoint from inside a workflow.
 				"history.enableSignalWithStartFromWorkflow":        true,
-				"activity.enableStandalone":                        true,
 				"activity.startDelayEnabled":                       true,
 				"history.enableStandaloneActivityOperatorCommands": true,
 				"activity.longPollTimeout":                         2 * time.Second,

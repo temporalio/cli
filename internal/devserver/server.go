@@ -243,10 +243,6 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// Up default visibility RPS
 	dynConf[dynamicconfig.FrontendMaxNamespaceVisibilityRPSPerInstance.Key()] = 100
 
-	// Enable CHASM and SAA. These will be on by default in server v1.32, at which point these lines
-	// should be removed.
-	dynConf[dynamicconfig.EnableChasm.Key()] = true
-	dynConf[activity.Enabled.Key()] = true
 	dynConf[activity.EnableStandaloneActivityOperatorCommands.Key()] = true
 	dynConf[dynamicconfig.FrontendEnableBatchOperationsForStandaloneActivities.Key()] = true
 
