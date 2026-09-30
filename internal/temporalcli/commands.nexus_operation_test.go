@@ -324,6 +324,87 @@ func (s *SharedServerSuite) TestNexusOperationDelete() {
 	}, 30*time.Second, 500*time.Millisecond)
 }
 
+func (s *SharedServerSuite) TestNexusOperationDelete_WithoutRunIDDeletesLatestRun() {
+	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
+	defer w.Stop()
+
+	opID := "delete-latest-op-" + uuid.NewString()[:8]
+	startOperation := func(extraArgs ...string) string {
+		args := []string{
+			"nexus", "operation", "start",
+			"--address", s.Address(),
+			"--endpoint", endpointName,
+			"--service", "test-service",
+			"--operation", "test-op",
+			"--operation-id", opID,
+			"--input", `"hello"`,
+			"--output", "json",
+		}
+		res := s.Execute(append(args, extraArgs...)...)
+		s.NoError(res.Err)
+		var started struct {
+			RunId string `json:"runId"`
+		}
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &started))
+		s.NotEmpty(started.RunId)
+		return started.RunId
+	}
+
+	firstRunID := startOperation()
+
+	// Wait for the first run to close so the same Operation ID can be reused.
+	res := s.Execute(
+		"nexus", "operation", "result",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--run-id", firstRunID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	latestRunID := startOperation("--id-reuse-policy", "AllowDuplicate")
+	s.NotEqual(firstRunID, latestRunID)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", latestRunID,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--yes",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Nexus Operation deletion requested")
+
+	// Omitting --run-id deletes the latest run, leaving the earlier run intact.
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", latestRunID,
+		)
+		return isNotFoundErr(res.Err)
+	}, 30*time.Second, 500*time.Millisecond)
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", firstRunID,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
 func (s *SharedServerSuite) TestNexusOperationDelete_RunID_JSON() {
 	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
 	defer w.Stop()
