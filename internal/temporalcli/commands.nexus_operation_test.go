@@ -3,6 +3,7 @@ package temporalcli_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
@@ -268,6 +270,213 @@ func (s *SharedServerSuite) TestNexusOperationTerminate() {
 	}, 30*time.Second, 500*time.Millisecond)
 
 	s.Contains(res.Stdout.String(), "Nexus Operation terminated")
+}
+
+func (s *SharedServerSuite) TestNexusOperationDelete() {
+	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
+	defer w.Stop()
+
+	opID := "delete-op-" + uuid.NewString()[:8]
+	res := s.Execute(
+		"nexus", "operation", "start",
+		"--address", s.Address(),
+		"--endpoint", endpointName,
+		"--service", "test-service",
+		"--operation", "test-op",
+		"--operation-id", opID,
+		"--input", `"hello"`,
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+	)
+	s.EqualError(res.Err, "user denied confirmation")
+	s.Contains(res.Stdout.String(), opID)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--yes",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Nexus Operation deletion requested")
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+		)
+		return isNotFoundErr(res.Err)
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestNexusOperationDelete_WithoutRunIDDeletesLatestRun() {
+	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
+	defer w.Stop()
+
+	opID := "delete-latest-op-" + uuid.NewString()[:8]
+	startOperation := func(extraArgs ...string) string {
+		args := []string{
+			"nexus", "operation", "start",
+			"--address", s.Address(),
+			"--endpoint", endpointName,
+			"--service", "test-service",
+			"--operation", "test-op",
+			"--operation-id", opID,
+			"--input", `"hello"`,
+			"--output", "json",
+		}
+		res := s.Execute(append(args, extraArgs...)...)
+		s.NoError(res.Err)
+		var started struct {
+			RunId string `json:"runId"`
+		}
+		s.NoError(json.Unmarshal(res.Stdout.Bytes(), &started))
+		s.NotEmpty(started.RunId)
+		return started.RunId
+	}
+
+	firstRunID := startOperation()
+
+	// Wait for the first run to close so the same Operation ID can be reused.
+	res := s.Execute(
+		"nexus", "operation", "result",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--run-id", firstRunID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+
+	latestRunID := startOperation("--id-reuse-policy", "AllowDuplicate")
+	s.NotEqual(firstRunID, latestRunID)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", latestRunID,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--yes",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Nexus Operation deletion requested")
+
+	// Omitting --run-id deletes the latest run, leaving the earlier run intact.
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", latestRunID,
+		)
+		return isNotFoundErr(res.Err)
+	}, 30*time.Second, 500*time.Millisecond)
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", firstRunID,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestNexusOperationDelete_RunID_JSON() {
+	endpointName, w := s.setupNexusEndpointAndWorker(s.T())
+	defer w.Stop()
+
+	opID := "delete-run-op-" + uuid.NewString()[:8]
+	res := s.Execute(
+		"nexus", "operation", "start",
+		"--address", s.Address(),
+		"--endpoint", endpointName,
+		"--service", "test-service",
+		"--operation", "test-op",
+		"--operation-id", opID,
+		"--input", `"hello"`,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var started struct {
+		RunId string `json:"runId"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &started))
+	s.NotEmpty(started.RunId)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", started.RunId,
+		)
+		return res.Err == nil
+	}, 30*time.Second, 500*time.Millisecond)
+
+	res = s.Execute(
+		"nexus", "operation", "delete",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--run-id", started.RunId,
+		"--yes",
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var deleted struct {
+		OperationId string `json:"operationId"`
+		RunId       string `json:"runId"`
+		Status      string `json:"status"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &deleted))
+	s.Equal(opID, deleted.OperationId)
+	s.Equal(started.RunId, deleted.RunId)
+	s.Equal("DELETE_REQUESTED", deleted.Status)
+
+	s.Eventually(func() bool {
+		res = s.Execute(
+			"nexus", "operation", "describe",
+			"--address", s.Address(),
+			"--operation-id", opID,
+			"--run-id", started.RunId,
+		)
+		return isNotFoundErr(res.Err)
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestNexusOperationDelete_MissingOperationID() {
+	res := s.Execute("nexus", "operation", "delete", "--address", s.Address(), "--yes")
+	s.ErrorContains(res.Err, "operation-id")
+}
+
+// isNotFoundErr reports whether err is the server's NotFound, so deletion waits
+// don't treat a transient RPC failure as proof the execution is gone.
+func isNotFoundErr(err error) bool {
+	var notFound *serviceerror.NotFound
+	return errors.As(err, &notFound)
 }
 
 func (s *SharedServerSuite) TestNexusOperationList() {
@@ -793,4 +1002,3 @@ func (s *SharedServerSuite) TestNexusOperationStart_InvalidSearchAttribute() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "invalid search attribute")
 }
-
