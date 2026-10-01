@@ -235,6 +235,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_Omits_Unset_Times() 
 		"--deployment-name", deploymentName, "--build-id", currentBuildId,
 	)
 	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "current")
 	s.Contains(res.Stdout.String(), "CurrentSinceTime")
 	s.NotContains(res.Stdout.String(), "RampingSinceTime")
 	s.NotContains(res.Stdout.String(), "a long while ago")
@@ -248,6 +249,8 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_Omits_Unset_Times() 
 	s.NoError(res.Err)
 	var rawOut map[string]any
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("current", rawOut["status"])
+	s.NotContains(rawOut, "drainageInfo")
 	s.Contains(rawOut, "currentSinceTime")
 	s.NotContains(rawOut, "rampingSinceTime")
 
@@ -269,6 +272,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_Omits_Unset_Times() 
 		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
 	)
 	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "ramping")
 	s.Contains(res.Stdout.String(), "RampingSinceTime")
 	s.NotContains(res.Stdout.String(), "CurrentSinceTime")
 	s.NotContains(res.Stdout.String(), "a long while ago")
@@ -282,6 +286,7 @@ func (s *SharedServerSuite) TestDeployment_Describe_Version_Omits_Unset_Times() 
 	s.NoError(res.Err)
 	rawOut = nil
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("ramping", rawOut["status"])
 	s.Contains(rawOut, "rampingSinceTime")
 	s.NotContains(rawOut, "currentSinceTime")
 }
