@@ -23,6 +23,7 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type versionSummariesRowType struct {
@@ -112,9 +113,9 @@ type formattedWorkerDeploymentVersionInfoType struct {
 	DeploymentName     string                          `json:"deploymentName"`
 	BuildID            string                          `json:"BuildID"`
 	CreateTime         time.Time                       `json:"createTime"`
-	RoutingChangedTime time.Time                       `json:"routingChangedTime"`
-	CurrentSinceTime   time.Time                       `json:"currentSinceTime"`
-	RampingSinceTime   time.Time                       `json:"rampingSinceTime"`
+	RoutingChangedTime *time.Time                      `json:"routingChangedTime,omitempty"`
+	CurrentSinceTime   *time.Time                      `json:"currentSinceTime,omitempty"`
+	RampingSinceTime   *time.Time                      `json:"rampingSinceTime,omitempty"`
 	RampPercentage     float32                         `json:"rampPercentage"`
 	DrainageInfo       formattedDrainageInfo           `json:"drainageInfo"`
 	TaskQueuesInfos    []formattedTaskQueueInfoRowType `json:"taskQueuesInfos"`
@@ -368,6 +369,28 @@ func formatTaskQueuesInfosProto(tqis []*workflowservice.DescribeWorkerDeployment
 	return tqiRows, nil
 }
 
+// optionalTimestampToTime converts a timestamp that the server may leave unset
+// (e.g. RampingSinceTime for a version that was never ramped) to a time.Time.
+// Both a nil timestamp and the Unix epoch are treated as unset and return the
+// zero time.Time, so that text output omits the field instead of rendering it
+// as "a long while ago".
+func optionalTimestampToTime(t *timestamppb.Timestamp) time.Time {
+	if t == nil || (t.GetSeconds() == 0 && t.GetNanos() == 0) {
+		return time.Time{}
+	}
+	return t.AsTime()
+}
+
+// optionalTimestampToTimePtr is like optionalTimestampToTime but returns nil for
+// an unset timestamp, so that JSON output omits the field.
+func optionalTimestampToTimePtr(t *timestamppb.Timestamp) *time.Time {
+	tm := optionalTimestampToTime(t)
+	if tm.IsZero() {
+		return nil
+	}
+	return &tm
+}
+
 func formatDrainageInfoProto(drainageInfo *deploymentpb.VersionDrainageInfo) (formattedDrainageInfo, error) {
 	if drainageInfo == nil {
 		return formattedDrainageInfo{}, nil
@@ -529,9 +552,9 @@ func workerDeploymentVersionInfoProtoToRows(deploymentInfo *deploymentpb.WorkerD
 		DeploymentName:     deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
 		BuildID:            deploymentInfo.GetDeploymentVersion().GetBuildId(),
 		CreateTime:         deploymentInfo.GetCreateTime().AsTime(),
-		RoutingChangedTime: deploymentInfo.GetRoutingChangedTime().AsTime(),
-		CurrentSinceTime:   deploymentInfo.GetCurrentSinceTime().AsTime(),
-		RampingSinceTime:   deploymentInfo.GetRampingSinceTime().AsTime(),
+		RoutingChangedTime: optionalTimestampToTimePtr(deploymentInfo.GetRoutingChangedTime()),
+		CurrentSinceTime:   optionalTimestampToTimePtr(deploymentInfo.GetCurrentSinceTime()),
+		RampingSinceTime:   optionalTimestampToTimePtr(deploymentInfo.GetRampingSinceTime()),
 		RampPercentage:     deploymentInfo.GetRampPercentage(),
 		DrainageInfo:       drainage,
 		TaskQueuesInfos:    tqi,
@@ -620,9 +643,9 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 			DeploymentName:          deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
 			BuildID:                 deploymentInfo.GetDeploymentVersion().GetBuildId(),
 			CreateTime:              deploymentInfo.GetCreateTime().AsTime(),
-			RoutingChangedTime:      deploymentInfo.GetRoutingChangedTime().AsTime(),
-			CurrentSinceTime:        deploymentInfo.GetCurrentSinceTime().AsTime(),
-			RampingSinceTime:        deploymentInfo.GetRampingSinceTime().AsTime(),
+			RoutingChangedTime:      optionalTimestampToTime(deploymentInfo.GetRoutingChangedTime()),
+			CurrentSinceTime:        optionalTimestampToTime(deploymentInfo.GetCurrentSinceTime()),
+			RampingSinceTime:        optionalTimestampToTime(deploymentInfo.GetRampingSinceTime()),
 			RampPercentage:          deploymentInfo.GetRampPercentage(),
 			DrainageStatus:          drainageStr,
 			DrainageLastChangedTime: drainageLastChangedTime,
@@ -1350,18 +1373,18 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	requestID := uuid.NewString()
 
 	providerType, detailsPayload, err := computeProviderConfig(&ComputeConfigArgs{
-		awsLambdaFunctionArn: c.AwsLambdaFunctionArn,
-		awsLambdaAssumeRoleArn: c.AwsLambdaAssumeRoleArn,
-		awsLambdaAssumeRoleExternalId: c.AwsLambdaAssumeRoleExternalId,
-		awsLambdaSkipRoleAndExternalId: c.AwsLambdaSkipRoleAndExternalId,
-		awsAgentcoreEndpointArn: c.AwsAgentcoreEndpointArn,
-		awsAgentcoreAssumeRoleArn: c.AwsAgentcoreAssumeRoleArn,
-		awsAgentcoreAssumeRoleExternalId: c.AwsAgentcoreAssumeRoleExternalId,
+		awsLambdaFunctionArn:              c.AwsLambdaFunctionArn,
+		awsLambdaAssumeRoleArn:            c.AwsLambdaAssumeRoleArn,
+		awsLambdaAssumeRoleExternalId:     c.AwsLambdaAssumeRoleExternalId,
+		awsLambdaSkipRoleAndExternalId:    c.AwsLambdaSkipRoleAndExternalId,
+		awsAgentcoreEndpointArn:           c.AwsAgentcoreEndpointArn,
+		awsAgentcoreAssumeRoleArn:         c.AwsAgentcoreAssumeRoleArn,
+		awsAgentcoreAssumeRoleExternalId:  c.AwsAgentcoreAssumeRoleExternalId,
 		awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
-		gcpCloudRunProject: c.GcpCloudRunProject,
-		gcpCloudRunRegion: c.GcpCloudRunRegion,
-		gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
-		gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
+		gcpCloudRunProject:                c.GcpCloudRunProject,
+		gcpCloudRunRegion:                 c.GcpCloudRunRegion,
+		gcpCloudRunWorkerPool:             c.GcpCloudRunWorkerPool,
+		gcpCloudRunServiceAccount:         c.GcpCloudRunServiceAccount,
 	})
 	if err != nil {
 		return err
@@ -1447,19 +1470,19 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 	}
 
 	computeConfigArgs := &ComputeConfigArgs{
-			awsLambdaFunctionArn: c.AwsLambdaFunctionArn,
-			awsLambdaAssumeRoleArn: c.AwsLambdaAssumeRoleArn,
-			awsLambdaAssumeRoleExternalId: c.AwsLambdaAssumeRoleExternalId,
-			awsLambdaSkipRoleAndExternalId: c.AwsLambdaSkipRoleAndExternalId,
-			awsAgentcoreEndpointArn: c.AwsAgentcoreEndpointArn,
-			awsAgentcoreAssumeRoleArn: c.AwsAgentcoreAssumeRoleArn,
-			awsAgentcoreAssumeRoleExternalId: c.AwsAgentcoreAssumeRoleExternalId,
-			awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
-			gcpCloudRunProject: c.GcpCloudRunProject,
-			gcpCloudRunRegion: c.GcpCloudRunRegion,
-			gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
-			gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
-		}
+		awsLambdaFunctionArn:              c.AwsLambdaFunctionArn,
+		awsLambdaAssumeRoleArn:            c.AwsLambdaAssumeRoleArn,
+		awsLambdaAssumeRoleExternalId:     c.AwsLambdaAssumeRoleExternalId,
+		awsLambdaSkipRoleAndExternalId:    c.AwsLambdaSkipRoleAndExternalId,
+		awsAgentcoreEndpointArn:           c.AwsAgentcoreEndpointArn,
+		awsAgentcoreAssumeRoleArn:         c.AwsAgentcoreAssumeRoleArn,
+		awsAgentcoreAssumeRoleExternalId:  c.AwsAgentcoreAssumeRoleExternalId,
+		awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
+		gcpCloudRunProject:                c.GcpCloudRunProject,
+		gcpCloudRunRegion:                 c.GcpCloudRunRegion,
+		gcpCloudRunWorkerPool:             c.GcpCloudRunWorkerPool,
+		gcpCloudRunServiceAccount:         c.GcpCloudRunServiceAccount,
+	}
 
 	if c.Remove {
 		if computeConfigArgs.hasAwsLambdaArgs() || computeConfigArgs.hasAwsAgentcoreArgs() || computeConfigArgs.hasGcpCloudRunArgs() ||

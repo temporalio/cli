@@ -213,6 +213,79 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.ErrorContains(res.Err, "specify either --build-id or --unversioned")
 }
 
+func (s *SharedServerSuite) TestDeployment_Describe_Version_Omits_Unset_Times() {
+	deploymentName := uuid.NewString()
+	currentBuildId := uuid.NewString()
+	rampingBuildId := uuid.NewString()
+
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// A version that has only ever been current has no ramping since time, so
+	// it must not be rendered (previously it showed as "a long while ago").
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "CurrentSinceTime")
+	s.NotContains(res.Stdout.String(), "RampingSinceTime")
+	s.NotContains(res.Stdout.String(), "a long while ago")
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var rawOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Contains(rawOut, "currentSinceTime")
+	s.NotContains(rawOut, "rampingSinceTime")
+
+	// Once a version is ramping, its ramping since time is shown and the
+	// never-current version omits its current since time.
+	res = s.Execute(
+		"worker", "deployment", "set-ramping-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--percentage", "5",
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "RampingSinceTime")
+	s.NotContains(res.Stdout.String(), "CurrentSinceTime")
+	s.NotContains(res.Stdout.String(), "a long while ago")
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	rawOut = nil
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Contains(rawOut, "rampingSinceTime")
+	s.NotContains(rawOut, "currentSinceTime")
+}
+
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version_AllowNoPollers() {
 	deploymentName := uuid.NewString()
 	buildId := uuid.NewString()
