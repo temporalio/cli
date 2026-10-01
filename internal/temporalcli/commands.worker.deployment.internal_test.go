@@ -1,12 +1,18 @@
 package temporalcli
 
 import (
+	"bytes"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cli/internal/printer"
 	computepb "go.temporal.io/api/compute/v1"
+	deploymentpb "go.temporal.io/api/deployment/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/converter"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestScalerTypeForProvider(t *testing.T) {
@@ -212,4 +218,86 @@ func TestFormatComputeConfigProto_ScalerBounds(t *testing.T) {
 	require.Nil(t, sg.Scaler.UtilizationTarget)
 	require.Empty(t, sg.Scaler.ScaleDownStabilization)
 	require.Equal(t, "gcp-cloud-run", computeConfigSummaryStr(ccNoBounds))
+}
+
+func TestPrintWorkerDeploymentVersionInfoProto_AllFields(t *testing.T) {
+	ts := func(sec int64) *timestamppb.Timestamp { return timestamppb.New(time.Unix(sec, 0).UTC()) }
+	info := &deploymentpb.WorkerDeploymentVersionInfo{
+		Status:               enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING,
+		DeploymentVersion:    &deploymentpb.WorkerDeploymentVersion{DeploymentName: "my-deployment", BuildId: "v1"},
+		CreateTime:           ts(1000),
+		RoutingChangedTime:   ts(2000),
+		FirstActivationTime:  ts(3000),
+		LastCurrentTime:      ts(4000),
+		LastDeactivationTime: ts(5000),
+		DrainageInfo: &deploymentpb.VersionDrainageInfo{
+			Status:          enumspb.VERSION_DRAINAGE_STATUS_DRAINING,
+			LastChangedTime: ts(6000),
+			LastCheckedTime: ts(7000),
+		},
+		LastModifierIdentity: "some-identity",
+	}
+
+	t.Run("text", func(t *testing.T) {
+		var buf bytes.Buffer
+		cctx := &CommandContext{Printer: &printer.Printer{Output: &buf}}
+		require.NoError(t, printWorkerDeploymentVersionInfoProto(cctx, info, nil, "Worker Deployment Version:", printVersionInfoOptions{}))
+		out := buf.String()
+		for _, field := range []string{
+			"Status", "FirstActivationTime", "LastCurrentTime", "LastDeactivationTime",
+			"DrainageStatus", "DrainageLastChangedTime", "DrainageLastCheckedTime", "LastModifierIdentity",
+		} {
+			require.Contains(t, out, field)
+		}
+		require.Contains(t, out, "draining")
+		require.Contains(t, out, "some-identity")
+		require.Contains(t, out, time.Unix(3000, 0).UTC().Format(time.RFC3339))
+		// Never current or ramping, so these must not be rendered.
+		require.NotContains(t, out, "CurrentSinceTime")
+		require.NotContains(t, out, "RampingSinceTime")
+	})
+
+	t.Run("json", func(t *testing.T) {
+		var buf bytes.Buffer
+		cctx := &CommandContext{JSONOutput: true, Printer: &printer.Printer{Output: &buf, JSON: true}}
+		require.NoError(t, printWorkerDeploymentVersionInfoProto(cctx, info, nil, "", printVersionInfoOptions{}))
+		var out formattedWorkerDeploymentVersionInfoType
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+		require.Equal(t, "draining", out.Status)
+		require.Equal(t, time.Unix(3000, 0).UTC(), *out.FirstActivationTime)
+		require.Equal(t, time.Unix(4000, 0).UTC(), *out.LastCurrentTime)
+		require.Equal(t, time.Unix(5000, 0).UTC(), *out.LastDeactivationTime)
+		require.Equal(t, "some-identity", out.LastModifierIdentity)
+		require.NotNil(t, out.DrainageInfo)
+		require.Equal(t, "draining", out.DrainageInfo.DrainageStatus)
+		require.Equal(t, time.Unix(6000, 0).UTC(), *out.DrainageInfo.LastChangedTime)
+		require.Equal(t, time.Unix(7000, 0).UTC(), *out.DrainageInfo.LastCheckedTime)
+		require.Nil(t, out.CurrentSinceTime)
+		require.Nil(t, out.RampingSinceTime)
+	})
+
+	t.Run("json omits unset drainage info", func(t *testing.T) {
+		var buf bytes.Buffer
+		cctx := &CommandContext{JSONOutput: true, Printer: &printer.Printer{Output: &buf, JSON: true}}
+		current := &deploymentpb.WorkerDeploymentVersionInfo{
+			Status:            enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT,
+			DeploymentVersion: &deploymentpb.WorkerDeploymentVersion{DeploymentName: "my-deployment", BuildId: "v2"},
+			CreateTime:        ts(1000),
+		}
+		require.NoError(t, printWorkerDeploymentVersionInfoProto(cctx, current, nil, "", printVersionInfoOptions{}))
+		var raw map[string]any
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &raw))
+		require.Equal(t, "current", raw["status"])
+		require.NotContains(t, raw, "drainageInfo")
+	})
+}
+
+func TestVersionStatusProtoToStr(t *testing.T) {
+	require.Equal(t, "unspecified", versionStatusProtoToStr(enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_UNSPECIFIED))
+	require.Equal(t, "inactive", versionStatusProtoToStr(enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_INACTIVE))
+	require.Equal(t, "current", versionStatusProtoToStr(enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT))
+	require.Equal(t, "ramping", versionStatusProtoToStr(enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_RAMPING))
+	require.Equal(t, "draining", versionStatusProtoToStr(enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING))
+	require.Equal(t, "drained", versionStatusProtoToStr(enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_DRAINED))
+	require.Equal(t, "created", versionStatusProtoToStr(enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_CREATED))
 }
