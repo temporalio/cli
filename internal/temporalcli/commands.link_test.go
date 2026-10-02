@@ -171,6 +171,9 @@ func TestPrintNexusOperationDescription_Links(t *testing.T) {
 	require.NoError(t, printNexusOperationDescription(cctx, desc))
 	out := buf.String()
 	require.Contains(t, out, "op-1")
+	require.NotContains(t, out, "ScheduledTime")
+	require.NotContains(t, out, "CloseTime")
+	require.NotContains(t, out, "ExpirationTime")
 	require.Contains(t, out, "Links: 1")
 	require.Contains(t, out, "temporal:///namespaces/ns/workflows/wf-id/run-id/history")
 }
