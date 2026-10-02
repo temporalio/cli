@@ -1,6 +1,6 @@
 module github.com/temporalio/cli
 
-go 1.26.8
+go 1.27.0
 
 require (
 	github.com/BurntSushi/toml v1.4.0
@@ -10,17 +10,17 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.23
-	github.com/nexus-rpc/sdk-go v0.6.0
+	github.com/nexus-rpc/sdk-go v0.7.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.1
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.54.1
-	go.temporal.io/api v1.63.5
-	go.temporal.io/sdk v1.47.0
+	go.temporal.io/api v1.63.6-0.20260909222256-20151aa90480
+	go.temporal.io/sdk v1.48.0
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
-	go.temporal.io/server v1.32.0
+	go.temporal.io/server v1.33.0-164.0-rc.20260929112932
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
 	golang.org/x/mod v0.41.0
 	golang.org/x/term v0.45.0

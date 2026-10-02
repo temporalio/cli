@@ -249,6 +249,8 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 
 	// Enable SANO; this can be removed when SANO is on by default.
 	dynConf[nexusoperation.Enabled.Key()] = true
+	// Allow NexusHandler-variant completion callbacks on standalone Nexus operations.
+	dynConf[nexusoperation.EnabledCallbackKinds.Key()] = []string{"nexusHandler"}
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
