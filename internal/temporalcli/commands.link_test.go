@@ -12,7 +12,6 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"
 )
 
 func workflowEventLink() *commonpb.Link {
@@ -161,13 +160,13 @@ func TestPrintNexusOperationDescription_Links(t *testing.T) {
 	var buf bytes.Buffer
 	cctx := &CommandContext{Printer: &printer.Printer{Output: &buf}}
 
-	desc := &client.NexusOperationExecutionDescription{
-		RawInfo: &nexuspb.NexusOperationExecutionInfo{
-			Links: []*commonpb.Link{workflowEventLink()},
+	desc := &workflowservice.DescribeNexusOperationExecutionResponse{
+		Info: &nexuspb.NexusOperationExecutionInfo{
+			OperationId: "op-1",
+			RunId:       "run-1",
+			Links:       []*commonpb.Link{workflowEventLink()},
 		},
 	}
-	desc.OperationID = "op-1"
-	desc.OperationRunID = "run-1"
 
 	require.NoError(t, printNexusOperationDescription(cctx, desc))
 	out := buf.String()
