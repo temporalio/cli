@@ -111,6 +111,7 @@ type priorityStatsDisplayRow struct {
 type formattedWorkerDeploymentVersionInfoType struct {
 	DeploymentName     string                          `json:"deploymentName"`
 	BuildID            string                          `json:"BuildID"`
+	Status             string                          `json:"status"`
 	CreateTime         time.Time                       `json:"createTime"`
 	RoutingChangedTime time.Time                       `json:"routingChangedTime"`
 	CurrentSinceTime   time.Time                       `json:"currentSinceTime"`
@@ -306,6 +307,10 @@ func drainageStatusProtoToStr(status enumspb.VersionDrainageStatus) (string, err
 	default:
 		return "", fmt.Errorf("unrecognized drainage status: %d", status)
 	}
+}
+
+func versionStatusProtoToStr(status enumspb.WorkerDeploymentVersionStatus) string {
+	return strings.ToLower(strings.TrimPrefix(status.String(), "WORKER_DEPLOYMENT_VERSION_STATUS_"))
 }
 
 func taskQueueTypeProtoToStr(taskQueueType enumspb.TaskQueueType) (string, error) {
@@ -528,6 +533,7 @@ func workerDeploymentVersionInfoProtoToRows(deploymentInfo *deploymentpb.WorkerD
 	return formattedWorkerDeploymentVersionInfoType{
 		DeploymentName:     deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
 		BuildID:            deploymentInfo.GetDeploymentVersion().GetBuildId(),
+		Status:             versionStatusProtoToStr(deploymentInfo.GetStatus()),
 		CreateTime:         deploymentInfo.GetCreateTime().AsTime(),
 		RoutingChangedTime: deploymentInfo.GetRoutingChangedTime().AsTime(),
 		CurrentSinceTime:   deploymentInfo.GetCurrentSinceTime().AsTime(),
@@ -606,6 +612,7 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 		printMe := struct {
 			DeploymentName          string
 			BuildID                 string
+			Status                  string
 			CreateTime              time.Time
 			RoutingChangedTime      time.Time `cli:",cardOmitEmpty"`
 			CurrentSinceTime        time.Time `cli:",cardOmitEmpty"`
@@ -619,6 +626,7 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 		}{
 			DeploymentName:          deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
 			BuildID:                 deploymentInfo.GetDeploymentVersion().GetBuildId(),
+			Status:                  fDeploymentInfo.Status,
 			CreateTime:              deploymentInfo.GetCreateTime().AsTime(),
 			RoutingChangedTime:      deploymentInfo.GetRoutingChangedTime().AsTime(),
 			CurrentSinceTime:        deploymentInfo.GetCurrentSinceTime().AsTime(),
