@@ -83,6 +83,7 @@ type jsonComputeConfig struct {
 
 type jsonDeploymentVersionInfoType struct {
 	Version            string                     `json:"version"`
+	Status             string                     `json:"status"`
 	CreateTime         time.Time                  `json:"createTime"`
 	RoutingChangedTime time.Time                  `json:"routingChangedTime"`
 	CurrentSinceTime   time.Time                  `json:"currentSinceTime"`
@@ -582,6 +583,25 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	s.Equal(version1.BuildID, jsonOut.VersionSummaries[0].BuildID)
 	s.Equal("unspecified", jsonOut.VersionSummaries[1].DrainageStatus)
 	s.Equal(version2.BuildID, jsonOut.VersionSummaries[1].BuildID)
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildID,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "draining")
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version2.DeploymentName, "--build-id", version2.BuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var jsonVersionOut jsonDeploymentVersionInfoType
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonVersionOut))
+	s.Equal("current", jsonVersionOut.Status)
 }
 
 func (s *SharedServerSuite) TestDeployment_Ramping() {
