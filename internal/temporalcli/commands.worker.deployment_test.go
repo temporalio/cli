@@ -525,6 +525,14 @@ func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	res := s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildID,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "inactive")
+
+	res = s.Execute(
 		"worker", "deployment", "set-current-version",
 		"--address", s.Address(),
 		"--deployment-name", version1.DeploymentName, "--build-id", version1.BuildID,
