@@ -5,9 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,17 +25,19 @@ import (
 	historypb "go.temporal.io/api/history/v1"
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/proxy"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/api/workflowservice/v1/workflowservicenexus"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
-	"go.temporal.io/server/common/payloads"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
@@ -1271,7 +1276,7 @@ const temporalSystemNexusEndpointName = "__temporal_system"
 // to complete, then completes the caller. Returns the caller workflow ID. The target
 // workflow is registered for cleanup via s.T().Cleanup. The SDK cannot be used here
 // because it refuses endpoints with the reserved "__temporal_" prefix.
-func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context) string {
+func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context, input *common.Payloads) string {
 	callerTaskQueue := "cli-sys-nexus-caller-" + uuid.NewString()
 	targetTaskQueue := "cli-sys-nexus-target-" + uuid.NewString()
 	targetWorkflowID := "cli-sys-nexus-target-" + uuid.NewString()
@@ -1294,6 +1299,25 @@ func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context) strin
 	s.NoError(err)
 	s.Equal(callerWorkflowID, pollResp.WorkflowExecution.WorkflowId)
 	s.Equal(startResp.RunId, pollResp.WorkflowExecution.RunId)
+	operationRequest := &workflowservice.SignalWithStartWorkflowExecutionRequest{
+		WorkflowId:   targetWorkflowID,
+		SignalName:   "cli-test-signal",
+		WorkflowType: &common.WorkflowType{Name: "target-workflow"},
+		TaskQueue:    &taskqueuepb.TaskQueue{Name: targetTaskQueue},
+		Input:        input,
+	}
+	operationInputData, err := proto.Marshal(operationRequest)
+	s.NoError(err)
+	// Generated System Nexus API clients mark protobuf envelopes that can contain
+	// nested payloads so payload visitors unwrap the envelope before invoking codecs.
+	operationInput := &common.Payload{
+		Metadata: map[string][]byte{
+			"encoding":                     []byte("binary/protobuf"),
+			"messageType":                  []byte(operationRequest.ProtoReflect().Descriptor().FullName()),
+			proxy.SystemPayloadMetadataKey: []byte("true"),
+		},
+		Data: operationInputData,
+	}
 
 	_, err = s.Client.WorkflowService().RespondWorkflowTaskCompleted(ctx, &workflowservice.RespondWorkflowTaskCompletedRequest{
 		Identity:  "cli-test",
@@ -1306,12 +1330,7 @@ func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context) strin
 						Endpoint:  temporalSystemNexusEndpointName,
 						Service:   workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.ServiceName,
 						Operation: workflowservicenexus.TemporalAPIWorkflowserviceV1WorkflowService.SignalWithStartWorkflowExecution.Name(),
-						Input: payloads.MustEncodeSingle(&workflowservice.SignalWithStartWorkflowExecutionRequest{
-							WorkflowId:   targetWorkflowID,
-							SignalName:   "cli-test-signal",
-							WorkflowType: &common.WorkflowType{Name: "target-workflow"},
-							TaskQueue:    &taskqueuepb.TaskQueue{Name: targetTaskQueue},
-						}),
+						Input:     operationInput,
 					},
 				},
 			},
@@ -1355,28 +1374,46 @@ func (s *SharedServerSuite) runSystemNexusSWSWorkflow(ctx context.Context) strin
 	return callerWorkflowID
 }
 
-// TestWorkflow_Show_SystemNexusOperationTransformsTypeNames drives a SignalWithStart
-// Nexus operation against the __temporal_system endpoint from inside a workflow, then
-// verifies that `workflow show` (default table mode) renders the resulting history
-// events using the operation-prefixed names (e.g. SignalWithStartWorkflowExecutionScheduled)
-// instead of the generic NexusOperation* names.
-func (s *SharedServerSuite) TestWorkflow_Show_SystemNexusOperationTransformsTypeNames() {
+// TestWorkflow_Show_SystemNexusOperationWithCodec drives a SignalWithStart Nexus
+// operation containing codec-encoded input against the __temporal_system endpoint, then
+// verifies that detailed `workflow show` decodes the nested input through the HTTP codec
+// exactly once and locally unwraps it for display.
+func (s *SharedServerSuite) TestWorkflow_Show_SystemNexusOperationWithCodec() {
 	ctx, cancel := context.WithTimeout(s.Context, 60*time.Second)
 	defer cancel()
 
-	callerWorkflowID := s.runSystemNexusSWSWorkflow(ctx)
+	input, err := converter.GetDefaultDataConverter().ToPayloads(map[string]string{"message": "codec-e2e-value"})
+	s.NoError(err)
+	encodedPayloads, err := (prefixingCodec{}).Encode(input.Payloads)
+	s.NoError(err)
+	callerWorkflowID := s.runSystemNexusSWSWorkflow(ctx, &common.Payloads{Payloads: encodedPayloads})
+
+	var decodeRequests atomic.Int64
+	codecHandler := converter.NewPayloadCodecHTTPHandler(prefixingCodec{})
+	codecServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/decode" {
+			decodeRequests.Add(1)
+		}
+		codecHandler.ServeHTTP(w, r)
+	}))
+	defer codecServer.Close()
 
 	res := s.Execute(
 		"workflow", "show",
 		"--address", s.Address(),
 		"-w", callerWorkflowID,
+		"--detailed",
+		"--codec-endpoint", codecServer.URL,
 	)
 	s.NoError(res.Err)
 	out := res.Stdout.String()
 	s.Contains(out, "SignalWithStartWorkflowExecutionScheduled", "expected transformed Scheduled name in show output")
 	s.Contains(out, "SignalWithStartWorkflowExecutionCompleted", "expected transformed Completed name in show output")
+	s.Contains(out, "unwrappedInput.input[0]")
+	s.Contains(out, "codec-e2e-value")
 	s.NotContains(out, "NexusOperationScheduled", "raw event type name should be replaced by the unwrapped form")
 	s.NotContains(out, "NexusOperationCompleted", "raw event type name should be replaced by the unwrapped form")
+	s.EqualValues(1, decodeRequests.Load(), "the gRPC interceptor should make the only codec-server request")
 }
 
 // TestWorkflow_Show_JSONOutputDoesNotUnwrapSystemNexus pins down that `workflow show -o json`
@@ -1387,7 +1424,7 @@ func (s *SharedServerSuite) TestWorkflow_Show_JSONOutputDoesNotUnwrapSystemNexus
 	ctx, cancel := context.WithTimeout(s.Context, 60*time.Second)
 	defer cancel()
 
-	callerWorkflowID := s.runSystemNexusSWSWorkflow(ctx)
+	callerWorkflowID := s.runSystemNexusSWSWorkflow(ctx, nil)
 
 	res := s.Execute(
 		"workflow", "show",

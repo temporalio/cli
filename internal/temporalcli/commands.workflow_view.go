@@ -536,7 +536,7 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Call describe
-	cl, codec, err := dialClientWithCodec(cctx, &c.Parent.ClientOptions)
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -552,7 +552,6 @@ func (c *TemporalWorkflowShowCommand) run(cctx *CommandContext, _ []string) erro
 		includeDetails: c.Detailed,
 		follow:         c.Follow,
 		reverse:        c.Reverse,
-		codec:          codec,
 	}
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString("Progress:"))
