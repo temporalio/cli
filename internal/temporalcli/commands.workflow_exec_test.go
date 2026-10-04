@@ -1027,4 +1027,15 @@ func (s *SharedServerSuite) TestWorkflow_Start_WithPriorityOptions() {
 	s.Equal(int32(2), priority.GetPriorityKey())
 	s.Equal("high-priority-tenant", priority.GetFairnessKey())
 	s.Equal(float32(5.5), priority.GetFairnessWeight())
+
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"--workflow-id", workflowId,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Priority:")
+	s.ContainsOnSameLine(res.Stdout.String(), "PriorityKey", "2")
+	s.ContainsOnSameLine(res.Stdout.String(), "FairnessKey", "high-priority-tenant")
+	s.ContainsOnSameLine(res.Stdout.String(), "FairnessWeight", "5.5")
 }
