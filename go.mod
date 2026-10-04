@@ -17,7 +17,7 @@ require (
 	github.com/stretchr/testify v1.12.0
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.54.1
-	go.temporal.io/api v1.63.6-0.20260910200743-859a8e8d17c0
+	go.temporal.io/api v1.63.6
 	go.temporal.io/sdk v1.48.0
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
 	go.temporal.io/server v1.32.0-163.3
