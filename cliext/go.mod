@@ -1,6 +1,6 @@
 module github.com/temporalio/cli/cliext
 
-go 1.26.4
+go 1.26.8
 
 require (
 	github.com/BurntSushi/toml v1.4.0

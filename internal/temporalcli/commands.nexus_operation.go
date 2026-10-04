@@ -251,24 +251,29 @@ func (c *TemporalNexusOperationDescribeCommand) run(cctx *CommandContext, args [
 	}
 	defer cl.Close()
 
-	handle := cl.GetNexusOperationHandle(client.GetNexusOperationHandleOptions{
-		OperationID: c.OperationId,
-		RunID:       c.RunId,
+	desc, err := cl.WorkflowService().DescribeNexusOperationExecution(cctx, &workflowservice.DescribeNexusOperationExecutionRequest{
+		Namespace:      c.Parent.Parent.Namespace,
+		OperationId:    c.OperationId,
+		RunId:          c.RunId,
+		IncludeInput:   cctx.JSONOutput,
+		IncludeOutcome: cctx.JSONOutput,
 	})
-
-	desc, err := handle.Describe(cctx, client.DescribeNexusOperationOptions{})
 	if err != nil {
 		return fmt.Errorf("failed describing nexus operation: %w", err)
 	}
 
 	if c.Raw || cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(desc.RawInfo, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(desc, printer.StructuredOptions{})
 	}
 	return printNexusOperationDescription(cctx, desc)
 }
 
-func printNexusOperationDescription(cctx *CommandContext, desc *client.NexusOperationExecutionDescription) error {
-	summary, _ := desc.GetSummary()
+func printNexusOperationDescription(cctx *CommandContext, desc *workflowservice.DescribeNexusOperationExecutionResponse) error {
+	info := desc.GetInfo()
+	var summary string
+	if payload := info.GetUserMetadata().GetSummary(); payload != nil {
+		_ = DataConverterWithRawValue.FromPayload(payload, &summary)
+	}
 	d := struct {
 		OperationId            string
 		RunId                  string
@@ -287,27 +292,27 @@ func printNexusOperationDescription(cctx *CommandContext, desc *client.NexusOper
 		Identity               string        `cli:",cardOmitEmpty"`
 		Summary                string        `cli:",cardOmitEmpty"`
 	}{
-		OperationId:            desc.OperationID,
-		RunId:                  desc.OperationRunID,
-		Endpoint:               desc.Endpoint,
-		Service:                desc.Service,
-		Operation:              desc.Operation,
-		Status:                 desc.Status.String(),
-		State:                  desc.State.String(),
-		Attempt:                desc.Attempt,
-		ScheduleToCloseTimeout: desc.ScheduleToCloseTimeout,
-		ScheduledTime:          desc.ScheduledTime,
-		CloseTime:              desc.CloseTime,
-		ExpirationTime:         desc.ExpirationTime,
-		BlockedReason:          desc.BlockedReason,
-		OperationToken:         desc.OperationToken,
-		Identity:               desc.Identity,
+		OperationId:            info.GetOperationId(),
+		RunId:                  info.GetRunId(),
+		Endpoint:               info.GetEndpoint(),
+		Service:                info.GetService(),
+		Operation:              info.GetOperation(),
+		Status:                 info.GetStatus().String(),
+		State:                  info.GetState().String(),
+		Attempt:                info.GetAttempt(),
+		ScheduleToCloseTimeout: info.GetScheduleToCloseTimeout().AsDuration(),
+		ScheduledTime:          timestampToTime(info.GetScheduleTime()),
+		CloseTime:              timestampToTime(info.GetCloseTime()),
+		ExpirationTime:         timestampToTime(info.GetExpirationTime()),
+		BlockedReason:          info.GetBlockedReason(),
+		OperationToken:         info.GetOperationToken(),
+		Identity:               info.GetIdentity(),
 		Summary:                summary,
 	}
 	if err := cctx.Printer.PrintStructured(d, printer.StructuredOptions{}); err != nil {
 		return err
 	}
-	return printLinks(cctx, desc.RawInfo.GetLinks())
+	return printLinks(cctx, info.GetLinks())
 }
 
 func (c *TemporalNexusOperationCancelCommand) run(cctx *CommandContext, args []string) error {

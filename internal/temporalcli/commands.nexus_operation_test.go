@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,9 +16,11 @@ import (
 	nexuspb "go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 func (s *SharedServerSuite) setupNexusEndpointAndWorker(t *testing.T) (string, *DevWorker) {
@@ -186,18 +189,101 @@ func (s *SharedServerSuite) TestNexusOperationDescribe_JSON() {
 	)
 	s.NoError(res.Err)
 
-	s.Eventually(func() bool {
-		res = s.Execute(
-			"nexus", "operation", "describe",
-			"--address", s.Address(),
-			"--operation-id", opID,
-			"--output", "json",
-		)
-		return res.Err == nil
-	}, 30*time.Second, 500*time.Millisecond)
+	handle := s.Client.GetNexusOperationHandle(client.GetNexusOperationHandleOptions{OperationID: opID})
+	var result string
+	require.NoError(s.T(), handle.Get(s.Context, &result))
+	s.Equal("got: hello", result)
 
-	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), opID)
+	var requestLock sync.Mutex
+	var describeRequest *workflowservice.DescribeNexusOperationExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.DescribeNexusOperationExecutionRequest); ok {
+				requestLock.Lock()
+				describeRequest = r
+				requestLock.Unlock()
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	for _, format := range []string{"json", "jsonl", "text", "raw"} {
+		s.T().Run(format, func(t *testing.T) {
+			args := []string{
+				"nexus", "operation", "describe",
+				"--address", s.Address(),
+				"--operation-id", opID,
+			}
+			if format == "raw" {
+				args = append(args, "--raw")
+			} else {
+				args = append(args, "--output", format)
+			}
+			res := s.Execute(args...)
+			require.NoError(t, res.Err)
+			requestLock.Lock()
+			req := describeRequest
+			describeRequest = nil
+			requestLock.Unlock()
+			require.NotNil(t, req)
+			includePayloads := format == "json" || format == "jsonl"
+			require.Equal(t, includePayloads, req.GetIncludeInput())
+			require.Equal(t, includePayloads, req.GetIncludeOutcome())
+			if includePayloads {
+				var out map[string]any
+				require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &out))
+				info, ok := out["info"].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, opID, info["operationId"])
+				require.Equal(t, "hello", out["input"])
+				require.Equal(t, "got: hello", out["result"])
+			} else {
+				require.Contains(t, res.Stdout.String(), opID)
+			}
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestNexusOperationDescribe_JSONFailure() {
+	endpointName, w := s.setupNexusEndpointWithWorkflow(s.T(), func(ctx workflow.Context, input string) (string, error) {
+		return "", errors.New("describe failure")
+	}, "describe-failure-")
+	defer w.Stop()
+
+	opID := "desc-failed-op-" + uuid.NewString()[:8]
+	res := s.Execute(
+		"nexus", "operation", "start",
+		"--address", s.Address(),
+		"--endpoint", endpointName,
+		"--service", "test-service",
+		"--operation", "test-op",
+		"--operation-id", opID,
+		"--input", `"hello"`,
+	)
+	require.NoError(s.T(), res.Err)
+
+	handle := s.Client.GetNexusOperationHandle(client.GetNexusOperationHandleOptions{OperationID: opID})
+	var result string
+	require.ErrorContains(s.T(), handle.Get(s.Context, &result), "describe failure")
+
+	res = s.Execute(
+		"nexus", "operation", "describe",
+		"--address", s.Address(),
+		"--operation-id", opID,
+		"--output", "json",
+	)
+	require.NoError(s.T(), res.Err)
+	var out map[string]any
+	require.NoError(s.T(), json.Unmarshal(res.Stdout.Bytes(), &out))
+	require.Equal(s.T(), "hello", out["input"])
+	require.NotNil(s.T(), out["failure"])
+	require.NotContains(s.T(), out, "result")
+	require.Contains(s.T(), res.Stdout.String(), "describe failure")
 }
 
 func (s *SharedServerSuite) TestNexusOperationCancel() {
