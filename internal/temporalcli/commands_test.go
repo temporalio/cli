@@ -241,12 +241,10 @@ func (s *SharedServerSuite) SetupSuite() {
 				"frontend.namespaceRPS.visibility": 10000,
 				// Disable DescribeTaskQueue cache.
 				"frontend.activityAPIsEnabled": true,
-				"history.enableChasm":          true,
 				// Required by TestWorkflow_Show_SystemNexusOperationWithCodec
 				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
 				// the __temporal_system endpoint from inside a workflow.
 				"history.enableSignalWithStartFromWorkflow":        true,
-				"activity.enableStandalone":                        true,
 				"activity.startDelayEnabled":                       true,
 				"history.enableStandaloneActivityOperatorCommands": true,
 				"activity.longPollTimeout":                         2 * time.Second,
@@ -406,6 +404,7 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.DynamicConfigValues = map[string]any{}
 	}
 	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
+	d.Options.DynamicConfigValues["system.forceNexusEndpointRefreshOnRead"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningRuleAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningDataAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true

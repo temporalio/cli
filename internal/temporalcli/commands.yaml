@@ -458,9 +458,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to update options. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to update options. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -627,9 +627,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to unpause. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to unpause. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: jitter
         type: duration
         description: |
@@ -698,9 +698,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to reset. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to reset. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
@@ -2200,6 +2200,7 @@ commands:
         - nexus operation describe
         - nexus operation cancel
         - nexus operation terminate
+        - nexus operation delete
         - nexus operation list
         - nexus operation count
         - cli reference
@@ -2313,6 +2314,29 @@ commands:
         description: |
           Reason for termination.
           Defaults to a message with the current user's name.
+
+  - name: temporal nexus operation delete
+    summary: Remove a Nexus Operation Execution (Experimental)
+    description: |
+      Delete a Nexus Operation Execution and its history. The request runs
+      asynchronously. If the Operation is running, the Service terminates it
+      before deletion. Without a Run ID, the latest run is deleted.
+
+      ```
+      temporal nexus operation delete \
+          --operation-id YourOperationId \
+          --yes
+      ```
+
+      Use "--run-id" to delete a specific run. Confirmation is required unless
+      "--yes" is passed.
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: yes
+        type: bool
+        short: y
+        description: Don't prompt to confirm deletion.
 
   - name: temporal nexus operation list
     summary: List Nexus Operations matching a query (Experimental)
@@ -2713,6 +2737,10 @@ commands:
           --active-cluster NewActiveCluster
       ```
 
+      Active Cluster changes cannot be combined with other Namespace updates.
+      Update Namespace configuration, including the replication Cluster list,
+      before changing the active Cluster in a separate command.
+
       Promote a Namespace for multi-region data replication:
 
       ```
@@ -2734,7 +2762,9 @@ commands:
     options:
       - name: active-cluster
         type: string
-        description: Active Cluster (Service) name.
+        description: |
+          Active Cluster (Service) name.
+          Cannot be combined with options that modify Namespace configuration.
       - name: cluster
         type: string[]
         description: Cluster (Service) names.

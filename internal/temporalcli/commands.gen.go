@@ -888,7 +888,7 @@ func NewTemporalActivityResetCommand(cctx *CommandContext, parent *TemporalActiv
 		s.Command.Long = "Reset an Activity.\n\nNote: This is an experimental feature and may change in the future.\n\nThis restarts the Activity as if it were first being scheduled: the\nattempt count returns to one, its per-attempt timeouts are re-armed.\nUse `--clear-heartbeat-details` to also clear its\nheartbeat details.\n\nIf the Activity may be executing (i.e. it has not yet timed out), the\nreset will take effect the next time it fails, heartbeats, or times out.\nIf the Activity is waiting for a retry (i.e. has failed or timed out), the reset\nwill apply immediately.\n\nIf the Activity is already paused, it will be unpaused by default.\nYou can specify `--keep-paused` to prevent this.\n\nEither `--activity-id` (with `--workflow-id` for a workflow Activity, or\nalone for a standalone Activity) or `--query` must be specified.\n\n### Resetting activities that heartbeat {#clear-heartbeat-details}\n\nActivities that heartbeat will receive a\nCanceled failure the next time\nthey heartbeat after a reset.\n\nIf, in your Activity, you need to do any cleanup when an Activity is\nreset, handle this error and then re-throw it when you've cleaned up.\n\nUse `--clear-heartbeat-details` to clear the heartbeat details as part of\nthe reset.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity reset \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --keep-paused\n```\n\nWorkflow Activities can be reset in bulk with a visibility query list filter:\n\n```\ntemporal activity reset \\\n    --query 'WorkflowType=\"YourWorkflow\"'\n```\n\nThe `--query` flag currently applies only to Workflow Activities.\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to reset. Mutually exclusive with --query. Set --workflow-id to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless --run-id is set).")
 	s.Command.Flags().BoolVar(&s.KeepPaused, "keep-paused", false, "If the activity was paused, it will stay paused.")
 	s.Command.Flags().BoolVar(&s.ClearHeartbeatDetails, "clear-heartbeat-details", false, "Clear the Activity's heartbeat details.")
 	s.Jitter = 0
@@ -1010,7 +1010,7 @@ func NewTemporalActivityUnpauseCommand(cctx *CommandContext, parent *TemporalAct
 		s.Command.Long = "Re-schedule a previously-paused Activity for execution.\n\nNote: This is an experimental feature and may change in the future.\n\nIf the Activity is not running and is past its retry timeout, it will be\nscheduled immediately. Otherwise, it will be scheduled after its retry\ntimeout expires.\n\nEither `--activity-id` (with `--workflow-id` for a workflow Activity, or\nalone for a standalone Activity) or `--query` must be specified.\n\nSpecify the Activity and Workflow IDs:\n\n```\ntemporal activity unpause \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId\n```\n\nWorkflow Activities can be unpaused in bulk via a visibility Query list filter:\n\n```\ntemporal activity unpause \\\n    --query 'TemporalPauseInfo IS NOT NULL'\n```\n\nThe `--query` flag currently applies only to Workflow Activities.\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to unpause. Mutually exclusive with --query. Set --workflow-id to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless --run-id is set).")
 	s.Jitter = 0
 	s.Command.Flags().Var(&s.Jitter, "jitter", "The activity will start at random a time within the specified duration. Can only be used with --query.")
 	s.SingleActivityOrBatchOptions.BuildFlags(s.Command.Flags())
@@ -1052,7 +1052,7 @@ func NewTemporalActivityUpdateOptionsCommand(cctx *CommandContext, parent *Tempo
 		s.Command.Long = "Update an Activity's options. Updates are incremental, only changing the\nspecified options.\n\nNote: This is an experimental feature and may change in the future.\n\nFor example:\n\n```\ntemporal activity update-options \\\n    --activity-id YourActivityId \\\n    --workflow-id YourWorkflowId \\\n    --task-queue NewTaskQueueName \\\n    --schedule-to-close-timeout DURATION \\\n    --schedule-to-start-timeout DURATION \\\n    --start-to-close-timeout DURATION \\\n    --heartbeat-timeout DURATION \\\n    --retry-initial-interval DURATION \\\n    --retry-maximum-interval DURATION \\\n    --retry-backoff-coefficient NewBackoffCoefficient \\\n    --retry-maximum-attempts NewMaximumAttempts\n```\n\nYou may follow this command with `temporal activity reset`, and the new\nvalues will apply after the reset.\n\nFor a Standalone Activity before its first dispatch, use `--start-delay`\nto change when the first Activity Task becomes available. The duration is\nmeasured from the Activity's original schedule time, and `0s` makes it\navailable immediately. `--start-delay` cannot be changed after the first\nActivity Task has been dispatched and is not supported for workflow\nActivities.\n\nEither `--activity-id` or `--query` must be specified.\n\nWorkflow Activity options can be updated in bulk with a visibility query list filter:\n\n```\ntemporal activity update-options \\\n    --query 'WorkflowType=\"YourWorkflow\"' \\\n    --task-queue NewTaskQueueName\n```\n\nThe `--query` flag currently applies only to Workflow Activities.\n\nOmit `--workflow-id` to target a Standalone Activity by Activity ID\nand optional Run ID."
 	}
 	s.Command.Args = cobra.NoArgs
-	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with `--query`. Set `--workflow-id` to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless `--run-id` is set).")
+	s.Command.Flags().StringVarP(&s.ActivityId, "activity-id", "a", "", "The Activity ID to update options. Mutually exclusive with --query. Set --workflow-id to target a workflow Activity, or omit it to target a standalone Activity (the latest run unless --run-id is set).")
 	s.Command.Flags().StringVar(&s.TaskQueue, "task-queue", "", "Name of the task queue for the Activity.")
 	s.ScheduleToCloseTimeout = 0
 	s.Command.Flags().Var(&s.ScheduleToCloseTimeout, "schedule-to-close-timeout", "Indicates how long the caller is willing to wait for an activity completion. Limits how long retries will be attempted.")
@@ -1523,6 +1523,7 @@ func NewTemporalNexusOperationCommand(cctx *CommandContext, parent *TemporalNexu
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalNexusOperationCancelCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationCountCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalNexusOperationDeleteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationExecuteCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalNexusOperationListCommand(cctx, &s).Command)
@@ -1580,6 +1581,35 @@ func NewTemporalNexusOperationCountCommand(cctx *CommandContext, parent *Tempora
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVarP(&s.Query, "query", "q", "", "Query to filter Nexus Operation Executions to count.")
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalNexusOperationDeleteCommand struct {
+	Parent  *TemporalNexusOperationCommand
+	Command cobra.Command
+	NexusOperationReferenceOptions
+	Yes bool
+}
+
+func NewTemporalNexusOperationDeleteCommand(cctx *CommandContext, parent *TemporalNexusOperationCommand) *TemporalNexusOperationDeleteCommand {
+	var s TemporalNexusOperationDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Remove a Nexus Operation Execution (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Delete a Nexus Operation Execution and its history. The request runs\nasynchronously. If the Operation is running, the Service terminates it\nbefore deletion. Without a Run ID, the latest run is deleted.\n\n\x1b[1mtemporal nexus operation delete \\\n    --operation-id YourOperationId \\\n    --yes\x1b[0m\n\nUse \"--run-id\" to delete a specific run. Confirmation is required unless\n\"--yes\" is passed."
+	} else {
+		s.Command.Long = "Delete a Nexus Operation Execution and its history. The request runs\nasynchronously. If the Operation is running, the Service terminates it\nbefore deletion. Without a Run ID, the latest run is deleted.\n\n```\ntemporal nexus operation delete \\\n    --operation-id YourOperationId \\\n    --yes\n```\n\nUse \"--run-id\" to delete a specific run. Confirmation is required unless\n\"--yes\" is passed."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm deletion.")
+	s.NexusOperationReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
@@ -2154,12 +2184,12 @@ func NewTemporalOperatorNamespaceUpdateCommand(cctx *CommandContext, parent *Tem
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update a Namespace"
 	if hasHighlighting {
-		s.Command.Long = "Update a Namespace using properties you specify.\n\n\x1b[1mtemporal operator namespace update [options]\x1b[0m\n\nAssign a Namespace's active Cluster (Service):\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\x1b[0m\n\nPromote a Namespace for multi-region data replication:\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\x1b[0m\n\nYou may update archives that were previously enabled or disabled. Note: URI\nvalues for archival states can't be changed once enabled.\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\x1b[0m"
+		s.Command.Long = "Update a Namespace using properties you specify.\n\n\x1b[1mtemporal operator namespace update [options]\x1b[0m\n\nAssign a Namespace's active Cluster (Service):\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\x1b[0m\n\nActive Cluster changes cannot be combined with other Namespace updates.\nUpdate Namespace configuration, including the replication Cluster list,\nbefore changing the active Cluster in a separate command.\n\nPromote a Namespace for multi-region data replication:\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\x1b[0m\n\nYou may update archives that were previously enabled or disabled. Note: URI\nvalues for archival states can't be changed once enabled.\n\n\x1b[1mtemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\x1b[0m"
 	} else {
-		s.Command.Long = "Update a Namespace using properties you specify.\n\n```\ntemporal operator namespace update [options]\n```\n\nAssign a Namespace's active Cluster (Service):\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\n```\n\nPromote a Namespace for multi-region data replication:\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\n```\n\nYou may update archives that were previously enabled or disabled. Note: URI\nvalues for archival states can't be changed once enabled.\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\n```"
+		s.Command.Long = "Update a Namespace using properties you specify.\n\n```\ntemporal operator namespace update [options]\n```\n\nAssign a Namespace's active Cluster (Service):\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --active-cluster NewActiveCluster\n```\n\nActive Cluster changes cannot be combined with other Namespace updates.\nUpdate Namespace configuration, including the replication Cluster list,\nbefore changing the active Cluster in a separate command.\n\nPromote a Namespace for multi-region data replication:\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --promote-global\n```\n\nYou may update archives that were previously enabled or disabled. Note: URI\nvalues for archival states can't be changed once enabled.\n\n```\ntemporal operator namespace update \\\n    --namespace YourNamespaceName \\\n    --history-archival-state enabled \\\n    --visibility-archival-state disabled\n```"
 	}
 	s.Command.Args = cobra.MaximumNArgs(1)
-	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active Cluster (Service) name.")
+	s.Command.Flags().StringVar(&s.ActiveCluster, "active-cluster", "", "Active Cluster (Service) name. Cannot be combined with options that modify Namespace configuration.")
 	s.Command.Flags().StringArrayVar(&s.Cluster, "cluster", nil, "Cluster (Service) names.")
 	s.Command.Flags().StringArrayVar(&s.Data, "data", nil, "Namespace data as `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey={\"your\": \"value\"}` Can be passed multiple times.")
 	s.Command.Flags().StringVar(&s.Description, "description", "", "Namespace description.")
