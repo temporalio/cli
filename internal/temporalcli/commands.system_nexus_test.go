@@ -65,13 +65,6 @@ func TestUnwrapAndInject_RejectsInvalidEnvelope(t *testing.T) {
 			wantErr: "missing messageType metadata",
 		},
 		{
-			name: "unknown message type",
-			mutate: func(payload *commonpb.Payload) {
-				payload.Metadata["messageType"] = []byte("temporal.api.unknown.v1.Message")
-			},
-			wantErr: "references unknown message type",
-		},
-		{
 			name: "invalid protobuf",
 			mutate: func(payload *commonpb.Payload) {
 				payload.Data = []byte{0xff, 0xff, 0xff}
@@ -87,6 +80,21 @@ func TestUnwrapAndInject_RejectsInvalidEnvelope(t *testing.T) {
 			err := (&structuredHistoryIter{}).unwrapAndInject(
 				payload, map[string]any{}, "unwrappedInput", temporalproto.CustomJSONMarshalOptions{})
 			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
+func TestUnwrapAndInject_UnknownMessageTypeIsNoOp(t *testing.T) {
+	payload := markedSystemPayload(t, &workflowservice.SignalWithStartWorkflowExecutionRequest{})
+	payload.Metadata["messageType"] = []byte("temporal.api.unknown.v1.Message")
+	originalPayload := proto.Clone(payload)
+	for _, key := range []string{"unwrappedInput", "unwrappedResult"} {
+		t.Run(key, func(t *testing.T) {
+			fields := map[string]any{"existing": "value"}
+			require.NoError(t, (&structuredHistoryIter{}).unwrapAndInject(
+				payload, fields, key, temporalproto.CustomJSONMarshalOptions{}))
+			require.Equal(t, map[string]any{"existing": "value"}, fields)
+			require.True(t, proto.Equal(originalPayload, payload))
 		})
 	}
 }

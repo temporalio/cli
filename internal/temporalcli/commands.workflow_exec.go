@@ -1024,7 +1024,8 @@ func (s *structuredHistoryIter) injectSystemNexusUnwrapped(
 
 // unwrapAndInject resolves the marked envelope's protobuf type, unmarshals it, and injects
 // its JSON representation into fieldsMap[key]. When configured, the gRPC payload codec
-// interceptor has already visited nested payloads. A nil payload is a no-op.
+// interceptor has already visited nested payloads. A nil payload or an unavailable
+// protobuf type is a no-op.
 func (s *structuredHistoryIter) unwrapAndInject(
 	payload *commonpb.Payload,
 	fieldsMap map[string]any,
@@ -1045,6 +1046,10 @@ func (s *structuredHistoryIter) unwrapAndInject(
 		return fmt.Errorf("system nexus payload is missing messageType metadata")
 	}
 	messageDescriptor, err := protoregistry.GlobalTypes.FindMessageByName(messageType)
+	if errors.Is(err, protoregistry.NotFound) {
+		// Newer servers may record types that this CLI's API version does not include.
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("system nexus payload references unknown message type %q: %w", messageType, err)
 	}
