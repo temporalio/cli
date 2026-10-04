@@ -1,28 +1,91 @@
 name: Trigger CLI docs update
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "CLI release tag to generate docs from (for example, v1.9.0)."
+        required: true
+        type: string
   release:
-    types: [published]
+    # `released` fires when a release is published as a full release, and when an
+    # existing pre-release is promoted to a full release. It never fires for
+    # pre-releases. `published` is deliberately not listed: it fires for
+    # pre-releases too, and listing both would double-fire on a full release.
+    types: [released]
 
 permissions:
   contents: read
 
 jobs:
   update:
-    if: github.repository == 'temporalio/cli'
+    # Belt-and-braces guard behind `types: [released]`:
+    #   - prerelease/draft: rejects a pre-release even if `released` ever fires for one.
+    #   - tag shape: rejects side-channel tags built from feature branches
+    #     (v1.8.3-server-1.32.0-162.0, v1.7.4-standalone-nexus-operations,
+    #     v1.6.3-serverless), which are published from non-mainline code and must
+    #     not regenerate published docs.
+    # workflow_dispatch is exempt so docs can be backfilled for any tag on demand;
+    # the tag it passes is validated by the receiving workflow in
+    # temporalio/documentation.
+    if: |
+      github.repository == 'temporalio/cli'
+      && (github.event_name == 'workflow_dispatch'
+          || (github.event.release.prerelease == false
+              && github.event.release.draft == false
+              && startsWith(github.event.release.tag_name, 'v')
+              && !contains(github.event.release.tag_name, '-')))
     runs-on: ubuntu-latest
+    env:
+      # Read the tag from the release payload rather than github.ref_name, which
+      # resolves to the selected branch on a manual run (run #37 dispatched
+      # cli_release_tag=main to temporalio/documentation as a result).
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
     defaults:
       run:
         shell: bash
     steps:
+      - name: Check release is the latest release
+        # prerelease/draft/tag-shape alone don't rule out a hotfix to an older
+        # minor line (for example patching v1.7.x after v1.8.0 is GA), which is
+        # a real full release but would overwrite newer docs if it triggered
+        # generation. workflow_dispatch is exempt, same as the job-level gate:
+        # backfilling an older tag on purpose is fine.
+        #
+        # Compare against the highest published GA version rather than
+        # /releases/latest: that endpoint reflects the make_latest marker,
+        # which is metadata someone can set (or mis-set) independently of
+        # version order. An older-line hotfix published with --latest=true
+        # would satisfy an equality check against /releases/latest while
+        # still being exactly the release this step exists to reject.
+        #
+        # The tag-shape filter here has to match the job-level gate's: a
+        # side-channel tag (v2.0.0-serverless) that ever slipped through as
+        # prerelease: false would still sort above the real v2.0.0 under
+        # sort -V (confirmed: v2.0.0-serverless > v2.0.0), silently skipping
+        # the real GA release's docs update on every future comparison.
+        if: github.event_name != 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          highest="$(gh api "repos/${{ github.repository }}/releases" --paginate \
+            --jq '.[] | select(.draft == false and .prerelease == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' \
+            | sort -V | tail -n1)"
+          if [ "$(printf '%s\n%s\n' "$highest" "$RELEASE_TAG" | sort -V | tail -n1)" != "$RELEASE_TAG" ]; then
+            echo "::notice::${RELEASE_TAG} is not the highest published GA version (highest is ${highest}); skipping so older docs don't overwrite newer ones."
+            echo "IS_LATEST=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Get user info from GitHub API
         id: get_user
+        if: env.IS_LATEST != 'false'
         env:
           GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "GitHub actor: ${GITHUB_ACTOR}"
           # Query the GitHub API for the user's details.
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
             "https://api.github.com/users/${GITHUB_ACTOR}" > user.json
 
           # Extract the user's full name if available, default to the username otherwise.
@@ -39,6 +102,7 @@ jobs:
 
       - name: Generate token
         id: generate_token
+        if: env.IS_LATEST != 'false'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
@@ -49,13 +113,17 @@ jobs:
             documentation
 
       - name: Trigger Documentation Workflow
+        if: env.IS_LATEST != 'false'
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          GIT_NAME: ${{ steps.get_user.outputs.GIT_NAME }}
+          GIT_EMAIL: ${{ steps.get_user.outputs.GIT_EMAIL }}
         run: |
+          echo "Dispatching CLI docs update for ${RELEASE_TAG}"
           gh workflow run update-cli-docs.yml \
             -R temporalio/documentation \
             -r main \
-            -f cli_release_tag="${{ github.ref_name }}" \
-            -f commit_author="${{ steps.get_user.outputs.GIT_NAME }}" \
-            -f commit_author_email="${{ steps.get_user.outputs.GIT_EMAIL }}" \
-            -f commit_message="Update CLI docs for release ${{ github.ref_name }}"
+            -f cli_release_tag="${RELEASE_TAG}" \
+            -f commit_author="${GIT_NAME}" \
+            -f commit_author_email="${GIT_EMAIL}" \
+            -f commit_message="Update CLI docs for release ${RELEASE_TAG}"
