@@ -3,21 +3,28 @@ package temporalcli
 import (
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	schedpb "go.temporal.io/api/schedule/v1"
+	sdkpb "go.temporal.io/api/sdk/v1"
+	"go.temporal.io/api/serviceerror"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/proto"
 )
 
 type printableSchedule struct {
@@ -253,6 +260,13 @@ func (c *ScheduleConfigurationOptions) toScheduleSpec(spec *client.ScheduleSpec)
 }
 
 func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (client.ScheduleAction, error) {
+	if len(sw.Headers) > 0 {
+		return nil, fmt.Errorf("headers are not supported for schedule actions")
+	}
+	if sw.PriorityKey < math.MinInt32 || sw.PriorityKey > math.MaxInt32 {
+		return nil, fmt.Errorf("priority key must be between %d and %d", math.MinInt32, math.MaxInt32)
+	}
+
 	opts, err := buildStartOptions(sw, &WorkflowStartOptions{})
 	if err != nil {
 		return nil, err
@@ -273,6 +287,7 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		Memo:                    opts.Memo,
 		StaticSummary:           opts.StaticSummary,
 		StaticDetails:           opts.StaticDetails,
+		Priority:                opts.Priority,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
 		return nil, err
@@ -347,10 +362,9 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 		}
 		// TODO: remove this after https://github.com/temporalio/api-go/pull/154
 		noShorthand := false
-		cctx.Printer.PrintStructured(res, printer.StructuredOptions{
+		return cctx.Printer.PrintStructuredErr(res, printer.StructuredOptions{
 			OverrideJSONPayloadShorthand: &noShorthand,
 		})
-		return nil
 	}
 
 	sch := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
@@ -360,7 +374,11 @@ func (c *TemporalScheduleDescribeCommand) run(cctx *CommandContext, args []strin
 	}
 
 	printable := describeResultToPrintable(c.ScheduleId, res)
-	return cctx.Printer.PrintStructured(printable, printer.StructuredOptions{})
+	return cctx.Printer.PrintStructuredErr(printable, printer.StructuredOptions{})
+}
+
+func finishScheduleList(p *printer.Printer, primaryErr error) error {
+	return errors.Join(primaryErr, p.EndListErr())
 }
 
 func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) error {
@@ -373,8 +391,9 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	if cctx.JSONOutput {
 		// Use raw gRPC for stability
 		// This is a listing command subject to json vs jsonl rules
-		cctx.Printer.StartList()
-		defer cctx.Printer.EndList()
+		if err := cctx.Printer.StartListErr(); err != nil {
+			return err
+		}
 
 		var token []byte
 		for {
@@ -384,21 +403,23 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 				Query:         c.Query,
 			})
 			if err != nil {
-				return err
+				return finishScheduleList(cctx.Printer, err)
 			}
 			// TODO: remove this after https://github.com/temporalio/api-go/pull/154
 			noShorthand := false
 			for _, entry := range res.Schedules {
-				cctx.Printer.PrintStructured(entry, printer.StructuredOptions{
+				if err := cctx.Printer.PrintStructuredErr(entry, printer.StructuredOptions{
 					OverrideJSONPayloadShorthand: &noShorthand,
-				})
+				}); err != nil {
+					return finishScheduleList(cctx.Printer, err)
+				}
 			}
 			if token = res.NextPageToken; len(token) == 0 {
 				break
 			}
 		}
 
-		return nil
+		return finishScheduleList(cctx.Printer, nil)
 	}
 
 	res, err := cl.ScheduleClient().List(cctx, client.ScheduleListOptions{
@@ -409,8 +430,9 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	}
 
 	// This is a listing command subject to json vs jsonl rules
-	cctx.Printer.StartList()
-	defer cctx.Printer.EndList()
+	if err := cctx.Printer.StartListErr(); err != nil {
+		return err
+	}
 
 	printOpts := printer.StructuredOptions{
 		ExcludeFields: []string{
@@ -453,18 +475,22 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 	for res.HasNext() {
 		ent, err := res.Next()
 		if err != nil {
-			return err
+			return finishScheduleList(cctx.Printer, err)
 		}
 		page = append(page, listEntryToPrintable(ent))
 		if len(page) == cap(page) {
-			cctx.Printer.PrintStructured(page, printOpts)
+			if err := cctx.Printer.PrintStructuredErr(page, printOpts); err != nil {
+				return finishScheduleList(cctx.Printer, err)
+			}
 			page = page[:0]
 			printOpts.Table.NoHeader = true
 		}
 	}
-	cctx.Printer.PrintStructured(page, printOpts)
+	if err := cctx.Printer.PrintStructuredErr(page, printOpts); err != nil {
+		return finishScheduleList(cctx.Printer, err)
+	}
 
-	return nil
+	return finishScheduleList(cctx.Printer, nil)
 }
 
 func (c *TemporalScheduleToggleCommand) run(cctx *CommandContext, args []string) error {
@@ -510,6 +536,492 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 		return err
 	}
 	cctx.Printer.Println("Trigger request sent")
+	return nil
+}
+
+type schedulePatchIntent struct {
+	notesSet              bool
+	notesUnset            bool
+	notes                 string
+	overlapSet            bool
+	overlap               enumspb.ScheduleOverlapPolicy
+	catchupSet            bool
+	catchup               time.Duration
+	catchupUnset          bool
+	pauseOnFailureSet     bool
+	pauseOnFailure        bool
+	pausedSet             bool
+	paused                bool
+	remainingActionsSet   bool
+	remainingActions      int
+	calendarSet           bool
+	cronSet               bool
+	intervalSet           bool
+	calendar              []string
+	cron                  []string
+	interval              []*schedpb.IntervalSpec
+	specClearAll          bool
+	startTimeSet          bool
+	startTimeUnset        bool
+	startTime             *timestamppb.Timestamp
+	endTimeSet            bool
+	endTimeUnset          bool
+	endTime               *timestamppb.Timestamp
+	jitterSet             bool
+	jitterUnset           bool
+	jitter                time.Duration
+	timeZoneSet           bool
+	timeZoneUnset         bool
+	timeZone              string
+	workflowIDSet         bool
+	workflowID            string
+	workflowTypeSet       bool
+	workflowType          string
+	taskQueueSet          bool
+	taskQueue             string
+	executionTimeoutSet   bool
+	executionTimeoutUnset bool
+	executionTimeout      time.Duration
+	runTimeoutSet         bool
+	runTimeoutUnset       bool
+	runTimeout            time.Duration
+	taskTimeoutSet        bool
+	taskTimeoutUnset      bool
+	taskTimeout           time.Duration
+	staticSummarySet      bool
+	staticSummaryUnset    bool
+	staticSummary         *commonpb.Payload
+	staticDetailsSet      bool
+	staticDetailsUnset    bool
+	staticDetails         *commonpb.Payload
+}
+
+func (i schedulePatchIntent) hasAnyPatch() bool {
+	return i.notesSet || i.notesUnset || i.hasPolicyPatch() || i.pausedSet ||
+		i.remainingActionsSet || i.hasSpecPatch() || i.hasWorkflowActionPatch()
+}
+
+func (i schedulePatchIntent) hasPolicyPatch() bool {
+	return i.overlapSet || i.catchupSet || i.catchupUnset || i.pauseOnFailureSet
+}
+
+func (i schedulePatchIntent) hasSpecPatch() bool {
+	return i.hasScheduleSpecSourcePatch() || i.specClearAll || i.startTimeSet ||
+		i.startTimeUnset || i.endTimeSet || i.endTimeUnset || i.jitterSet ||
+		i.jitterUnset || i.timeZoneSet || i.timeZoneUnset
+}
+
+func (i schedulePatchIntent) hasScheduleSpecSourcePatch() bool {
+	return i.calendarSet || i.cronSet || i.intervalSet
+}
+
+func (i schedulePatchIntent) hasWorkflowActionPatch() bool {
+	return i.workflowIDSet || i.workflowTypeSet || i.taskQueueSet ||
+		i.executionTimeoutSet || i.executionTimeoutUnset || i.runTimeoutSet ||
+		i.runTimeoutUnset || i.taskTimeoutSet || i.taskTimeoutUnset ||
+		i.staticSummarySet || i.staticSummaryUnset || i.staticDetailsSet ||
+		i.staticDetailsUnset
+}
+
+func (i schedulePatchIntent) validate() error {
+	if !i.hasAnyPatch() {
+		return errors.New("at least one patch operation is required")
+	}
+	if i.notesSet && i.notesUnset {
+		return errors.New("--notes and --unset-notes are mutually exclusive")
+	}
+	if i.catchupSet && i.catchupUnset {
+		return errors.New("--catchup-window and --unset-catchup-window are mutually exclusive")
+	}
+	if i.catchupSet && i.catchup < 10*time.Second {
+		return errors.New("catchup window must be at least 10s")
+	}
+	if i.remainingActionsSet && i.remainingActions < 0 {
+		return errors.New("remaining actions must not be negative")
+	}
+	if i.startTimeSet && i.startTimeUnset {
+		return errors.New("--start-time and --unset-start-time are mutually exclusive")
+	}
+	if i.startTimeSet {
+		if err := i.startTime.CheckValid(); err != nil {
+			return fmt.Errorf("invalid start time: %w", err)
+		}
+	}
+	if i.endTimeSet && i.endTimeUnset {
+		return errors.New("--end-time and --unset-end-time are mutually exclusive")
+	}
+	if i.endTimeSet {
+		if err := i.endTime.CheckValid(); err != nil {
+			return fmt.Errorf("invalid end time: %w", err)
+		}
+	}
+	if i.jitterSet && i.jitterUnset {
+		return errors.New("--jitter and --unset-jitter are mutually exclusive")
+	}
+	if i.timeZoneSet && i.timeZoneUnset {
+		return errors.New("--time-zone and --unset-time-zone are mutually exclusive")
+	}
+	if i.timeZoneSet && strings.TrimSpace(i.timeZone) == "" {
+		return errors.New("--time-zone requires a non-empty value; use --unset-time-zone to clear")
+	}
+	if i.workflowIDSet && i.workflowID == "" {
+		return errors.New("workflow ID must not be empty")
+	}
+	if i.workflowTypeSet && i.workflowType == "" {
+		return errors.New("workflow type must not be empty")
+	}
+	if i.taskQueueSet && i.taskQueue == "" {
+		return errors.New("task queue must not be empty")
+	}
+	if i.executionTimeoutSet && i.executionTimeoutUnset {
+		return errors.New("--execution-timeout and --unset-execution-timeout are mutually exclusive")
+	}
+	if i.executionTimeoutSet && i.executionTimeout < 0 {
+		return errors.New("execution timeout must not be negative")
+	}
+	if i.runTimeoutSet && i.runTimeoutUnset {
+		return errors.New("--run-timeout and --unset-run-timeout are mutually exclusive")
+	}
+	if i.runTimeoutSet && i.runTimeout < 0 {
+		return errors.New("run timeout must not be negative")
+	}
+	if i.taskTimeoutSet && i.taskTimeoutUnset {
+		return errors.New("--task-timeout and --unset-task-timeout are mutually exclusive")
+	}
+	if i.taskTimeoutSet && i.taskTimeout < 0 {
+		return errors.New("task timeout must not be negative")
+	}
+	if i.staticSummarySet && i.staticSummaryUnset {
+		return errors.New("--static-summary and --unset-static-summary are mutually exclusive")
+	}
+	if i.staticDetailsSet && i.staticDetailsUnset {
+		return errors.New("--static-details and --unset-static-details are mutually exclusive")
+	}
+	if i.specClearAll && i.hasScheduleSpecSourcePatch() {
+		return errors.New("--spec-clear-all cannot be combined with --calendar, --cron, or --interval")
+	}
+	if i.jitterSet && i.jitter < 0 {
+		return errors.New("jitter must not be negative")
+	}
+	return nil
+}
+
+func (i schedulePatchIntent) validateResult(schedule *schedpb.Schedule) error {
+	if i.specClearAll && !schedule.GetState().GetPaused() {
+		return errors.New("--spec-clear-all requires the Schedule to be paused; use --paused=true to pause explicitly")
+	}
+	return nil
+}
+
+func (i schedulePatchIntent) apply(schedule *schedpb.Schedule) error {
+	if i.hasPolicyPatch() {
+		if schedule.Policies == nil {
+			schedule.Policies = &schedpb.SchedulePolicies{}
+		}
+	}
+	if i.overlapSet {
+		schedule.Policies.OverlapPolicy = i.overlap
+	}
+	if i.catchupSet {
+		schedule.Policies.CatchupWindow = durationpb.New(i.catchup)
+	}
+	if i.catchupUnset {
+		schedule.Policies.CatchupWindow = nil
+	}
+	if i.pauseOnFailureSet {
+		schedule.Policies.PauseOnFailure = i.pauseOnFailure
+	}
+	if i.pausedSet {
+		if schedule.State == nil {
+			schedule.State = &schedpb.ScheduleState{}
+		}
+		schedule.State.Paused = i.paused
+	}
+	if i.remainingActionsSet {
+		if schedule.State == nil {
+			schedule.State = &schedpb.ScheduleState{}
+		}
+		schedule.State.RemainingActions = int64(i.remainingActions)
+		schedule.State.LimitedActions = i.remainingActions > 0
+	}
+	if i.hasSpecPatch() {
+		if schedule.Spec == nil {
+			schedule.Spec = &schedpb.ScheduleSpec{}
+		}
+	}
+	if i.hasScheduleSpecSourcePatch() || i.specClearAll {
+		schedule.Spec.StructuredCalendar = nil
+		schedule.Spec.Calendar = nil
+		schedule.Spec.CronString = nil
+		schedule.Spec.Interval = nil
+	}
+	if i.hasScheduleSpecSourcePatch() {
+		schedule.Spec.CronString = append(append([]string(nil), i.calendar...), i.cron...)
+		schedule.Spec.Interval = append([]*schedpb.IntervalSpec(nil), i.interval...)
+	}
+	if i.startTimeSet {
+		schedule.Spec.StartTime = i.startTime
+	}
+	if i.startTimeUnset {
+		schedule.Spec.StartTime = nil
+	}
+	if i.endTimeSet {
+		schedule.Spec.EndTime = i.endTime
+	}
+	if i.endTimeUnset {
+		schedule.Spec.EndTime = nil
+	}
+	if i.jitterSet {
+		schedule.Spec.Jitter = durationpb.New(i.jitter)
+	}
+	if i.jitterUnset {
+		schedule.Spec.Jitter = nil
+	}
+	if i.timeZoneSet {
+		schedule.Spec.TimezoneName = i.timeZone
+		schedule.Spec.TimezoneData = nil
+	}
+	if i.timeZoneUnset {
+		schedule.Spec.TimezoneName = ""
+		schedule.Spec.TimezoneData = nil
+	}
+	if i.hasWorkflowActionPatch() {
+		startWorkflow := schedule.GetAction().GetStartWorkflow()
+		if startWorkflow == nil {
+			return errors.New("schedule action does not contain a StartWorkflow action")
+		}
+		if i.workflowIDSet {
+			startWorkflow.WorkflowId = i.workflowID
+		}
+		if i.workflowTypeSet {
+			if startWorkflow.WorkflowType == nil {
+				startWorkflow.WorkflowType = &commonpb.WorkflowType{}
+			}
+			startWorkflow.WorkflowType.Name = i.workflowType
+		}
+		if i.taskQueueSet {
+			if startWorkflow.TaskQueue == nil {
+				startWorkflow.TaskQueue = &taskqueuepb.TaskQueue{}
+			}
+			startWorkflow.TaskQueue.Name = i.taskQueue
+		}
+		if i.executionTimeoutSet {
+			startWorkflow.WorkflowExecutionTimeout = durationpb.New(i.executionTimeout)
+		}
+		if i.executionTimeoutUnset {
+			startWorkflow.WorkflowExecutionTimeout = nil
+		}
+		if i.runTimeoutSet {
+			startWorkflow.WorkflowRunTimeout = durationpb.New(i.runTimeout)
+		}
+		if i.runTimeoutUnset {
+			startWorkflow.WorkflowRunTimeout = nil
+		}
+		if i.taskTimeoutSet {
+			startWorkflow.WorkflowTaskTimeout = durationpb.New(i.taskTimeout)
+		}
+		if i.taskTimeoutUnset {
+			startWorkflow.WorkflowTaskTimeout = durationpb.New(10 * time.Second)
+		}
+		if i.staticSummarySet || i.staticDetailsSet {
+			if startWorkflow.UserMetadata == nil {
+				startWorkflow.UserMetadata = &sdkpb.UserMetadata{}
+			}
+		}
+		if i.staticSummarySet {
+			startWorkflow.UserMetadata.Summary = i.staticSummary
+		}
+		if i.staticDetailsSet {
+			startWorkflow.UserMetadata.Details = i.staticDetails
+		}
+		if i.staticSummaryUnset && startWorkflow.UserMetadata != nil {
+			startWorkflow.UserMetadata.Summary = nil
+		}
+		if i.staticDetailsUnset && startWorkflow.UserMetadata != nil {
+			startWorkflow.UserMetadata.Details = nil
+		}
+	}
+	if !i.notesSet && !i.notesUnset {
+		return nil
+	}
+	if schedule.State == nil {
+		schedule.State = &schedpb.ScheduleState{}
+	}
+	if i.notesSet {
+		schedule.State.Notes = i.notes
+		return nil
+	}
+	schedule.State.Notes = ""
+	return nil
+}
+
+func parseScheduleSpecSources(calendar, cron, intervals []string) ([]string, []*schedpb.IntervalSpec, error) {
+	calendarCron := make([]string, 0, len(calendar))
+	for _, calendarJSON := range calendar {
+		var calendarSpec schedpb.CalendarSpec
+		if err := protojson.Unmarshal([]byte(calendarJSON), &calendarSpec); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse json calendar spec: %w", err)
+		}
+		calendarCronString, err := toCronString(&calendarSpec)
+		if err != nil {
+			return nil, nil, err
+		}
+		calendarCron = append(calendarCron, calendarCronString)
+	}
+	intervalSpecs := make([]*schedpb.IntervalSpec, 0, len(intervals))
+	for _, intervalString := range intervals {
+		interval, err := toIntervalSpec(intervalString)
+		if err != nil {
+			return nil, nil, err
+		}
+		if interval.Every < time.Second {
+			return nil, nil, errors.New("interval must be at least 1s")
+		}
+		if interval.Offset < 0 {
+			return nil, nil, errors.New("interval phase must not be negative")
+		}
+		if interval.Offset >= interval.Every {
+			return nil, nil, errors.New("interval phase must be less than the interval")
+		}
+		intervalSpecs = append(intervalSpecs, &schedpb.IntervalSpec{
+			Interval: durationpb.New(interval.Every),
+			Phase:    durationpb.New(interval.Offset),
+		})
+	}
+	return calendarCron, intervalSpecs, nil
+}
+
+func (c *TemporalSchedulePatchCommand) run(cctx *CommandContext, args []string) error {
+	const maxAttempts = 3
+
+	var err error
+	intent := schedulePatchIntent{
+		notesSet:              c.Command.Flags().Changed("notes"),
+		notesUnset:            c.UnsetNotes,
+		notes:                 c.Notes,
+		overlapSet:            c.Command.Flags().Changed("overlap-policy"),
+		catchupSet:            c.Command.Flags().Changed("catchup-window"),
+		catchup:               c.CatchupWindow.Duration(),
+		catchupUnset:          c.UnsetCatchupWindow,
+		pauseOnFailureSet:     c.Command.Flags().Changed("pause-on-failure"),
+		pauseOnFailure:        c.PauseOnFailure,
+		pausedSet:             c.Command.Flags().Changed("paused"),
+		paused:                c.Paused,
+		remainingActionsSet:   c.Command.Flags().Changed("remaining-actions"),
+		remainingActions:      c.RemainingActions,
+		calendarSet:           c.Command.Flags().Changed("calendar"),
+		cronSet:               c.Command.Flags().Changed("cron"),
+		intervalSet:           c.Command.Flags().Changed("interval"),
+		cron:                  c.Cron,
+		specClearAll:          c.SpecClearAll,
+		startTimeSet:          c.Command.Flags().Changed("start-time"),
+		startTimeUnset:        c.UnsetStartTime,
+		startTime:             timestamppb.New(c.StartTime.Time()),
+		endTimeSet:            c.Command.Flags().Changed("end-time"),
+		endTimeUnset:          c.UnsetEndTime,
+		endTime:               timestamppb.New(c.EndTime.Time()),
+		jitterSet:             c.Command.Flags().Changed("jitter"),
+		jitterUnset:           c.UnsetJitter,
+		jitter:                c.Jitter.Duration(),
+		timeZoneSet:           c.Command.Flags().Changed("time-zone"),
+		timeZoneUnset:         c.UnsetTimeZone,
+		timeZone:              c.TimeZone,
+		workflowIDSet:         c.Command.Flags().Changed("workflow-id"),
+		workflowID:            c.WorkflowId,
+		workflowTypeSet:       c.Command.Flags().Changed("type"),
+		workflowType:          c.Type,
+		taskQueueSet:          c.Command.Flags().Changed("task-queue"),
+		taskQueue:             c.TaskQueue,
+		executionTimeoutSet:   c.Command.Flags().Changed("execution-timeout"),
+		executionTimeoutUnset: c.UnsetExecutionTimeout,
+		executionTimeout:      c.ExecutionTimeout.Duration(),
+		runTimeoutSet:         c.Command.Flags().Changed("run-timeout"),
+		runTimeoutUnset:       c.UnsetRunTimeout,
+		runTimeout:            c.RunTimeout.Duration(),
+		taskTimeoutSet:        c.Command.Flags().Changed("task-timeout"),
+		taskTimeoutUnset:      c.UnsetTaskTimeout,
+		taskTimeout:           c.TaskTimeout.Duration(),
+		staticSummarySet:      c.Command.Flags().Changed("static-summary"),
+		staticSummaryUnset:    c.UnsetStaticSummary,
+		staticDetailsSet:      c.Command.Flags().Changed("static-details"),
+		staticDetailsUnset:    c.UnsetStaticDetails,
+	}
+	if intent.staticSummarySet {
+		intent.staticSummary, err = DataConverterWithRawValue.ToPayload(c.StaticSummary)
+		if err != nil {
+			return fmt.Errorf("failed to encode static summary: %w", err)
+		}
+	}
+	if intent.staticDetailsSet {
+		intent.staticDetails, err = DataConverterWithRawValue.ToPayload(c.StaticDetails)
+		if err != nil {
+			return fmt.Errorf("failed to encode static details: %w", err)
+		}
+	}
+	if intent.hasScheduleSpecSourcePatch() {
+		intent.calendar, intent.interval, err = parseScheduleSpecSources(c.Calendar, c.Cron, c.Interval)
+		if err != nil {
+			return err
+		}
+	}
+	if intent.overlapSet {
+		intent.overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value)
+		if err != nil {
+			return err
+		}
+	}
+	if err := intent.validate(); err != nil {
+		return err
+	}
+	if c.ScheduleId == "" {
+		return errors.New("schedule ID is required")
+	}
+
+	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		describeResponse, err := cl.WorkflowService().DescribeSchedule(cctx, &workflowservice.DescribeScheduleRequest{
+			Namespace:  c.Parent.Namespace,
+			ScheduleId: c.ScheduleId,
+		})
+		if err != nil {
+			return err
+		}
+		if describeResponse.GetSchedule() == nil {
+			return fmt.Errorf("DescribeSchedule response for Schedule %q did not contain a Schedule", c.ScheduleId)
+		}
+
+		schedule := proto.Clone(describeResponse.Schedule).(*schedpb.Schedule)
+		if err := intent.apply(schedule); err != nil {
+			return err
+		}
+		if err := intent.validateResult(schedule); err != nil {
+			return err
+		}
+		_, err = cl.WorkflowService().UpdateSchedule(cctx, &workflowservice.UpdateScheduleRequest{
+			Namespace:     c.Parent.Namespace,
+			ScheduleId:    c.ScheduleId,
+			Schedule:      schedule,
+			ConflictToken: describeResponse.ConflictToken,
+			Identity:      c.Parent.Identity,
+			RequestId:     uuid.NewString(),
+		})
+		if err == nil {
+			break
+		}
+		conflictErr, ok := err.(*serviceerror.FailedPrecondition)
+		if !ok || conflictErr.Message != "mismatched conflict token" || attempt == maxAttempts-1 {
+			return err
+		}
+	}
+	if err := cctx.Printer.PrintlnStrictErr("Schedule patch submitted"); err != nil {
+		fmt.Fprintln(cctx.Options.Stderr, "Schedule patch may already have been submitted")
+		return err
+	}
 	return nil
 }
 
