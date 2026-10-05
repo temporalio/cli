@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/fatih/color"
@@ -39,10 +40,22 @@ type statsRowType struct {
 	TasksDispatchRate       float32 `json:"tasksDispatchRate"`
 }
 
+type priorityStatsRowType struct {
+	TaskQueueType           string  `json:"taskQueueType"`
+	PriorityKey             int32   `json:"priorityKey"`
+	ApproximateBacklogCount int64   `json:"approximateBacklogCount"`
+	ApproximateBacklogAge   string  `json:"approximateBacklogAge"`
+	BacklogIncreaseRate     float32 `json:"backlogIncreaseRate"`
+	TasksAddRate            float32 `json:"tasksAddRate"`
+	TasksDispatchRate       float32 `json:"tasksDispatchRate"`
+	RateLimitingActive      bool    `json:"rateLimitingActive"`
+}
+
 type taskQueueDescriptionType struct {
-	Reachability []taskQueueReachabilityRowType `json:"reachability"`
-	Pollers      []pollerRowType                `json:"pollers"`
-	Stats        []statsRowType                 `json:"stats"`
+	Reachability    []taskQueueReachabilityRowType `json:"reachability"`
+	Pollers         []pollerRowType                `json:"pollers"`
+	Stats           []statsRowType                 `json:"stats"`
+	StatsByPriority []priorityStatsRowType         `json:"statsByPriority,omitempty"`
 }
 
 func reachabilityToStr(reachability client.BuildIDTaskReachability) (string, error) {
@@ -219,11 +232,12 @@ func taskQueueDescriptionToRows(taskQueueDescription client.TaskQueueDescription
 	}, nil
 }
 
-func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client.TaskQueueDescription, reportReachability bool, disableStats bool) error {
+func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client.TaskQueueDescription, reportReachability bool, disableStats bool, priorityStats []priorityStatsRowType) error {
 	descRows, err := taskQueueDescriptionToRows(taskQueueDescription, reportReachability, disableStats)
 	if err != nil {
 		return fmt.Errorf("creating task queue description rows failed: %w", err)
 	}
+	descRows.StatsByPriority = priorityStats
 
 	if !cctx.JSONOutput {
 		if reportReachability {
@@ -243,6 +257,12 @@ func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client
 				}
 			}
 		}
+		if len(descRows.StatsByPriority) > 0 {
+			cctx.Printer.Println(color.MagentaString("Task Queue Statistics by Priority (all build IDs):"))
+			if err := cctx.Printer.PrintStructured(descRows.StatsByPriority, printer.StructuredOptions{Table: &printer.TableOptions{}}); err != nil {
+				return fmt.Errorf("displaying priority statistics failed: %w", err)
+			}
+		}
 
 		cctx.Printer.Println(color.MagentaString("Pollers:"))
 		return cctx.Printer.PrintStructured(descRows.Pollers, printer.StructuredOptions{Table: &printer.TableOptions{}})
@@ -254,13 +274,20 @@ func printTaskQueueDescription(cctx *CommandContext, taskQueueDescription client
 
 func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []string) error {
 	if c.LegacyMode {
+		if c.ReportPriorityStats {
+			return fmt.Errorf("--report-priority-stats is unavailable in legacy mode")
+		}
 		return c.runLegacy(cctx, args)
+	}
+	if c.ReportPriorityStats && c.DisableStats {
+		return fmt.Errorf("--report-priority-stats cannot be used with --disable-stats")
 	}
 	// Call describeEnhanced
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
+	defer cl.Close()
 
 	var selection *client.TaskQueueVersionSelection
 	if len(c.SelectBuildId) > 0 || c.SelectUnversioned || c.SelectAllActive {
@@ -298,7 +325,70 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 	if err != nil {
 		return fmt.Errorf("unable to describe task queue: %w", err)
 	}
-	return printTaskQueueDescription(cctx, resp, c.ReportReachability, c.DisableStats)
+
+	var priorityStats []priorityStatsRowType
+	if c.ReportPriorityStats {
+		priorityStats, err = c.getPriorityStats(cctx, cl, taskQueueTypes)
+		if err != nil {
+			return err
+		}
+	}
+	return printTaskQueueDescription(cctx, resp, c.ReportReachability, c.DisableStats, priorityStats)
+}
+
+// The enhanced SDK response does not include stats_by_priority_key, so query
+// each task type using the regular DescribeTaskQueue response. These stats are
+// totals across build IDs and cannot be joined to the enhanced per-build-ID rows.
+func (c *TemporalTaskQueueDescribeCommand) getPriorityStats(cctx *CommandContext, cl client.Client, types []client.TaskQueueType) ([]priorityStatsRowType, error) {
+	if len(types) == 0 {
+		types = []client.TaskQueueType{client.TaskQueueTypeWorkflow, client.TaskQueueTypeActivity}
+	}
+	var rows []priorityStatsRowType
+	for _, taskType := range types {
+		typeName, err := taskQueueTypeToStr(taskType)
+		if err != nil {
+			return nil, err
+		}
+		var protoType enums.TaskQueueType
+		switch taskType {
+		case client.TaskQueueTypeWorkflow:
+			protoType = enums.TASK_QUEUE_TYPE_WORKFLOW
+		case client.TaskQueueTypeActivity:
+			protoType = enums.TASK_QUEUE_TYPE_ACTIVITY
+		case client.TaskQueueTypeNexus:
+			protoType = enums.TASK_QUEUE_TYPE_NEXUS
+		default:
+			return nil, fmt.Errorf("unsupported task queue type for priority statistics: %s", typeName)
+		}
+		resp, err := cl.WorkflowService().DescribeTaskQueue(cctx, &workflowservice.DescribeTaskQueueRequest{
+			Namespace:     c.Parent.Namespace,
+			TaskQueue:     &taskqueue.TaskQueue{Name: c.TaskQueue, Kind: enums.TASK_QUEUE_KIND_NORMAL},
+			TaskQueueType: protoType,
+			ReportStats:   true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("unable to describe %s task queue priority statistics: %w", typeName, err)
+		}
+		for priorityKey, stats := range resp.GetStatsByPriorityKey() {
+			rows = append(rows, priorityStatsRowType{
+				TaskQueueType:           typeName,
+				PriorityKey:             priorityKey,
+				ApproximateBacklogCount: stats.GetApproximateBacklogCount(),
+				ApproximateBacklogAge:   formatDuration(stats.GetApproximateBacklogAge().AsDuration()),
+				BacklogIncreaseRate:     stats.GetTasksAddRate() - stats.GetTasksDispatchRate(),
+				TasksAddRate:            stats.GetTasksAddRate(),
+				TasksDispatchRate:       stats.GetTasksDispatchRate(),
+				RateLimitingActive:      stats.GetRateLimitingActive(),
+			})
+		}
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].TaskQueueType != rows[j].TaskQueueType {
+			return rows[i].TaskQueueType < rows[j].TaskQueueType
+		}
+		return rows[i].PriorityKey < rows[j].PriorityKey
+	})
+	return rows, nil
 }
 
 func (c *TemporalTaskQueueDescribeCommand) runLegacy(cctx *CommandContext, args []string) error {
