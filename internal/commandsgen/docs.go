@@ -129,22 +129,38 @@ func (w *docWriter) writeSubcommand(c *Command) {
 	w.fileMap[fileName].WriteString(prefix + " " + c.leafName() + "\n\n")
 	w.fileMap[fileName].WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
-	if w.isLeafCommand(c) {
-		w.writeLeafOptions(fileName)
+	if w.hasOptionsSection(c) {
+		w.writeOptionsSection(c, fileName)
 	}
 }
 
-// writeLeafOptions writes the option table (or the global-flags fallback message)
-// for a leaf command, and records its inherited options for the file's Global
-// Flags section. The command's own options are the top frame of the options
-// stack; everything below it is inherited from parent commands.
+// hasOptionsSection reports whether a command gets an option table. Leaf
+// commands always do. A command with subcommands does only when it declares
+// options of its own (e.g. "workflow reset" or "task-queue versioning"). Those
+// options are generated as persistent flags, so they apply to the command and
+// to every subcommand under it, and are documented nowhere else. Parents that
+// only group subcommands, or only pull in option sets, get no table.
+func (w *docWriter) hasOptionsSection(c *Command) bool {
+	return w.isLeafCommand(c) || len(c.Options) > 0
+}
+
+// writeOptionsSection writes the option table (or the global-flags fallback
+// message) for a command that has an options section (see hasOptionsSection),
+// and records its inherited options for the file's Global Flags section. The
+// command's own options are the top frame of the options stack; everything
+// below it is inherited from parent commands.
 //
 // The reference to the "#global-flags" anchor is only emitted when there are
 // inherited options, since that is what causes a Global Flags section (and thus
 // the anchor) to be generated for the file. A command with no inherited options
 // (e.g. a top-level command in a split subdirectory) would otherwise link to an
 // anchor that never exists.
-func (w *docWriter) writeLeafOptions(fileName string) {
+func (w *docWriter) writeOptionsSection(c *Command, fileName string) {
+	scope := "this command"
+	if !w.isLeafCommand(c) {
+		scope = "this command and all of its subcommands"
+	}
+
 	var options, globalOptions []Option
 	for i, o := range w.optionsStack {
 		if i == len(w.optionsStack)-1 {
@@ -162,14 +178,14 @@ func (w *docWriter) writeLeafOptions(fileName string) {
 	hasGlobal := len(globalOptions) > 0
 	switch {
 	case len(options) > 0 && hasGlobal:
-		buf.WriteString("Use the following options to change the behavior of this command. ")
+		buf.WriteString("Use the following options to change the behavior of " + scope + ". ")
 		buf.WriteString("You can also use any of the [global flags](#global-flags) that apply to all subcommands.\n\n")
 		w.writeOptionsTable(options, fileName)
 	case len(options) > 0:
-		buf.WriteString("Use the following options to change the behavior of this command.\n\n")
+		buf.WriteString("Use the following options to change the behavior of " + scope + ".\n\n")
 		w.writeOptionsTable(options, fileName)
 	case hasGlobal:
-		buf.WriteString("Use [global flags](#global-flags) to customize the connection to the Temporal Service for this command.\n\n")
+		buf.WriteString("Use [global flags](#global-flags) to customize the connection to the Temporal Service for " + scope + ".\n\n")
 	}
 
 	w.collectGlobalFlags(fileName, globalOptions)
@@ -232,12 +248,13 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 
 	buf.WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
-	if w.isLeafCommand(c) {
-		w.writeLeafOptions(fileName)
-	} else {
+	if !w.isLeafCommand(c) {
 		buf.WriteString(fmt.Sprintf("This page provides a reference for the `temporal %s` commands. ", c.FullName))
 		buf.WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
 		buf.WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
+	}
+	if w.hasOptionsSection(c) {
+		w.writeOptionsSection(c, fileName)
 	}
 }
 
@@ -257,8 +274,8 @@ func (w *docWriter) writeSplitSubcommand(c *Command, splitRoot string) {
 	buf.WriteString(prefix + " " + leafName + "\n\n")
 	buf.WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
-	if w.isLeafCommand(c) {
-		w.writeLeafOptions(fileName)
+	if w.hasOptionsSection(c) {
+		w.writeOptionsSection(c, fileName)
 	}
 }
 

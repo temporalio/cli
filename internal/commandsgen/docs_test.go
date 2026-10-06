@@ -182,3 +182,118 @@ func keys(m map[string][]byte) []string {
 	}
 	return out
 }
+
+// parentOptionsFixture has a parent command that defines its own options and
+// can be run directly ("thing run", like "workflow reset"), alongside a parent
+// that only groups subcommands ("thing group").
+const parentOptionsFixture = `
+commands:
+  - name: app
+    summary: App
+    description: App.
+  - name: app thing
+    summary: Thing
+    description: Manage things.
+    docs:
+      keywords:
+        - thing
+      description-header: Manage things
+      tags:
+        - Things
+  - name: app thing group
+    summary: Group
+    description: Group related subcommands.
+  - name: app thing group leaf
+    summary: Leaf
+    description: A leaf under a grouping parent.
+    options:
+      - name: leaf-flag
+        type: string
+        description: A leaf flag.
+  - name: app thing run
+    summary: Run
+    description: Run a thing.
+    options:
+      - name: target
+        type: string
+        description: The thing to run.
+  - name: app thing run extra
+    summary: Extra
+    description: Run a thing, then do something extra.
+    options:
+      - name: extra-flag
+        type: string
+        description: An extra flag.
+`
+
+func TestGenerateDocsFilesParentOptions(t *testing.T) {
+	cmds, err := ParseCommands([]byte(parentOptionsFixture))
+	if err != nil {
+		t.Fatalf("ParseCommands: %v", err)
+	}
+
+	cases := []struct {
+		name      string
+		subdirs   []string
+		file      string
+		run       string
+		extra     string
+		group     string
+		groupLeaf string
+	}{
+		{name: "single file", file: "thing", run: "## run", extra: "### extra", group: "## group", groupLeaf: "### leaf"},
+		{name: "split subdirectory", subdirs: []string{"app"}, file: "app/thing", run: "## run", extra: "### run extra", group: "## group", groupLeaf: "### group leaf"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			docs, err := GenerateDocsFiles(cmds, tc.subdirs)
+			if err != nil {
+				t.Fatalf("GenerateDocsFiles: %v", err)
+			}
+			doc, ok := docs[tc.file]
+			if !ok {
+				t.Fatalf("expected file %q, got keys: %v", tc.file, keys(docs))
+			}
+
+			// A parent with its own options gets an option table under its heading.
+			run := section(t, string(doc), tc.run, tc.extra)
+			if !strings.Contains(run, "`--target`") {
+				t.Errorf("expected --target in the run section, got:\n%s", run)
+			}
+			// Its options are persistent flags, so the section says they reach subcommands.
+			if !strings.Contains(run, "this command and all of its subcommands") {
+				t.Errorf("expected the run section to say its options apply to subcommands, got:\n%s", run)
+			}
+			extra := section(t, string(doc), tc.extra, "")
+			if !strings.Contains(extra, "`--extra-flag`") {
+				t.Errorf("expected --extra-flag in the extra section, got:\n%s", extra)
+			}
+
+			// A parent that only groups subcommands still gets no table.
+			group := section(t, string(doc), tc.group, tc.groupLeaf)
+			if strings.Contains(group, "| Flag |") {
+				t.Errorf("expected no option table in the group section, got:\n%s", group)
+			}
+		})
+	}
+}
+
+// section returns the text from the start heading up to the end heading, or to
+// the end of the document when end is empty.
+func section(t *testing.T, doc, start, end string) string {
+	t.Helper()
+	i := strings.Index(doc, start+"\n")
+	if i < 0 {
+		t.Fatalf("heading %q not found in:\n%s", start, doc)
+	}
+	rest := doc[i:]
+	if end == "" {
+		return rest
+	}
+	j := strings.Index(rest, end+"\n")
+	if j < 0 {
+		t.Fatalf("heading %q not found after %q in:\n%s", end, start, doc)
+	}
+	return rest[:j]
+}
