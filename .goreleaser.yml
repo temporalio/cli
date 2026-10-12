@@ -48,6 +48,11 @@ builds:
         - arm64
       env:
         - CGO_ENABLED=0
+      tags:
+        # The `disable_grpc_modules` build tag excludes gRPC dependencies from cloud.google.com/go/storage,
+        # which the dev server links through the Temporal server's GCS archiver. Nothing uses the gRPC
+        # storage client (storage.NewGRPCClient). Related issue: https://github.com/googleapis/google-cloud-go/issues/12343
+        - disable_grpc_modules
     id: nix
     goos:
       - linux

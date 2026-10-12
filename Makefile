@@ -22,7 +22,7 @@ gen-docs: internal/temporalcli/commands.yaml cliext/option-sets.yaml
 		-output dist/docs
 
 build:
-	go build ./cmd/temporal
+	go build -tags disable_grpc_modules ./cmd/temporal
 
 test:
 	(cd cliext && go test ./...)
