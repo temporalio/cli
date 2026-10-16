@@ -220,20 +220,17 @@ func TestFormatComputeConfigProto_ScalerBounds(t *testing.T) {
 	require.Equal(t, "gcp-cloud-run", computeConfigSummaryStr(ccNoBounds))
 }
 
-func TestPrintWorkerDeploymentVersionInfoProto_AllFields(t *testing.T) {
+func TestPrintWorkerDeploymentVersionInfoProto_ServerFields(t *testing.T) {
 	ts := func(sec int64) *timestamppb.Timestamp { return timestamppb.New(time.Unix(sec, 0).UTC()) }
 	info := &deploymentpb.WorkerDeploymentVersionInfo{
-		Status:               enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING,
-		DeploymentVersion:    &deploymentpb.WorkerDeploymentVersion{DeploymentName: "my-deployment", BuildId: "v1"},
-		CreateTime:           ts(1000),
-		RoutingChangedTime:   ts(2000),
-		FirstActivationTime:  ts(3000),
-		LastCurrentTime:      ts(4000),
-		LastDeactivationTime: ts(5000),
+		Status:             enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING,
+		DeploymentVersion:  &deploymentpb.WorkerDeploymentVersion{DeploymentName: "my-deployment", BuildId: "v1"},
+		CreateTime:         ts(1000),
+		RoutingChangedTime: ts(3000),
 		DrainageInfo: &deploymentpb.VersionDrainageInfo{
 			Status:          enumspb.VERSION_DRAINAGE_STATUS_DRAINING,
-			LastChangedTime: ts(6000),
-			LastCheckedTime: ts(7000),
+			LastChangedTime: ts(3000),
+			LastCheckedTime: ts(4000),
 		},
 		LastModifierIdentity: "some-identity",
 	}
@@ -244,7 +241,7 @@ func TestPrintWorkerDeploymentVersionInfoProto_AllFields(t *testing.T) {
 		require.NoError(t, printWorkerDeploymentVersionInfoProto(cctx, info, nil, "Worker Deployment Version:", printVersionInfoOptions{}))
 		out := buf.String()
 		for _, field := range []string{
-			"Status", "FirstActivationTime", "LastCurrentTime", "LastDeactivationTime",
+			"Status", "RoutingChangedTime",
 			"DrainageStatus", "DrainageLastChangedTime", "DrainageLastCheckedTime", "LastModifierIdentity",
 		} {
 			require.Contains(t, out, field)
@@ -264,14 +261,12 @@ func TestPrintWorkerDeploymentVersionInfoProto_AllFields(t *testing.T) {
 		var out formattedWorkerDeploymentVersionInfoType
 		require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
 		require.Equal(t, "draining", out.Status)
-		require.Equal(t, time.Unix(3000, 0).UTC(), *out.FirstActivationTime)
-		require.Equal(t, time.Unix(4000, 0).UTC(), *out.LastCurrentTime)
-		require.Equal(t, time.Unix(5000, 0).UTC(), *out.LastDeactivationTime)
+		require.Equal(t, time.Unix(3000, 0).UTC(), *out.RoutingChangedTime)
 		require.Equal(t, "some-identity", out.LastModifierIdentity)
 		require.NotNil(t, out.DrainageInfo)
 		require.Equal(t, "draining", out.DrainageInfo.DrainageStatus)
-		require.Equal(t, time.Unix(6000, 0).UTC(), *out.DrainageInfo.LastChangedTime)
-		require.Equal(t, time.Unix(7000, 0).UTC(), *out.DrainageInfo.LastCheckedTime)
+		require.Equal(t, time.Unix(3000, 0).UTC(), *out.DrainageInfo.LastChangedTime)
+		require.Equal(t, time.Unix(4000, 0).UTC(), *out.DrainageInfo.LastCheckedTime)
 		require.Nil(t, out.CurrentSinceTime)
 		require.Nil(t, out.RampingSinceTime)
 	})
@@ -280,9 +275,11 @@ func TestPrintWorkerDeploymentVersionInfoProto_AllFields(t *testing.T) {
 		var buf bytes.Buffer
 		cctx := &CommandContext{JSONOutput: true, Printer: &printer.Printer{Output: &buf, JSON: true}}
 		current := &deploymentpb.WorkerDeploymentVersionInfo{
-			Status:            enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT,
-			DeploymentVersion: &deploymentpb.WorkerDeploymentVersion{DeploymentName: "my-deployment", BuildId: "v2"},
-			CreateTime:        ts(1000),
+			Status:             enumspb.WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT,
+			DeploymentVersion:  &deploymentpb.WorkerDeploymentVersion{DeploymentName: "my-deployment", BuildId: "v2"},
+			CreateTime:         ts(1000),
+			RoutingChangedTime: ts(2000),
+			CurrentSinceTime:   ts(2000),
 		}
 		require.NoError(t, printWorkerDeploymentVersionInfoProto(cctx, current, nil, "", printVersionInfoOptions{}))
 		var raw map[string]any
