@@ -251,6 +251,8 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	dynConf[nexusoperation.Enabled.Key()] = true
 	// Allow NexusHandler-variant completion callbacks on standalone Nexus operations.
 	dynConf[nexusoperation.EnabledCallbackKinds.Key()] = []string{"nexusHandler"}
+	// Allow completion callbacks on standalone activities, used by Nexus operations backed by them.
+	dynConf[activity.EnableCallbacks.Key()] = true
 
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
