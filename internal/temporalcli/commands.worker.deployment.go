@@ -1148,6 +1148,11 @@ type ComputeConfigArgs struct {
 	gcpCloudRunRegion                 string
 	gcpCloudRunWorkerPool             string
 	gcpCloudRunServiceAccount         string
+	modalAppName                      string
+	modalFunctionName                 string
+	modalEnvironment                  string
+	modalWorkspaceID                  string
+	modalVersion                      string
 }
 
 func (c *ComputeConfigArgs) hasAwsLambdaArgs() bool {
@@ -1171,24 +1176,34 @@ func (c *ComputeConfigArgs) hasGcpCloudRunArgs() bool {
 		c.gcpCloudRunServiceAccount != ""
 }
 
+func (c *ComputeConfigArgs) hasModalArgs() bool {
+	return c.modalAppName != "" ||
+		c.modalFunctionName != "" ||
+		c.modalEnvironment != "" ||
+		c.modalWorkspaceID != "" ||
+		c.modalVersion != ""
+}
+
 // computeProviderConfig selects the single compute provider for a Worker
 // Deployment Version's "default" scaling group from the command's flags. It
 // enforces that flags for different providers are not mixed, then dispatches on
 // the trigger flag (--aws-lambda-function-arn / --aws-agentcore-endpoint-arn /
-// --gcp-cloud-run-worker-pool). Returns an empty providerType when no provider
-// flags are set, leaving the "no configuration" decision to the caller.
+// --gcp-cloud-run-worker-pool / --modal-app-name). Returns an empty providerType
+// when no provider flags are set, leaving the "no configuration" decision to
+// the caller.
 func computeProviderConfig(c *ComputeConfigArgs) (providerType string, detailsPayload *commonpb.Payload, err error) {
 	awsLambdaSet := c.hasAwsLambdaArgs()
 	awsAgentcoreSet := c.hasAwsAgentcoreArgs()
 	gcpSet := c.hasGcpCloudRunArgs()
+	modalSet := c.hasModalArgs()
 	setCount := 0
-	for _, set := range []bool{awsLambdaSet, awsAgentcoreSet, gcpSet} {
+	for _, set := range []bool{awsLambdaSet, awsAgentcoreSet, gcpSet, modalSet} {
 		if set {
 			setCount++
 		}
 	}
 	if setCount > 1 {
-		return "", nil, fmt.Errorf("cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags; a Worker Deployment Version supports a single compute provider")
+		return "", nil, fmt.Errorf("cannot combine --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, and --modal-* flags; a Worker Deployment Version supports a single compute provider")
 	}
 
 	switch {
@@ -1216,19 +1231,29 @@ func computeProviderConfig(c *ComputeConfigArgs) (providerType string, detailsPa
 			c.gcpCloudRunServiceAccount,
 		)
 		return "gcp-cloud-run", p, err
+	case c.hasModalArgs():
+		p, err := modalProviderDetailsPayload(
+			c.modalAppName,
+			c.modalFunctionName,
+			c.modalEnvironment,
+			c.modalWorkspaceID,
+			c.modalVersion,
+		)
+		return "modal", p, err
 	default:
 		return "", nil, nil
 	}
 }
 
 // scalerTypeByProvider maps each compute provider to the scaling algorithm
-// compatible with its launch strategy in temporal-auto-scaled-workers: aws-lambda
-// is invoke-based ("no-sync"); gcp-cloud-run is worker-set-based ("rate-based").
-// WCI rejects an incompatible pairing at CreateWorkerDeploymentVersion.
+// compatible with its launch strategy in temporal-auto-scaled-workers. Invoke
+// providers use "no-sync"; worker-set providers use "rate-based". WCI rejects
+// an incompatible pairing at CreateWorkerDeploymentVersion.
 var scalerTypeByProvider = map[string]string{
 	"aws-lambda":    "no-sync",
 	"aws-agentcore": "no-sync",
 	"gcp-cloud-run": "rate-based",
+	"modal":         "no-sync",
 }
 
 // scalerTypeForProvider returns the scaling algorithm for the given provider,
@@ -1362,6 +1387,11 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 		gcpCloudRunRegion: c.GcpCloudRunRegion,
 		gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
 		gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
+		modalAppName: c.ModalAppName,
+		modalFunctionName: c.ModalFunctionName,
+		modalEnvironment: c.ModalEnvironment,
+		modalWorkspaceID: c.ModalWorkspaceId,
+		modalVersion: c.ModalVersion,
 	})
 	if err != nil {
 		return err
@@ -1459,12 +1489,17 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 			gcpCloudRunRegion: c.GcpCloudRunRegion,
 			gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
 			gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
+			modalAppName: c.ModalAppName,
+			modalFunctionName: c.ModalFunctionName,
+			modalEnvironment: c.ModalEnvironment,
+			modalWorkspaceID: c.ModalWorkspaceId,
+			modalVersion: c.ModalVersion,
 		}
 
 	if c.Remove {
-		if computeConfigArgs.hasAwsLambdaArgs() || computeConfigArgs.hasAwsAgentcoreArgs() || computeConfigArgs.hasGcpCloudRunArgs() ||
+		if computeConfigArgs.hasAwsLambdaArgs() || computeConfigArgs.hasAwsAgentcoreArgs() || computeConfigArgs.hasGcpCloudRunArgs() || computeConfigArgs.hasModalArgs() ||
 			c.gcpScalerFlags().anySet() {
-			return fmt.Errorf("--remove cannot be combined with --aws-lambda-*, --aws-agentcore-*, or --gcp-cloud-run-* flags")
+			return fmt.Errorf("--remove cannot be combined with --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, or --modal-* flags")
 		}
 		request.RemoveComputeConfigScalingGroups = []string{"default"}
 	} else {

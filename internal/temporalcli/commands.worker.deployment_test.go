@@ -1402,7 +1402,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, and --modal-* flags")
 
 	// AWS Agentcore and Lambda providers are mutually exclusive on create.
 	res = s.Execute(
@@ -1415,7 +1415,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, and --modal-* flags")
 
 	// --gcp-cloud-run-worker-pool requires project, region, and
 	// service-account; the first missing detail key is reported.
@@ -1446,6 +1446,51 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "missing required GCP Cloud Run provider detail: service_account")
 
+	// Modal requires the deployed App, Function, and environment.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--modal-app-name", "payments",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required Modal provider detail: function_name")
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--modal-function-name", "worker",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required Modal provider detail: app_name")
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--modal-app-name", "payments",
+		"--modal-function-name", "worker",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required Modal provider detail: environment")
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--modal-app-name", "payments",
+		"--modal-function-name", "worker",
+		"--modal-environment", "main",
+		"--modal-version", "-1",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "Modal provider detail \"version\" must be a non-negative integer string")
+
 	// AWS Lambda and GCP Cloud Run providers are mutually exclusive on create.
 	mixedProvidersBuildID := uuid.NewString()
 
@@ -1458,7 +1503,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, and --modal-* flags")
 
 	// Attempting to update the compute config for a non-existent WDV
 	// should fail.
@@ -1498,7 +1543,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, and --modal-* flags")
 
 	// --remove cannot be combined with GCP Cloud Run flags.
 	res = s.Execute(
@@ -1507,6 +1552,18 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--deployment-name", deploymentName,
 		"--build-id", lazyCreatedBuildID,
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--remove",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--remove cannot be combined with")
+
+	// --remove cannot be combined with Modal provider flags either.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", lazyCreatedBuildID,
+		"--modal-app-name", "payments",
 		"--remove",
 	)
 	s.Error(res.Err)
@@ -1758,6 +1815,56 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
 }
 
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_ModalRequest() {
+	var mu sync.Mutex
+	var captured *workflowservice.CreateWorkerDeploymentVersionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context, method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			if r, ok := req.(*workflowservice.CreateWorkerDeploymentVersionRequest); ok {
+				mu.Lock()
+				captured = r
+				mu.Unlock()
+				return nil // capture only; do not forward to the server
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+	takeCaptured := func() *workflowservice.CreateWorkerDeploymentVersionRequest {
+		mu.Lock()
+		defer mu.Unlock()
+		r := captured
+		captured = nil
+		return r
+	}
+
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", uuid.NewString(), "--build-id", "1.0",
+		"--modal-app-name", "payments",
+		"--modal-function-name", "worker",
+		"--modal-environment", "main",
+	)
+	s.NoError(res.Err)
+	createReq := takeCaptured()
+	s.NotNil(createReq)
+	createGroup := createReq.GetComputeConfig().GetScalingGroups()["default"]
+	s.Equal("modal", createGroup.GetProvider().GetType())
+	s.Equal("no-sync", createGroup.GetScaler().GetType())
+	s.Nil(createGroup.GetScaler().GetDetails())
+	var modalDetails map[string]any
+	s.NoError(converter.GetDefaultDataConverter().FromPayload(createGroup.GetProvider().GetDetails(), &modalDetails))
+	s.Equal("payments", modalDetails["app_name"])
+	s.Equal("worker", modalDetails["function_name"])
+	s.Equal("main", modalDetails["environment"])
+	s.NotContains(modalDetails, "workspace_id")
+	s.NotContains(modalDetails, "version")
+}
+
 // TestUpdateWorkerDeploymentVersionComputeConfig_UpdateModes verifies the shape
 // of the update request for each mode. It captures the outbound gRPC request and
 // short-circuits it, so the assertions don't need a real (GCP-backed) version on
@@ -1836,6 +1943,32 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 	s.Contains(sg.GetUpdateMask().GetPaths(), "scaler.details")
 	s.Equal("aws-lambda", sg.GetScalingGroup().GetProvider().GetType())
 	s.Nil(sg.GetScalingGroup().GetScaler().GetDetails())
+
+	// Switching to Modal also clears rate-based scaler details and includes the
+	// required environment plus optional workspace and App version.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", buildID,
+		"--modal-app-name", "payments",
+		"--modal-function-name", "worker",
+		"--modal-environment", "staging",
+		"--modal-workspace-id", "ws-123",
+		"--modal-version", "42",
+	)
+	s.NoError(res.Err)
+	req = takeCaptured()
+	s.NotNil(req)
+	sg = req.GetComputeConfigScalingGroups()["default"]
+	s.Contains(sg.GetUpdateMask().GetPaths(), "scaler.details")
+	s.Equal("modal", sg.GetScalingGroup().GetProvider().GetType())
+	s.Equal("no-sync", sg.GetScalingGroup().GetScaler().GetType())
+	s.Nil(sg.GetScalingGroup().GetScaler().GetDetails())
+	var modalDetails map[string]any
+	s.NoError(converter.GetDefaultDataConverter().FromPayload(sg.GetScalingGroup().GetProvider().GetDetails(), &modalDetails))
+	s.Equal("staging", modalDetails["environment"])
+	s.Equal("ws-123", modalDetails["workspace_id"])
+	s.Equal("42", modalDetails["version"])
 
 	// Updating only GCP provider fields (no scaler flags) leaves scaler.details
 	// out of the mask, so existing bounds are preserved.
