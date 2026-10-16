@@ -142,6 +142,23 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		RootRunId:            info.GetRootExecution().GetRunId(),
 	}, printer.StructuredOptions{})
 
+	if priority := info.GetPriority(); priority != nil &&
+		(priority.GetPriorityKey() != 0 || priority.GetFairnessKey() != "" || priority.GetFairnessWeight() != 0) {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Priority:"))
+		if err := cctx.Printer.PrintStructured(struct {
+			PriorityKey    int32   `cli:",cardOmitEmpty"`
+			FairnessKey    string  `cli:",cardOmitEmpty"`
+			FairnessWeight float32 `cli:",cardOmitEmpty"`
+		}{
+			PriorityKey:    priority.GetPriorityKey(),
+			FairnessKey:    priority.GetFairnessKey(),
+			FairnessWeight: priority.GetFairnessWeight(),
+		}, printer.StructuredOptions{}); err != nil {
+			return fmt.Errorf("displaying workflow priority failed: %w", err)
+		}
+	}
+
 	extendedInfo := resp.WorkflowExtendedInfo
 	if extendedInfo != nil {
 		cctx.Printer.Println(color.MagentaString("Extended Execution Info:"))
@@ -288,6 +305,34 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 			}
 			_ = cctx.Printer.PrintStructured(acts, printer.StructuredOptions{})
 			cctx.Printer.Println()
+
+			type priorityRow struct {
+				ActivityId     string
+				PriorityKey    int32
+				FairnessKey    string
+				FairnessWeight float32
+			}
+			var priorityRows []priorityRow
+			for _, activity := range resp.PendingActivities {
+				priority := activity.GetPriority()
+				if priority == nil ||
+					(priority.GetPriorityKey() == 0 && priority.GetFairnessKey() == "" && priority.GetFairnessWeight() == 0) {
+					continue
+				}
+				priorityRows = append(priorityRows, priorityRow{
+					ActivityId:     activity.GetActivityId(),
+					PriorityKey:    priority.GetPriorityKey(),
+					FairnessKey:    priority.GetFairnessKey(),
+					FairnessWeight: priority.GetFairnessWeight(),
+				})
+			}
+			if len(priorityRows) > 0 {
+				cctx.Printer.Println(color.MagentaString("Pending Activity Priorities:"))
+				if err := cctx.Printer.PrintStructured(priorityRows, printer.StructuredOptions{Table: &printer.TableOptions{}}); err != nil {
+					return fmt.Errorf("displaying pending activity priorities failed: %w", err)
+				}
+				cctx.Printer.Println()
+			}
 		}
 
 		cctx.Printer.Println(color.MagentaString("Pending Child Workflows: %v", len(resp.PendingChildren)))

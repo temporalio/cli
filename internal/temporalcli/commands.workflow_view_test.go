@@ -44,6 +44,11 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
 		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,
+			Priority: temporal.Priority{
+				PriorityKey:    2,
+				FairnessKey:    "tenant-a",
+				FairnessWeight: 4.5,
+			},
 		})
 		var res any
 		err := workflow.ExecuteActivity(ctx, DevActivity, input).Get(ctx, &res)
@@ -74,6 +79,8 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "WorkflowId", run.GetID())
 	s.Contains(out, "Pending Activities: 1")
+	s.Contains(out, "Pending Activity Priorities:")
+	s.ContainsOnSameLine(out, "2", "tenant-a", "4.5")
 	s.ContainsOnSameLine(out, "LastFailure", "intentional error")
 	s.Contains(out, "Pending Child Workflows: 0")
 

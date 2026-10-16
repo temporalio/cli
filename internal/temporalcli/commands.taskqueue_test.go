@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -26,6 +27,69 @@ type statsRowType struct {
 
 type taskQueueStatsType struct {
 	Stats []statsRowType `json:"stats"`
+}
+
+func (s *SharedServerSuite) TestTaskQueue_Describe_PriorityStats() {
+	taskQueue := "priority-stats-" + uuid.NewString()
+	res := s.Execute(
+		"workflow", "start",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--type", "DevWorkflow",
+		"--workflow-id", uuid.NewString(),
+		"--priority-key", "1",
+	)
+	s.NoError(res.Err)
+
+	s.Eventually(func() bool {
+		resp, err := s.Client.WorkflowService().DescribeTaskQueue(s.Context, &workflowservice.DescribeTaskQueueRequest{
+			Namespace:     "default",
+			TaskQueue:     &taskqueue.TaskQueue{Name: taskQueue},
+			TaskQueueType: enums.TASK_QUEUE_TYPE_WORKFLOW,
+			ReportStats:   true,
+		})
+		return err == nil && resp.GetStatsByPriorityKey()[1].GetApproximateBacklogCount() == 1
+	}, 5*time.Second, 100*time.Millisecond)
+
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--report-priority-stats",
+		"--task-queue-type", "workflow",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Task Queue Statistics by Priority (all build IDs):")
+	s.ContainsOnSameLine(res.Stdout.String(), "workflow", "1", "1")
+
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--report-priority-stats",
+		"--task-queue-type", "workflow",
+		"--task-queue-type", "workflow",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	var jsonOut struct {
+		StatsByPriority []struct {
+			TaskQueueType           string `json:"taskQueueType"`
+			PriorityKey             int32  `json:"priorityKey"`
+			ApproximateBacklogCount int64  `json:"approximateBacklogCount"`
+			ApproximateBacklogAge   string `json:"approximateBacklogAge"`
+		} `json:"statsByPriority"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.Len(jsonOut.StatsByPriority, 2)
+	s.Equal("workflow", jsonOut.StatsByPriority[0].TaskQueueType)
+	s.Equal(int32(1), jsonOut.StatsByPriority[0].PriorityKey)
+	s.Equal(int64(1), jsonOut.StatsByPriority[0].ApproximateBacklogCount)
+	s.NotEmpty(jsonOut.StatsByPriority[0].ApproximateBacklogAge)
+	s.Equal("workflow", jsonOut.StatsByPriority[1].TaskQueueType)
+	s.Equal(int32(3), jsonOut.StatsByPriority[1].PriorityKey)
+	s.Equal(int64(0), jsonOut.StatsByPriority[1].ApproximateBacklogCount)
+	s.Equal("0s", jsonOut.StatsByPriority[1].ApproximateBacklogAge)
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
