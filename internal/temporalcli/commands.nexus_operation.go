@@ -18,6 +18,8 @@ import (
 	"go.temporal.io/sdk/converter"
 )
 
+const nexusOperationDeleteWarning = "WARNING: Deleting Nexus Operation Executions in a global Namespace removes them from all replicas. Requests sent to a passive cluster are forwarded to the active cluster by default; to target the passive cluster directly, specify `--grpc-meta xdc-redirection=false`."
+
 func (c *TemporalNexusOperationStartCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
@@ -249,24 +251,29 @@ func (c *TemporalNexusOperationDescribeCommand) run(cctx *CommandContext, args [
 	}
 	defer cl.Close()
 
-	handle := cl.GetNexusOperationHandle(client.GetNexusOperationHandleOptions{
-		OperationID: c.OperationId,
-		RunID:       c.RunId,
+	desc, err := cl.WorkflowService().DescribeNexusOperationExecution(cctx, &workflowservice.DescribeNexusOperationExecutionRequest{
+		Namespace:      c.Parent.Parent.Namespace,
+		OperationId:    c.OperationId,
+		RunId:          c.RunId,
+		IncludeInput:   cctx.JSONOutput,
+		IncludeOutcome: cctx.JSONOutput,
 	})
-
-	desc, err := handle.Describe(cctx, client.DescribeNexusOperationOptions{})
 	if err != nil {
 		return fmt.Errorf("failed describing nexus operation: %w", err)
 	}
 
 	if c.Raw || cctx.JSONOutput {
-		return cctx.Printer.PrintStructured(desc.RawInfo, printer.StructuredOptions{})
+		return cctx.Printer.PrintStructured(desc, printer.StructuredOptions{})
 	}
 	return printNexusOperationDescription(cctx, desc)
 }
 
-func printNexusOperationDescription(cctx *CommandContext, desc *client.NexusOperationExecutionDescription) error {
-	summary, _ := desc.GetSummary()
+func printNexusOperationDescription(cctx *CommandContext, desc *workflowservice.DescribeNexusOperationExecutionResponse) error {
+	info := desc.GetInfo()
+	var summary string
+	if payload := info.GetUserMetadata().GetSummary(); payload != nil {
+		_ = DataConverterWithRawValue.FromPayload(payload, &summary)
+	}
 	d := struct {
 		OperationId            string
 		RunId                  string
@@ -285,27 +292,27 @@ func printNexusOperationDescription(cctx *CommandContext, desc *client.NexusOper
 		Identity               string        `cli:",cardOmitEmpty"`
 		Summary                string        `cli:",cardOmitEmpty"`
 	}{
-		OperationId:            desc.OperationID,
-		RunId:                  desc.OperationRunID,
-		Endpoint:               desc.Endpoint,
-		Service:                desc.Service,
-		Operation:              desc.Operation,
-		Status:                 desc.Status.String(),
-		State:                  desc.State.String(),
-		Attempt:                desc.Attempt,
-		ScheduleToCloseTimeout: desc.ScheduleToCloseTimeout,
-		ScheduledTime:          desc.ScheduledTime,
-		CloseTime:              desc.CloseTime,
-		ExpirationTime:         desc.ExpirationTime,
-		BlockedReason:          desc.BlockedReason,
-		OperationToken:         desc.OperationToken,
-		Identity:               desc.Identity,
+		OperationId:            info.GetOperationId(),
+		RunId:                  info.GetRunId(),
+		Endpoint:               info.GetEndpoint(),
+		Service:                info.GetService(),
+		Operation:              info.GetOperation(),
+		Status:                 info.GetStatus().String(),
+		State:                  info.GetState().String(),
+		Attempt:                info.GetAttempt(),
+		ScheduleToCloseTimeout: info.GetScheduleToCloseTimeout().AsDuration(),
+		ScheduledTime:          timestampToTime(info.GetScheduleTime()),
+		CloseTime:              timestampToTime(info.GetCloseTime()),
+		ExpirationTime:         timestampToTime(info.GetExpirationTime()),
+		BlockedReason:          info.GetBlockedReason(),
+		OperationToken:         info.GetOperationToken(),
+		Identity:               info.GetIdentity(),
 		Summary:                summary,
 	}
 	if err := cctx.Printer.PrintStructured(d, printer.StructuredOptions{}); err != nil {
 		return err
 	}
-	return printLinks(cctx, desc.RawInfo.GetLinks())
+	return printLinks(cctx, info.GetLinks())
 }
 
 func (c *TemporalNexusOperationCancelCommand) run(cctx *CommandContext, args []string) error {
@@ -350,6 +357,59 @@ func (c *TemporalNexusOperationTerminateCommand) run(cctx *CommandContext, args 
 	}
 	cctx.Printer.Println("Nexus Operation terminated")
 	return nil
+}
+
+func (c *TemporalNexusOperationDeleteCommand) run(cctx *CommandContext, _ []string) error {
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+
+	// Only warn when the namespace is global, or can't get the namespace info
+	nsResp, nsErr := cl.WorkflowService().DescribeNamespace(cctx, &workflowservice.DescribeNamespaceRequest{
+		Namespace: c.Parent.Parent.Namespace,
+	})
+	if nsErr != nil || nsResp.GetIsGlobalNamespace() {
+		fmt.Fprintln(cctx.Options.Stderr, nexusOperationDeleteWarning)
+	}
+
+	yes, err := cctx.promptYes(nexusOperationDeleteConfirmationMessage(c.OperationId, c.RunId), c.Yes)
+	if err != nil {
+		return err
+	} else if !yes {
+		return fmt.Errorf("user denied confirmation")
+	}
+
+	_, err = cl.WorkflowService().DeleteNexusOperationExecution(cctx, &workflowservice.DeleteNexusOperationExecutionRequest{
+		Namespace:   c.Parent.Parent.Namespace,
+		OperationId: c.OperationId,
+		RunId:       c.RunId,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete nexus operation: %w", err)
+	}
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(struct {
+			OperationId string `json:"operationId"`
+			RunId       string `json:"runId,omitempty"`
+			Status      string `json:"status"`
+		}{
+			OperationId: c.OperationId,
+			RunId:       c.RunId,
+			Status:      "DELETE_REQUESTED",
+		}, printer.StructuredOptions{})
+	}
+	cctx.Printer.Println("Nexus Operation deletion requested")
+	return nil
+}
+
+func nexusOperationDeleteConfirmationMessage(operationID, runID string) string {
+	action := fmt.Sprintf("Delete Nexus Operation %q", operationID)
+	if runID != "" {
+		action += fmt.Sprintf(" with Run ID %q", runID)
+	}
+	return fmt.Sprintf("%s? y/N", action)
 }
 
 func (c *TemporalNexusOperationListCommand) run(cctx *CommandContext, _ []string) error {
