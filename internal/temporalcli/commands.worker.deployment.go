@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1133,6 +1134,52 @@ func gcpCloudRunProviderDetailsPayload(
 	return dc.ToPayload(&providerDetails)
 }
 
+func validateModalProviderDetails(details map[string]any) error {
+	for _, key := range []string{"app_name", "function_name", "environment"} {
+		if v, ok := details[key].(string); !ok || v == "" {
+			return fmt.Errorf("missing required Modal provider detail: %s", key)
+		}
+	}
+	if rawVersion, ok := details["version"]; ok {
+		version, ok := rawVersion.(string)
+		parsed, err := strconv.Atoi(version)
+		if !ok || err != nil || parsed < 0 {
+			return fmt.Errorf("Modal provider detail %q must be a non-negative integer string", "version")
+		}
+	}
+	return nil
+}
+
+// modalProviderDetailsPayload returns the encoded Payload expected by WCI's
+// invoke-based Modal provider. The environment is part of the compute resource
+// identity and must be explicit so provider updates cannot silently change it.
+func modalProviderDetailsPayload(
+	appName string,
+	functionName string,
+	environment string,
+	workspaceID string,
+	version string,
+) (*commonpb.Payload, error) {
+	// Map keys from temporal-auto-scaled-workers:
+	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/324950cf843e560ff0c6531070bb1d4e139d5000/wci/workflow/compute_provider/modal.go#L18-L24
+	providerDetails := map[string]any{
+		"app_name":      appName,
+		"function_name": functionName,
+		"environment":   environment,
+	}
+	if workspaceID != "" {
+		providerDetails["workspace_id"] = workspaceID
+	}
+	if version != "" {
+		providerDetails["version"] = version
+	}
+	if err := validateModalProviderDetails(providerDetails); err != nil {
+		return nil, err
+	}
+	dc := converter.GetDefaultDataConverter()
+	return dc.ToPayload(&providerDetails)
+}
+
 // ComputeConfigArgs holds ComputeConfig specific args along with helpers for distinguishing between desired compute
 // provider
 type ComputeConfigArgs struct {
@@ -1148,6 +1195,11 @@ type ComputeConfigArgs struct {
 	gcpCloudRunRegion                 string
 	gcpCloudRunWorkerPool             string
 	gcpCloudRunServiceAccount         string
+	modalAppName                      string
+	modalFunctionName                 string
+	modalEnvironment                  string
+	modalWorkspaceID                  string
+	modalVersion                      string
 }
 
 func (c *ComputeConfigArgs) hasAwsLambdaArgs() bool {
@@ -1171,24 +1223,34 @@ func (c *ComputeConfigArgs) hasGcpCloudRunArgs() bool {
 		c.gcpCloudRunServiceAccount != ""
 }
 
+func (c *ComputeConfigArgs) hasModalArgs() bool {
+	return c.modalAppName != "" ||
+		c.modalFunctionName != "" ||
+		c.modalEnvironment != "" ||
+		c.modalWorkspaceID != "" ||
+		c.modalVersion != ""
+}
+
 // computeProviderConfig selects the single compute provider for a Worker
 // Deployment Version's "default" scaling group from the command's flags. It
 // enforces that flags for different providers are not mixed, then dispatches on
 // the trigger flag (--aws-lambda-function-arn / --aws-agentcore-endpoint-arn /
-// --gcp-cloud-run-worker-pool). Returns an empty providerType when no provider
-// flags are set, leaving the "no configuration" decision to the caller.
+// --gcp-cloud-run-worker-pool / --modal-app-name). Returns an empty providerType
+// when no provider flags are set, leaving the "no configuration" decision to
+// the caller.
 func computeProviderConfig(c *ComputeConfigArgs) (providerType string, detailsPayload *commonpb.Payload, err error) {
 	awsLambdaSet := c.hasAwsLambdaArgs()
 	awsAgentcoreSet := c.hasAwsAgentcoreArgs()
 	gcpSet := c.hasGcpCloudRunArgs()
+	modalSet := c.hasModalArgs()
 	setCount := 0
-	for _, set := range []bool{awsLambdaSet, awsAgentcoreSet, gcpSet} {
+	for _, set := range []bool{awsLambdaSet, awsAgentcoreSet, gcpSet, modalSet} {
 		if set {
 			setCount++
 		}
 	}
 	if setCount > 1 {
-		return "", nil, fmt.Errorf("cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags; a Worker Deployment Version supports a single compute provider")
+		return "", nil, fmt.Errorf("cannot combine --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, and --modal-* flags; a Worker Deployment Version supports a single compute provider")
 	}
 
 	switch {
@@ -1216,19 +1278,29 @@ func computeProviderConfig(c *ComputeConfigArgs) (providerType string, detailsPa
 			c.gcpCloudRunServiceAccount,
 		)
 		return "gcp-cloud-run", p, err
+	case c.hasModalArgs():
+		p, err := modalProviderDetailsPayload(
+			c.modalAppName,
+			c.modalFunctionName,
+			c.modalEnvironment,
+			c.modalWorkspaceID,
+			c.modalVersion,
+		)
+		return "modal", p, err
 	default:
 		return "", nil, nil
 	}
 }
 
 // scalerTypeByProvider maps each compute provider to the scaling algorithm
-// compatible with its launch strategy in temporal-auto-scaled-workers: aws-lambda
-// is invoke-based ("no-sync"); gcp-cloud-run is worker-set-based ("rate-based").
-// WCI rejects an incompatible pairing at CreateWorkerDeploymentVersion.
+// compatible with its launch strategy in temporal-auto-scaled-workers. Invoke
+// providers use "no-sync"; worker-set providers use "rate-based". WCI rejects
+// an incompatible pairing at CreateWorkerDeploymentVersion.
 var scalerTypeByProvider = map[string]string{
 	"aws-lambda":    "no-sync",
 	"aws-agentcore": "no-sync",
 	"gcp-cloud-run": "rate-based",
+	"modal":         "no-sync",
 }
 
 // scalerTypeForProvider returns the scaling algorithm for the given provider,
@@ -1350,18 +1422,23 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	requestID := uuid.NewString()
 
 	providerType, detailsPayload, err := computeProviderConfig(&ComputeConfigArgs{
-		awsLambdaFunctionArn: c.AwsLambdaFunctionArn,
-		awsLambdaAssumeRoleArn: c.AwsLambdaAssumeRoleArn,
-		awsLambdaAssumeRoleExternalId: c.AwsLambdaAssumeRoleExternalId,
-		awsLambdaSkipRoleAndExternalId: c.AwsLambdaSkipRoleAndExternalId,
-		awsAgentcoreEndpointArn: c.AwsAgentcoreEndpointArn,
-		awsAgentcoreAssumeRoleArn: c.AwsAgentcoreAssumeRoleArn,
-		awsAgentcoreAssumeRoleExternalId: c.AwsAgentcoreAssumeRoleExternalId,
+		awsLambdaFunctionArn:              c.AwsLambdaFunctionArn,
+		awsLambdaAssumeRoleArn:            c.AwsLambdaAssumeRoleArn,
+		awsLambdaAssumeRoleExternalId:     c.AwsLambdaAssumeRoleExternalId,
+		awsLambdaSkipRoleAndExternalId:    c.AwsLambdaSkipRoleAndExternalId,
+		awsAgentcoreEndpointArn:           c.AwsAgentcoreEndpointArn,
+		awsAgentcoreAssumeRoleArn:         c.AwsAgentcoreAssumeRoleArn,
+		awsAgentcoreAssumeRoleExternalId:  c.AwsAgentcoreAssumeRoleExternalId,
 		awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
-		gcpCloudRunProject: c.GcpCloudRunProject,
-		gcpCloudRunRegion: c.GcpCloudRunRegion,
-		gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
-		gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
+		gcpCloudRunProject:                c.GcpCloudRunProject,
+		gcpCloudRunRegion:                 c.GcpCloudRunRegion,
+		gcpCloudRunWorkerPool:             c.GcpCloudRunWorkerPool,
+		gcpCloudRunServiceAccount:         c.GcpCloudRunServiceAccount,
+		modalAppName:                      c.ModalAppName,
+		modalFunctionName:                 c.ModalFunctionName,
+		modalEnvironment:                  c.ModalEnvironment,
+		modalWorkspaceID:                  c.ModalWorkspaceId,
+		modalVersion:                      c.ModalVersion,
 	})
 	if err != nil {
 		return err
@@ -1447,24 +1524,29 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 	}
 
 	computeConfigArgs := &ComputeConfigArgs{
-			awsLambdaFunctionArn: c.AwsLambdaFunctionArn,
-			awsLambdaAssumeRoleArn: c.AwsLambdaAssumeRoleArn,
-			awsLambdaAssumeRoleExternalId: c.AwsLambdaAssumeRoleExternalId,
-			awsLambdaSkipRoleAndExternalId: c.AwsLambdaSkipRoleAndExternalId,
-			awsAgentcoreEndpointArn: c.AwsAgentcoreEndpointArn,
-			awsAgentcoreAssumeRoleArn: c.AwsAgentcoreAssumeRoleArn,
-			awsAgentcoreAssumeRoleExternalId: c.AwsAgentcoreAssumeRoleExternalId,
-			awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
-			gcpCloudRunProject: c.GcpCloudRunProject,
-			gcpCloudRunRegion: c.GcpCloudRunRegion,
-			gcpCloudRunWorkerPool: c.GcpCloudRunWorkerPool,
-			gcpCloudRunServiceAccount: c.GcpCloudRunServiceAccount,
-		}
+		awsLambdaFunctionArn:              c.AwsLambdaFunctionArn,
+		awsLambdaAssumeRoleArn:            c.AwsLambdaAssumeRoleArn,
+		awsLambdaAssumeRoleExternalId:     c.AwsLambdaAssumeRoleExternalId,
+		awsLambdaSkipRoleAndExternalId:    c.AwsLambdaSkipRoleAndExternalId,
+		awsAgentcoreEndpointArn:           c.AwsAgentcoreEndpointArn,
+		awsAgentcoreAssumeRoleArn:         c.AwsAgentcoreAssumeRoleArn,
+		awsAgentcoreAssumeRoleExternalId:  c.AwsAgentcoreAssumeRoleExternalId,
+		awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
+		gcpCloudRunProject:                c.GcpCloudRunProject,
+		gcpCloudRunRegion:                 c.GcpCloudRunRegion,
+		gcpCloudRunWorkerPool:             c.GcpCloudRunWorkerPool,
+		gcpCloudRunServiceAccount:         c.GcpCloudRunServiceAccount,
+		modalAppName:                      c.ModalAppName,
+		modalFunctionName:                 c.ModalFunctionName,
+		modalEnvironment:                  c.ModalEnvironment,
+		modalWorkspaceID:                  c.ModalWorkspaceId,
+		modalVersion:                      c.ModalVersion,
+	}
 
 	if c.Remove {
-		if computeConfigArgs.hasAwsLambdaArgs() || computeConfigArgs.hasAwsAgentcoreArgs() || computeConfigArgs.hasGcpCloudRunArgs() ||
+		if computeConfigArgs.hasAwsLambdaArgs() || computeConfigArgs.hasAwsAgentcoreArgs() || computeConfigArgs.hasGcpCloudRunArgs() || computeConfigArgs.hasModalArgs() ||
 			c.gcpScalerFlags().anySet() {
-			return fmt.Errorf("--remove cannot be combined with --aws-lambda-*, --aws-agentcore-*, or --gcp-cloud-run-* flags")
+			return fmt.Errorf("--remove cannot be combined with --aws-lambda-*, --aws-agentcore-*, --gcp-cloud-run-*, or --modal-* flags")
 		}
 		request.RemoveComputeConfigScalingGroups = []string{"default"}
 	} else {
