@@ -1267,6 +1267,19 @@ commands:
           --aws-agentcore-assume-role-external-id AgentcoreAssumeRoleExternalID
       ```
 
+      Or pass a deployed Modal application and function that spawns a Worker in
+      the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --modal-app-name YourModalApp \
+          --modal-function-name YourModalFunction \
+          --modal-environment main
+      ```
+
       Or pass compute provider information for a GCP Cloud Run worker pool
       that spawns a Worker in the Worker Deployment:
 
@@ -1352,6 +1365,33 @@ commands:
           When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
           and --aws-agentcore-assume-role-external-id are required unless this
           flag is passed, in which case both must be omitted.
+      - name: modal-app-name
+        type: string
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function. Required when configuring a Modal compute provider.
+      - name: modal-function-name
+        type: string
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for task queue targets in the Worker Deployment. Required when
+          configuring a Modal compute provider.
+      - name: modal-environment
+        type: string
+        description: |
+          Modal environment containing the deployed application. Required when
+          configuring a Modal compute provider.
+      - name: modal-workspace-id
+        type: string
+        description: |
+          Optional Modal workspace ID used to select the workspace's credential
+          grant. Omit when the server uses ambient Modal credentials.
+      - name: modal-version
+        type: string
+        description: |
+          Optional deployed Modal application version, expressed as a
+          non-negative integer. Omit to use the application's current deployed
+          version.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1662,6 +1702,17 @@ commands:
           --aws-agentcore-assume-role-external-id UpdatedExternalID
       ```
 
+      To update the Modal application and function associated with an existing
+      Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --modal-app-name UpdatedModalApp \
+          --modal-function-name UpdatedModalFunction \
+          --modal-environment main
+      ```
+
       To update the GCP Cloud Run worker pool associated with an existing
       Worker Deployment Version:
 
@@ -1769,6 +1820,33 @@ commands:
           When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
           and --aws-agentcore-assume-role-external-id are required unless this
           flag is passed, in which case both must be omitted.
+      - name: modal-app-name
+        type: string
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function. Required when configuring a Modal compute provider.
+      - name: modal-function-name
+        type: string
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for task queue targets in the Worker Deployment. Required when
+          configuring a Modal compute provider.
+      - name: modal-environment
+        type: string
+        description: |
+          Modal environment containing the deployed application. Required when
+          configuring a Modal compute provider.
+      - name: modal-workspace-id
+        type: string
+        description: |
+          Optional Modal workspace ID used to select the workspace's credential
+          grant. Omit when the server uses ambient Modal credentials.
+      - name: modal-version
+        type: string
+        description: |
+          Optional deployed Modal application version, expressed as a
+          non-negative integer. Omit to use the application's current deployed
+          version.
       - name: gcp-cloud-run-project
         type: string
         description: |
