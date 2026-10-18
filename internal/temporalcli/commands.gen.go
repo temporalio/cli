@@ -73,15 +73,23 @@ func (v *ScheduleConfigurationOptions) BuildFlags(f *pflag.FlagSet) {
 }
 
 type ScheduleCreateOnlyOptions struct {
-	ScheduleSearchAttribute []string
-	ScheduleMemo            []string
-	FlagSet                 *pflag.FlagSet
+	ScheduleMemo []string
+	FlagSet      *pflag.FlagSet
 }
 
 func (v *ScheduleCreateOnlyOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringArrayVar(&v.ScheduleSearchAttribute, "schedule-search-attribute", nil, "Set schedule Search Attributes using `KEY=\"VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
 	f.StringArrayVar(&v.ScheduleMemo, "schedule-memo", nil, "Set schedule memo using `KEY=\"VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourKey={\"your\": \"value\"}'. Can be passed multiple times.")
+}
+
+type ScheduleSearchAttributesOptions struct {
+	ScheduleSearchAttribute []string
+	FlagSet                 *pflag.FlagSet
+}
+
+func (v *ScheduleSearchAttributesOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringArrayVar(&v.ScheduleSearchAttribute, "schedule-search-attribute", nil, "Set Schedule Search Attributes using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: 'YourAttribute=\"YourValue\"'. Can be passed multiple times.")
 }
 
 type WorkflowReferenceOptions struct {
@@ -2577,6 +2585,7 @@ type TemporalScheduleCreateCommand struct {
 	ScheduleConfigurationOptions
 	ScheduleCreateOnlyOptions
 	ScheduleIdOptions
+	ScheduleSearchAttributesOptions
 	OverlapPolicyOptions
 	SharedWorkflowStartOptions
 	PayloadInputOptions
@@ -2597,6 +2606,7 @@ func NewTemporalScheduleCreateCommand(cctx *CommandContext, parent *TemporalSche
 	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())
 	s.ScheduleCreateOnlyOptions.BuildFlags(s.Command.Flags())
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleSearchAttributesOptions.BuildFlags(s.Command.Flags())
 	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
 	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
@@ -2796,9 +2806,11 @@ type TemporalScheduleUpdateCommand struct {
 	Command cobra.Command
 	ScheduleConfigurationOptions
 	ScheduleIdOptions
+	ScheduleSearchAttributesOptions
 	OverlapPolicyOptions
 	SharedWorkflowStartOptions
 	PayloadInputOptions
+	RemoveScheduleSearchAttributes bool
 }
 
 func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleUpdateCommand {
@@ -2808,13 +2820,15 @@ func NewTemporalScheduleUpdateCommand(cctx *CommandContext, parent *TemporalSche
 	s.Command.Use = "update [flags]"
 	s.Command.Short = "Update Schedule details"
 	if hasHighlighting {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\x1b[0m\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n\x1b[1mtemporal schedule describe\x1b[0m before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\x1b[0m\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n\x1b[1mtemporal schedule describe\x1b[0m before updating.\n\nTo replace the Schedule's Search Attributes, supply\n\"--schedule-search-attribute\" for every attribute you want to keep:\n\n\x1b[1mtemporal schedule update \\\n    --schedule-id YourScheduleId \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType \\\n    --interval 1h \\\n    --schedule-search-attribute 'YourAttribute=\"YourValue\"'\x1b[0m\n\nAttributes omitted from the replacement or set to null are removed.\nUse \"--remove-schedule-search-attributes\" to remove all Search Attributes.\nThese two flags cannot be combined. If neither is supplied, existing\nSchedule Search Attributes are preserved. These attributes are separate\nfrom the Workflow Search Attributes set with \"--search-attribute\".\n\nSchedule memo is set only during creation and is not affected by updates."
 	} else {
-		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\n```\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n`temporal schedule describe` before updating.\n\nSchedule memo and search attributes cannot be updated with this\ncommand. They are set only during Schedule creation and are not affected\nby updates."
+		s.Command.Long = "Update an existing Schedule with new configuration details, including time\nspecifications, action, and policies:\n\n```\ntemporal schedule update \\\n    --schedule-id \"YourScheduleId\" \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType\n```\n\nThis command performs a full replacement of the Schedule\nconfiguration. Any options not provided will be reset to their default\nvalues. You must re-specify all options, not just the ones you want to\nchange. To view the current configuration of a Schedule, use\n`temporal schedule describe` before updating.\n\nTo replace the Schedule's Search Attributes, supply\n\"--schedule-search-attribute\" for every attribute you want to keep:\n\n```\ntemporal schedule update \\\n    --schedule-id YourScheduleId \\\n    --workflow-id YourBaseWorkflowIdName \\\n    --task-queue YourTaskQueue \\\n    --type YourWorkflowType \\\n    --interval 1h \\\n    --schedule-search-attribute 'YourAttribute=\"YourValue\"'\n```\n\nAttributes omitted from the replacement or set to null are removed.\nUse \"--remove-schedule-search-attributes\" to remove all Search Attributes.\nThese two flags cannot be combined. If neither is supplied, existing\nSchedule Search Attributes are preserved. These attributes are separate\nfrom the Workflow Search Attributes set with \"--search-attribute\".\n\nSchedule memo is set only during creation and is not affected by updates."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.RemoveScheduleSearchAttributes, "remove-schedule-search-attributes", false, "Remove all Search Attributes from the Schedule. Can't be combined with \"--schedule-search-attribute\".")
 	s.ScheduleConfigurationOptions.BuildFlags(s.Command.Flags())
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleSearchAttributesOptions.BuildFlags(s.Command.Flags())
 	s.OverlapPolicyOptions.BuildFlags(s.Command.Flags())
 	s.SharedWorkflowStartOptions.BuildFlags(s.Command.Flags())
 	s.PayloadInputOptions.BuildFlags(s.Command.Flags())
