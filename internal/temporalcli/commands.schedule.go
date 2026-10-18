@@ -18,6 +18,7 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 )
 
 type printableSchedule struct {
@@ -514,6 +515,11 @@ func (c *TemporalScheduleTriggerCommand) run(cctx *CommandContext, args []string
 }
 
 func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string) error {
+	searchAttributes, err := c.searchAttributes()
+	if err != nil {
+		return err
+	}
+
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
 		return err
@@ -552,10 +558,37 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 		DoUpdate: func(u client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
 			// replace whole schedule
 			return &client.ScheduleUpdate{
-				Schedule: &newSchedule,
+				Schedule:              &newSchedule,
+				TypedSearchAttributes: searchAttributes,
 			}, nil
 		},
 	})
+}
+
+func (c *TemporalScheduleUpdateCommand) searchAttributes() (*temporal.SearchAttributes, error) {
+	if c.RemoveScheduleSearchAttributes && len(c.ScheduleSearchAttribute) > 0 {
+		return nil, errors.New("cannot combine --remove-schedule-search-attributes with --schedule-search-attribute")
+	}
+	if !c.RemoveScheduleSearchAttributes && len(c.ScheduleSearchAttribute) == 0 {
+		// A nil pointer leaves the existing Schedule Search Attributes unchanged.
+		return nil, nil
+	}
+	attributes, err := stringKeysJSONValues(c.ScheduleSearchAttribute, true)
+	if err != nil {
+		return nil, fmt.Errorf("invalid search attribute values: %w", err)
+	}
+	for key, value := range attributes {
+		if value == nil {
+			// Updates replace the entire collection, so omit keys set to null.
+			delete(attributes, key)
+		}
+	}
+	typedAttributes, err := mapToSearchAttributes(attributes)
+	if err != nil {
+		return nil, fmt.Errorf("invalid search attribute values: %w", err)
+	}
+	// An explicitly empty collection removes all existing attributes.
+	return &typedAttributes, nil
 }
 
 func formatCalendarSpec(spec client.ScheduleCalendarSpec) *schedpb.CalendarSpec {
