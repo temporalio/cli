@@ -1955,9 +1955,10 @@ commands:
     description: |
       A Worker Deployment Version's compute configuration is made of one
       or more scaling groups. Each scaling group is identified by a key
-      and is made of a compute provider that starts Workers and a scaler
-      that decides when to start them. Each compute provider has its own
-      command, such as `aws-lambda`, to create and update scaling groups:
+      and is made of a compute provider that starts Workers, a scaler that
+      decides when to start them, and optionally the region it is used in.
+      Each compute provider has its own command, such as `aws-lambda`, to
+      create and update scaling groups:
 
       ```
       temporal worker deployment version compute-config [command] [options]
@@ -1969,7 +1970,8 @@ commands:
     summary: Show the compute configuration of a Version (Experimental)
     description: |
       Show the scaling groups in the compute configuration of a Worker
-      Deployment Version, with their compute provider and scaler settings:
+      Deployment Version, with their region, compute provider, and scaler
+      settings:
 
       ```
       temporal worker deployment version compute-config describe \
@@ -2084,6 +2086,32 @@ commands:
           --max-worker-lifetime-ms 300000
       ```
 
+      To add a scaling group that is only used while the Namespace is
+      active in one region:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --scaling-group YourScalingGroup \
+          --region-id aws-us-east-1 \
+          --function-arn YourLambdaFunctionARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID
+      ```
+
+      To update only the region of a scaling group, supply --region-id
+      without the other flags. The region passed replaces the existing
+      one, and the provider and scaler are not changed:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --scaling-group YourScalingGroup \
+          --region-id aws-us-west-2
+      ```
+
       The provider flags are --function-arn, --assume-role-arn,
       --assume-role-external-id, and --skip-role-and-external-id. The
       scaler flags are the --scale-up-* and --suppress-* flags,
@@ -2093,7 +2121,8 @@ commands:
       role flags or --skip-role-and-external-id. Changing the provider
       also resets the scaler: scaler flags passed with it are applied, and
       the rest, or all of them if none are passed, go back to their
-      defaults.
+      defaults. --region-id can be passed with any of these, and the
+      region passed replaces the existing one.
 
       If a Worker Deployment Version with the supplied BuildID does not exist,
       this command will return an error. To create it, use
@@ -5765,6 +5794,17 @@ option-sets:
         default: default
         description: |
           Key of the scaling group.
+      - name: region-id
+        type: string
+        description: |
+          Region in which this scaling group is used, such as
+          "aws-us-east-1". The scaling group is only used while the Namespace
+          is active in this region. A Version can have at most one scaling
+          group per region, and one scaling group without a region, which is
+          used in the regions that have none. When updating a scaling group,
+          the region passed replaces its existing one. A scaling group's
+          region cannot be removed; to make it the scaling group without a
+          region, remove it and add it again without this flag.
 
   - name: aws-assume-role
     options:
