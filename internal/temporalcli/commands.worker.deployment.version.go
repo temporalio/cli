@@ -111,6 +111,7 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigDescribeCommand) run(cctx *
 
 	type scalingGroupCard struct {
 		ScalingGroup string
+		RegionIds    string `cli:",cardOmitEmpty"`
 		Provider     string `cli:",cardOmitEmpty"`
 		Scaler       string `cli:",cardOmitEmpty"`
 	}
@@ -118,7 +119,7 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigDescribeCommand) run(cctx *
 	cards := make([]scalingGroupCard, 0, len(keys))
 	for _, key := range keys {
 		sg := described.ScalingGroups[key]
-		card := scalingGroupCard{ScalingGroup: key}
+		card := scalingGroupCard{ScalingGroup: key, RegionIds: strings.Join(sg.RegionIds, ", ")}
 		if sg.Provider != nil {
 			card.Provider = sg.Provider.Type
 		}
@@ -212,13 +213,20 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigRemoveCommand) run(cctx *Co
 }
 
 // scalingGroup builds the provider-independent part of a scaling group from
-// the --scaling-group flag. Scaling groups set from the CLI serve every Task
-// Queue type.
+// the --scaling-group and --region-id flags. Scaling groups set from the CLI
+// serve every Task Queue type.
 func (o *ScalingGroupOptions) scalingGroup() (*computepb.ComputeConfigScalingGroup, error) {
 	if o.ScalingGroup == "" {
 		return nil, fmt.Errorf("--scaling-group cannot be empty")
 	}
-	return &computepb.ComputeConfigScalingGroup{}, nil
+	sg := &computepb.ComputeConfigScalingGroup{}
+	if o.FlagSet.Changed("region-id") {
+		if o.RegionId == "" {
+			return nil, fmt.Errorf("--region-id cannot be empty")
+		}
+		sg.RegionIds = []string{o.RegionId}
+	}
+	return sg, nil
 }
 
 // update builds the provider-independent part of a scaling group update: the
@@ -228,7 +236,11 @@ func (o *ScalingGroupOptions) update() (*computepb.ComputeConfigScalingGroup, []
 	if err != nil {
 		return nil, nil, err
 	}
-	return sg, nil, nil
+	var paths []string
+	if o.FlagSet.Changed("region-id") {
+		paths = append(paths, "region_ids")
+	}
+	return sg, paths, nil
 }
 
 // createVersionWithScalingGroup creates a Worker Deployment Version with one
@@ -414,8 +426,9 @@ type formattedComputeConfigDescription struct {
 }
 
 type formattedScalingGroupDescription struct {
-	Provider *formattedComputeConfigProvider `json:"provider,omitempty"`
-	Scaler   *formattedScalerDescription     `json:"scaler,omitempty"`
+	RegionIds []string                        `json:"regionIds,omitempty"`
+	Provider  *formattedComputeConfigProvider `json:"provider,omitempty"`
+	Scaler    *formattedScalerDescription     `json:"scaler,omitempty"`
 }
 
 type formattedScalerDescription struct {
@@ -433,7 +446,7 @@ type formattedScalerDescription struct {
 func formatComputeConfigDescription(cc *computepb.ComputeConfig) formattedComputeConfigDescription {
 	out := formattedComputeConfigDescription{ScalingGroups: map[string]formattedScalingGroupDescription{}}
 	for name, msgSG := range cc.GetScalingGroups() {
-		var sg formattedScalingGroupDescription
+		sg := formattedScalingGroupDescription{RegionIds: msgSG.GetRegionIds()}
 		if p := msgSG.GetProvider(); p != nil {
 			sg.Provider = &formattedComputeConfigProvider{Type: p.GetType()}
 		}
