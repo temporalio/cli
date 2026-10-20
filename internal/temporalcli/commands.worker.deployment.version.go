@@ -113,6 +113,7 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigDescribeCommand) run(cctx *
 	type scalingGroupCard struct {
 		ScalingGroup   string
 		TaskQueueTypes string `cli:",cardOmitEmpty"`
+		RegionIds      string `cli:",cardOmitEmpty"`
 		Provider       string `cli:",cardOmitEmpty"`
 		Scaler         string `cli:",cardOmitEmpty"`
 	}
@@ -123,6 +124,7 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigDescribeCommand) run(cctx *
 		card := scalingGroupCard{
 			ScalingGroup:   key,
 			TaskQueueTypes: strings.Join(sg.TaskQueueTypes, ", "),
+			RegionIds:      strings.Join(sg.RegionIds, ", "),
 		}
 		if sg.Provider != nil {
 			card.Provider = sg.Provider.Type
@@ -217,7 +219,7 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigRemoveCommand) run(cctx *Co
 }
 
 // scalingGroup builds the provider-independent part of a scaling group from
-// the --scaling-group and --task-queue-type flags.
+// the --scaling-group, --task-queue-type, and --region-id flags.
 func (o *ScalingGroupOptions) scalingGroup() (*computepb.ComputeConfigScalingGroup, error) {
 	if o.ScalingGroup == "" {
 		return nil, fmt.Errorf("--scaling-group cannot be empty")
@@ -240,6 +242,15 @@ func (o *ScalingGroupOptions) scalingGroup() (*computepb.ComputeConfigScalingGro
 		}
 	}
 	slices.Sort(sg.TaskQueueTypes)
+	for _, r := range o.RegionId {
+		if r == "" {
+			return nil, fmt.Errorf("--region-id cannot be empty")
+		}
+		if !slices.Contains(sg.RegionIds, r) {
+			sg.RegionIds = append(sg.RegionIds, r)
+		}
+	}
+	slices.Sort(sg.RegionIds)
 	return sg, nil
 }
 
@@ -255,6 +266,11 @@ func (o *ScalingGroupOptions) update() (*computepb.ComputeConfigScalingGroup, []
 		paths = append(paths, "task_queue_types")
 	} else {
 		sg.TaskQueueTypes = nil
+	}
+	if o.FlagSet.Changed("region-id") {
+		paths = append(paths, "region_ids")
+	} else {
+		sg.RegionIds = nil
 	}
 	return sg, paths, nil
 }
@@ -443,6 +459,7 @@ type formattedComputeConfigDescription struct {
 
 type formattedScalingGroupDescription struct {
 	TaskQueueTypes []string                        `json:"taskQueueTypes,omitempty"`
+	RegionIds      []string                        `json:"regionIds,omitempty"`
 	Provider       *formattedComputeConfigProvider `json:"provider,omitempty"`
 	Scaler         *formattedScalerDescription     `json:"scaler,omitempty"`
 }
@@ -462,7 +479,7 @@ type formattedScalerDescription struct {
 func formatComputeConfigDescription(cc *computepb.ComputeConfig) formattedComputeConfigDescription {
 	out := formattedComputeConfigDescription{ScalingGroups: map[string]formattedScalingGroupDescription{}}
 	for name, msgSG := range cc.GetScalingGroups() {
-		var sg formattedScalingGroupDescription
+		sg := formattedScalingGroupDescription{RegionIds: msgSG.GetRegionIds()}
 		for _, t := range msgSG.GetTaskQueueTypes() {
 			str, err := taskQueueTypeProtoToStr(t)
 			if err != nil {

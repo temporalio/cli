@@ -97,6 +97,8 @@ func (f *fakeComputeConfigServer) update(key string, update *computepb.ComputeCo
 		switch path {
 		case "task_queue_types":
 			merged.TaskQueueTypes = src.GetTaskQueueTypes()
+		case "region_ids":
+			merged.RegionIds = src.GetRegionIds()
 		case "provider.type", "provider.details":
 			if merged.Provider == nil {
 				merged.Provider = &computepb.ComputeProvider{}
@@ -214,11 +216,13 @@ func twoScalingGroupComputeConfig() *computepb.ComputeConfig {
 		ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
 			"aws-us-west-2-ac": {
 				TaskQueueTypes: []enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_ACTIVITY},
+				RegionIds:      []string{"aws-us-west-2"},
 				Provider:       &computepb.ComputeProvider{Type: "aws-lambda"},
 				Scaler:         &computepb.ComputeScaler{Type: "no-sync", Details: scalerDetails},
 			},
 			"aws-us-east-1-wf": {
 				TaskQueueTypes: []enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_WORKFLOW},
+				RegionIds:      []string{"aws-us-east-1"},
 				Provider:       &computepb.ComputeProvider{Type: "aws-lambda"},
 				Scaler:         &computepb.ComputeScaler{Type: "no-sync"},
 			},
@@ -255,11 +259,13 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	s.Len(cards, 2)
 	s.ContainsOnSameLine(cards[0], "ScalingGroup", "aws-us-east-1-wf")
 	s.ContainsOnSameLine(cards[0], "TaskQueueTypes", "workflow")
+	s.ContainsOnSameLine(cards[0], "RegionIds", "aws-us-east-1")
 	s.ContainsOnSameLine(cards[0], "Provider", "aws-lambda")
 	s.ContainsOnSameLine(cards[0], "Scaler", "no-sync")
 	s.NotContains(cards[0], "(")
 	s.ContainsOnSameLine(cards[1], "ScalingGroup", "aws-us-west-2-ac")
 	s.ContainsOnSameLine(cards[1], "TaskQueueTypes", "activity")
+	s.ContainsOnSameLine(cards[1], "RegionIds", "aws-us-west-2")
 	s.ContainsOnSameLine(cards[1], "Scaler",
 		"no-sync (scale_up_backlog_threshold 2, max_worker_lifetime_ms 300000, scale_up_dispatch_rate_epsilon 0.05)")
 
@@ -268,6 +274,7 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	var described struct {
 		ScalingGroups map[string]struct {
 			TaskQueueTypes []string `json:"taskQueueTypes"`
+			RegionIds      []string `json:"regionIds"`
 			Provider       struct {
 				Type string `json:"type"`
 			} `json:"provider"`
@@ -284,10 +291,12 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	s.Len(described.ScalingGroups, 2)
 	wf := described.ScalingGroups["aws-us-east-1-wf"]
 	s.Equal([]string{"workflow"}, wf.TaskQueueTypes)
+	s.Equal([]string{"aws-us-east-1"}, wf.RegionIds)
 	s.Equal("aws-lambda", wf.Provider.Type)
 	s.Equal("no-sync", wf.Scaler.Type)
 	ac := described.ScalingGroups["aws-us-west-2-ac"]
 	s.Equal([]string{"activity"}, ac.TaskQueueTypes)
+	s.Equal([]string{"aws-us-west-2"}, ac.RegionIds)
 	s.Equal("aws-lambda", ac.Provider.Type)
 	s.Equal("no-sync", ac.Scaler.Type)
 	// The no-sync settings that are set are shown; the others are left out.
