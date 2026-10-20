@@ -350,6 +350,10 @@ func (c *TemporalTaskQueueDescribeCommand) getPriorityStats(cctx *CommandContext
 	}
 	var rows []priorityStatsRowType
 	for _, taskType := range types {
+		// Nexus tasks do not have priority keys in the server.
+		if taskType == client.TaskQueueTypeNexus {
+			continue
+		}
 		typeName, err := taskQueueTypeToStr(taskType)
 		if err != nil {
 			return nil, err
@@ -360,8 +364,6 @@ func (c *TemporalTaskQueueDescribeCommand) getPriorityStats(cctx *CommandContext
 			protoType = enums.TASK_QUEUE_TYPE_WORKFLOW
 		case client.TaskQueueTypeActivity:
 			protoType = enums.TASK_QUEUE_TYPE_ACTIVITY
-		case client.TaskQueueTypeNexus:
-			protoType = enums.TASK_QUEUE_TYPE_NEXUS
 		default:
 			return nil, fmt.Errorf("unsupported task queue type for priority statistics: %s", typeName)
 		}

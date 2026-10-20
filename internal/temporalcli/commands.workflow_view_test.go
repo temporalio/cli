@@ -79,8 +79,10 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	out := res.Stdout.String()
 	s.ContainsOnSameLine(out, "WorkflowId", run.GetID())
 	s.Contains(out, "Pending Activities: 1")
-	s.Contains(out, "Pending Activity Priorities:")
-	s.ContainsOnSameLine(out, "2", "tenant-a", "4.5")
+	s.ContainsOnSameLine(out, "PriorityKey", "2")
+	s.ContainsOnSameLine(out, "FairnessKey", "tenant-a")
+	s.ContainsOnSameLine(out, "FairnessWeight", "4.5")
+	s.NotContains(out, "Pending Activity Priorities:")
 	s.ContainsOnSameLine(out, "LastFailure", "intentional error")
 	s.Contains(out, "Pending Child Workflows: 0")
 

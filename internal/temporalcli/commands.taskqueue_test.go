@@ -86,10 +86,26 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_PriorityStats() {
 	s.Equal(int32(1), jsonOut.StatsByPriority[0].PriorityKey)
 	s.Equal(int64(1), jsonOut.StatsByPriority[0].ApproximateBacklogCount)
 	s.NotEmpty(jsonOut.StatsByPriority[0].ApproximateBacklogAge)
+	// With the default five priority levels, the server also returns its empty
+	// default-priority bucket (key 3).
 	s.Equal("workflow", jsonOut.StatsByPriority[1].TaskQueueType)
 	s.Equal(int32(3), jsonOut.StatsByPriority[1].PriorityKey)
 	s.Equal(int64(0), jsonOut.StatsByPriority[1].ApproximateBacklogCount)
 	s.Equal("0s", jsonOut.StatsByPriority[1].ApproximateBacklogAge)
+
+	// Nexus tasks have no priority keys, even when the type is selected.
+	res = s.Execute(
+		"task-queue", "describe",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--report-priority-stats",
+		"--task-queue-type", "nexus",
+		"-o", "json",
+	)
+	s.NoError(res.Err)
+	var nexusOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &nexusOut))
+	s.NotContains(nexusOut, "statsByPriority")
 }
 
 func (s *SharedServerSuite) TestTaskQueue_Describe_Task_Queue_Stats_Empty() {
