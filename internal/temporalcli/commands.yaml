@@ -1956,9 +1956,9 @@ commands:
       A Worker Deployment Version's compute configuration is made of one
       or more scaling groups. Each scaling group is identified by a key
       and is made of a compute provider that starts Workers, a scaler that
-      decides when to start them, and optionally the Task Queue types it
-      serves. Each compute provider has its own command, such as
-      `aws-lambda`, to create and update scaling groups:
+      decides when to start them, and optionally the Task Queue types and
+      regions it serves. Each compute provider has its own command, such
+      as `aws-lambda`, to create and update scaling groups:
 
       ```
       temporal worker deployment version compute-config [command] [options]
@@ -1970,8 +1970,8 @@ commands:
     summary: Show the compute configuration of a Version (Experimental)
     description: |
       Show the scaling groups in the compute configuration of a Worker
-      Deployment Version, with their Task Queue types, compute provider, and
-      scaler settings:
+      Deployment Version, with their Task Queue types, regions, compute
+      provider, and scaler settings:
 
       ```
       temporal worker deployment version compute-config describe \
@@ -2086,10 +2086,25 @@ commands:
           --max-worker-lifetime-ms 300000
       ```
 
-      To update only the Task Queue types that a scaling group serves,
-      supply --task-queue-type without the other flags. The types passed
-      replace the existing ones, and the provider and scaler are not
-      changed:
+      To add a scaling group that serves only Workflow Task Queues in one
+      region:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --scaling-group YourScalingGroup \
+          --region-id aws-us-east-1 \
+          --task-queue-type workflow \
+          --function-arn YourLambdaFunctionARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID
+      ```
+
+      To update only the Task Queue types or regions that a scaling group
+      serves, supply --task-queue-type or --region-id without the other
+      flags. The values passed replace the existing ones, and the provider
+      and scaler are not changed:
 
       ```
       temporal worker deployment version compute-config aws-lambda update \
@@ -2109,8 +2124,8 @@ commands:
       role flags or --skip-role-and-external-id. Changing the provider
       also resets the scaler: scaler flags passed with it are applied, and
       the rest, or all of them if none are passed, go back to their
-      defaults. --task-queue-type can be passed with any of these, and the
-      types passed replace the existing ones.
+      defaults. --task-queue-type and --region-id can be passed with any
+      of these, and the values passed replace the existing ones.
 
       If a Worker Deployment Version with the supplied BuildID does not exist,
       this command will return an error. To create it, use
@@ -5780,6 +5795,16 @@ option-sets:
         default: default
         description: |
           Key of the scaling group.
+      - name: region-id
+        type: string[]
+        description: |
+          Region in which this scaling group is used, such as
+          "aws-us-east-1". The scaling group is only used while the Namespace
+          is active in one of these regions, and takes precedence there over
+          scaling groups without regions. A scaling group created without
+          this flag can be used in any region. When updating a scaling group,
+          the regions passed replace its existing ones.
+          Can be passed multiple times.
       - name: task-queue-type
         type: string-enum[]
         description: |
