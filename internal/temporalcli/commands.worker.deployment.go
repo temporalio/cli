@@ -117,9 +117,6 @@ type formattedWorkerDeploymentVersionInfoType struct {
 	RoutingChangedTime   *time.Time                      `json:"routingChangedTime,omitempty"`
 	CurrentSinceTime     *time.Time                      `json:"currentSinceTime,omitempty"`
 	RampingSinceTime     *time.Time                      `json:"rampingSinceTime,omitempty"`
-	FirstActivationTime  *time.Time                      `json:"firstActivationTime,omitempty"`
-	LastCurrentTime      *time.Time                      `json:"lastCurrentTime,omitempty"`
-	LastDeactivationTime *time.Time                      `json:"lastDeactivationTime,omitempty"`
 	RampPercentage       float32                         `json:"rampPercentage"`
 	DrainageInfo         *formattedDrainageInfo          `json:"drainageInfo,omitempty"`
 	LastModifierIdentity string                          `json:"lastModifierIdentity,omitempty"`
@@ -568,9 +565,6 @@ func workerDeploymentVersionInfoProtoToRows(deploymentInfo *deploymentpb.WorkerD
 		RoutingChangedTime:   optionalTimestampToTimePtr(deploymentInfo.GetRoutingChangedTime()),
 		CurrentSinceTime:     optionalTimestampToTimePtr(deploymentInfo.GetCurrentSinceTime()),
 		RampingSinceTime:     optionalTimestampToTimePtr(deploymentInfo.GetRampingSinceTime()),
-		FirstActivationTime:  optionalTimestampToTimePtr(deploymentInfo.GetFirstActivationTime()),
-		LastCurrentTime:      optionalTimestampToTimePtr(deploymentInfo.GetLastCurrentTime()),
-		LastDeactivationTime: optionalTimestampToTimePtr(deploymentInfo.GetLastDeactivationTime()),
 		RampPercentage:       deploymentInfo.GetRampPercentage(),
 		DrainageInfo:         drainage,
 		LastModifierIdentity: deploymentInfo.GetLastModifierIdentity(),
@@ -647,9 +641,6 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 			RoutingChangedTime      *time.Time `cli:",cardOmitEmpty"`
 			CurrentSinceTime        *time.Time `cli:",cardOmitEmpty"`
 			RampingSinceTime        *time.Time `cli:",cardOmitEmpty"`
-			FirstActivationTime     *time.Time `cli:",cardOmitEmpty"`
-			LastCurrentTime         *time.Time `cli:",cardOmitEmpty"`
-			LastDeactivationTime    *time.Time `cli:",cardOmitEmpty"`
 			RampPercentage          float32
 			DrainageStatus          string                     `cli:",cardOmitEmpty"`
 			DrainageLastChangedTime *time.Time                 `cli:",cardOmitEmpty"`
@@ -665,9 +656,6 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 			RoutingChangedTime:      fDeploymentInfo.RoutingChangedTime,
 			CurrentSinceTime:        fDeploymentInfo.CurrentSinceTime,
 			RampingSinceTime:        fDeploymentInfo.RampingSinceTime,
-			FirstActivationTime:     fDeploymentInfo.FirstActivationTime,
-			LastCurrentTime:         fDeploymentInfo.LastCurrentTime,
-			LastDeactivationTime:    fDeploymentInfo.LastDeactivationTime,
 			RampPercentage:          fDeploymentInfo.RampPercentage,
 			DrainageStatus:          drainageStr,
 			DrainageLastChangedTime: drainageLastChangedTime,
