@@ -631,15 +631,11 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString(msg))
 		var drainageStr string
-		var drainageLastChangedTime time.Time
-		var drainageLastCheckedTime time.Time
-		if deploymentInfo.GetDrainageInfo() != nil {
-			drainageStr, err = drainageStatusProtoToStr(deploymentInfo.GetDrainageInfo().GetStatus())
-			if err != nil {
-				return err
-			}
-			drainageLastChangedTime = optionalTimestampToTime(deploymentInfo.GetDrainageInfo().GetLastChangedTime())
-			drainageLastCheckedTime = optionalTimestampToTime(deploymentInfo.GetDrainageInfo().GetLastCheckedTime())
+		var drainageLastChangedTime, drainageLastCheckedTime *time.Time
+		if drainage := fDeploymentInfo.DrainageInfo; drainage != nil {
+			drainageStr = drainage.DrainageStatus
+			drainageLastChangedTime = drainage.LastChangedTime
+			drainageLastCheckedTime = drainage.LastCheckedTime
 		}
 		computeConfigSummary := computeConfigSummaryStr(deploymentInfo.GetComputeConfig())
 
@@ -648,36 +644,36 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 			BuildID                 string
 			Status                  string
 			CreateTime              time.Time
-			RoutingChangedTime      time.Time `cli:",cardOmitEmpty"`
-			CurrentSinceTime        time.Time `cli:",cardOmitEmpty"`
-			RampingSinceTime        time.Time `cli:",cardOmitEmpty"`
-			FirstActivationTime     time.Time `cli:",cardOmitEmpty"`
-			LastCurrentTime         time.Time `cli:",cardOmitEmpty"`
-			LastDeactivationTime    time.Time `cli:",cardOmitEmpty"`
+			RoutingChangedTime      *time.Time `cli:",cardOmitEmpty"`
+			CurrentSinceTime        *time.Time `cli:",cardOmitEmpty"`
+			RampingSinceTime        *time.Time `cli:",cardOmitEmpty"`
+			FirstActivationTime     *time.Time `cli:",cardOmitEmpty"`
+			LastCurrentTime         *time.Time `cli:",cardOmitEmpty"`
+			LastDeactivationTime    *time.Time `cli:",cardOmitEmpty"`
 			RampPercentage          float32
 			DrainageStatus          string                     `cli:",cardOmitEmpty"`
-			DrainageLastChangedTime time.Time                  `cli:",cardOmitEmpty"`
-			DrainageLastCheckedTime time.Time                  `cli:",cardOmitEmpty"`
+			DrainageLastChangedTime *time.Time                 `cli:",cardOmitEmpty"`
+			DrainageLastCheckedTime *time.Time                 `cli:",cardOmitEmpty"`
 			LastModifierIdentity    string                     `cli:",cardOmitEmpty"`
 			Metadata                map[string]*common.Payload `cli:",cardOmitEmpty"`
 			ComputeConfigSummary    string                     `cli:",cardOmitEmpty"`
 		}{
-			DeploymentName:          deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
-			BuildID:                 deploymentInfo.GetDeploymentVersion().GetBuildId(),
+			DeploymentName:          fDeploymentInfo.DeploymentName,
+			BuildID:                 fDeploymentInfo.BuildID,
 			Status:                  fDeploymentInfo.Status,
-			CreateTime:              deploymentInfo.GetCreateTime().AsTime(),
-			RoutingChangedTime:      optionalTimestampToTime(deploymentInfo.GetRoutingChangedTime()),
-			CurrentSinceTime:        optionalTimestampToTime(deploymentInfo.GetCurrentSinceTime()),
-			RampingSinceTime:        optionalTimestampToTime(deploymentInfo.GetRampingSinceTime()),
-			FirstActivationTime:     optionalTimestampToTime(deploymentInfo.GetFirstActivationTime()),
-			LastCurrentTime:         optionalTimestampToTime(deploymentInfo.GetLastCurrentTime()),
-			LastDeactivationTime:    optionalTimestampToTime(deploymentInfo.GetLastDeactivationTime()),
-			RampPercentage:          deploymentInfo.GetRampPercentage(),
+			CreateTime:              fDeploymentInfo.CreateTime,
+			RoutingChangedTime:      fDeploymentInfo.RoutingChangedTime,
+			CurrentSinceTime:        fDeploymentInfo.CurrentSinceTime,
+			RampingSinceTime:        fDeploymentInfo.RampingSinceTime,
+			FirstActivationTime:     fDeploymentInfo.FirstActivationTime,
+			LastCurrentTime:         fDeploymentInfo.LastCurrentTime,
+			LastDeactivationTime:    fDeploymentInfo.LastDeactivationTime,
+			RampPercentage:          fDeploymentInfo.RampPercentage,
 			DrainageStatus:          drainageStr,
 			DrainageLastChangedTime: drainageLastChangedTime,
 			DrainageLastCheckedTime: drainageLastCheckedTime,
-			LastModifierIdentity:    deploymentInfo.GetLastModifierIdentity(),
-			Metadata:                deploymentInfo.GetMetadata().GetEntries(),
+			LastModifierIdentity:    fDeploymentInfo.LastModifierIdentity,
+			Metadata:                fDeploymentInfo.Metadata,
 			ComputeConfigSummary:    computeConfigSummary,
 		}
 		err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
