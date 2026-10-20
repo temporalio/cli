@@ -299,7 +299,6 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 	}
 
 	var taskQueueTypes []client.TaskQueueType
-	seenTaskQueueTypes := make(map[client.TaskQueueType]struct{})
 	for _, t := range c.TaskQueueType.Values {
 		var taskQueueType client.TaskQueueType
 		switch t {
@@ -312,10 +311,6 @@ func (c *TemporalTaskQueueDescribeCommand) run(cctx *CommandContext, args []stri
 		default:
 			return fmt.Errorf("unrecognized task queue type: %s", t)
 		}
-		if _, seen := seenTaskQueueTypes[taskQueueType]; seen {
-			continue
-		}
-		seenTaskQueueTypes[taskQueueType] = struct{}{}
 		taskQueueTypes = append(taskQueueTypes, taskQueueType)
 	}
 

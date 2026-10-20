@@ -68,7 +68,6 @@ func (s *SharedServerSuite) TestTaskQueue_Describe_PriorityStats() {
 		"--task-queue", taskQueue,
 		"--report-priority-stats",
 		"--task-queue-type", "workflow",
-		"--task-queue-type", "workflow",
 		"-o", "json",
 	)
 	s.NoError(res.Err)
