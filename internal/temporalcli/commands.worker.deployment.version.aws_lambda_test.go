@@ -166,7 +166,7 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_UpdateError() {
 	s.ErrorContains(res.Err, "error updating worker deployment version compute config: invalid compute config")
 }
 
-func (s *SharedServerSuite) TestComputeConfig_AwsLambda_TaskQueueTypes() {
+func (s *SharedServerSuite) TestComputeConfig_AwsLambda_TaskQueueTypesAndRegions() {
 	fake := s.newFakeComputeConfigServer()
 	fake.setComputeConfig(nil)
 
@@ -174,6 +174,7 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_TaskQueueTypes() {
 		"--scaling-group", "use1",
 		"--task-queue-type", "nexus",
 		"--task-queue-type", "workflow",
+		"--region-id", "aws-us-east-1",
 	)...)
 	s.NoError(res.Err)
 	s.Empty(res.Stderr.String())
@@ -181,6 +182,39 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_TaskQueueTypes() {
 	s.Len(updates, 1)
 	sg := updates[0].GetComputeConfigScalingGroups()["use1"].GetScalingGroup()
 	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_WORKFLOW, enumspb.TASK_QUEUE_TYPE_NEXUS}, sg.GetTaskQueueTypes())
+	s.Equal([]string{"aws-us-east-1"}, sg.GetRegionIds())
+}
+
+func (s *SharedServerSuite) TestComputeConfig_AwsLambda_RegionIDs() {
+	fake := s.newFakeComputeConfigServer()
+	fake.setComputeConfig(nil)
+	deploymentName := uuid.NewString()
+	regionArgs := lambdaComputeConfigArgs("update", s.Address(), deploymentName,
+		"--scaling-group", "aws-us-west-2",
+		"--region-id", "aws-us-west-2",
+		"--region-id", "aws-us-east-1",
+		"--region-id", "aws-us-west-2",
+	)
+
+	// Region IDs are de-duplicated and sorted, and the mask covers them.
+	res := s.Execute(regionArgs...)
+	s.NoError(res.Err)
+	s.Empty(res.Stderr.String())
+	updates := fake.takeUpdates()
+	s.Len(updates, 1)
+	update := updates[0].GetComputeConfigScalingGroups()["aws-us-west-2"]
+	s.Equal([]string{"aws-us-east-1", "aws-us-west-2"}, update.GetScalingGroup().GetRegionIds())
+	s.Equal([]string{"region_ids", "provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths())
+
+	// Leaving out --region-id keeps the region IDs.
+	res = s.Execute(lambdaComputeConfigArgs("update", s.Address(), deploymentName, "--scaling-group", "aws-us-west-2")...)
+	s.NoError(res.Err)
+	updates = fake.takeUpdates()
+	s.Len(updates, 1)
+	update = updates[0].GetComputeConfigScalingGroups()["aws-us-west-2"]
+	s.Empty(update.GetScalingGroup().GetRegionIds())
+	s.NotContains(update.GetUpdateMask().GetPaths(), "region_ids")
+	s.Equal([]string{"aws-us-east-1", "aws-us-west-2"}, fake.computeConfig.GetScalingGroups()["aws-us-west-2"].GetRegionIds())
 }
 
 func (s *SharedServerSuite) TestComputeConfig_AwsLambda_ScalerSettings() {
@@ -263,6 +297,16 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_PartialUpdate() {
 	s.Equal("no-sync", sg.GetScaler().GetType())
 	s.Equal(map[string]any{"scale_up_cooloff_ms": float64(500)}, s.decodePayloadMap(sg.GetScaler().GetDetails()))
 	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_ACTIVITY}, sg.GetTaskQueueTypes())
+	s.Equal([]string{"aws-us-west-2"}, sg.GetRegionIds())
+
+	// --region-id on its own changes only the region IDs.
+	res = s.Execute(args("--scaling-group", "aws-us-east-1-wf", "--region-id", "aws-us-west-2", "--region-id", "aws-us-east-1")...)
+	s.NoError(res.Err)
+	s.Equal([]string{"region_ids"}, onlyUpdate("aws-us-east-1-wf").GetUpdateMask().GetPaths())
+	sg = stored("aws-us-east-1-wf")
+	s.Equal([]string{"aws-us-east-1", "aws-us-west-2"}, sg.GetRegionIds())
+	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_WORKFLOW}, sg.GetTaskQueueTypes())
+	s.Equal("aws-lambda", sg.GetProvider().GetType())
 
 	// --task-queue-type on its own changes only the Task Queue types.
 	res = s.Execute(args("--scaling-group", "aws-us-east-1-wf", "--task-queue-type", "nexus")...)
@@ -270,6 +314,7 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_PartialUpdate() {
 	s.Equal([]string{"task_queue_types"}, onlyUpdate("aws-us-east-1-wf").GetUpdateMask().GetPaths())
 	sg = stored("aws-us-east-1-wf")
 	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_NEXUS}, sg.GetTaskQueueTypes())
+	s.Equal([]string{"aws-us-east-1", "aws-us-west-2"}, sg.GetRegionIds())
 	s.Equal("aws-lambda", sg.GetProvider().GetType())
 	s.Equal("no-sync", sg.GetScaler().GetType())
 
@@ -285,6 +330,7 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_PartialUpdate() {
 	s.Equal("no-sync", sg.GetScaler().GetType())
 	s.Nil(sg.GetScaler().GetDetails())
 	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_ACTIVITY}, sg.GetTaskQueueTypes())
+	s.Equal([]string{"aws-us-west-2"}, sg.GetRegionIds())
 
 	// The provider flags are passed together, and something must be passed.
 	for _, tc := range []struct {
@@ -364,6 +410,12 @@ func (s *SharedServerSuite) TestComputeConfig_Provider_Errors() {
 			args: append(append([]string{}, lambda...),
 				"--function-arn", "arn", "--skip-role-and-external-id", "--scaling-group", ""),
 			errText: "--scaling-group cannot be empty",
+		},
+		{
+			name: "empty region ID",
+			args: append(append([]string{}, lambda...),
+				"--function-arn", "arn", "--skip-role-and-external-id", "--region-id", ""),
+			errText: "--region-id cannot be empty",
 		},
 	} {
 		res := s.Execute(tc.args...)
