@@ -130,6 +130,7 @@ type formattedComputeConfig struct {
 }
 
 type formattedComputeConfigScalingGroup struct {
+	RegionId string                          `json:"regionId,omitempty"`
 	Provider *formattedComputeConfigProvider `json:"provider,omitempty"`
 	Scaler   *formattedComputeConfigScaler   `json:"scaler,omitempty"`
 }
@@ -518,7 +519,7 @@ func formatComputeConfigProto(cc *computepb.ComputeConfig) *formattedComputeConf
 		if p == nil && s == nil {
 			continue
 		}
-		sg := formattedComputeConfigScalingGroup{}
+		sg := formattedComputeConfigScalingGroup{RegionId: strings.Join(msgSG.GetRegionIds(), ", ")}
 		if p != nil {
 			sg.Provider = &formattedComputeConfigProvider{
 				Type: p.GetType(),

@@ -95,6 +95,8 @@ func (f *fakeComputeConfigServer) update(key string, update *computepb.ComputeCo
 	src := update.GetScalingGroup()
 	for _, path := range update.GetUpdateMask().GetPaths() {
 		switch path {
+		case "region_ids":
+			merged.RegionIds = src.GetRegionIds()
 		case "provider.type", "provider.details":
 			if merged.Provider == nil {
 				merged.Provider = &computepb.ComputeProvider{}
@@ -212,11 +214,13 @@ func twoScalingGroupComputeConfig() *computepb.ComputeConfig {
 		ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
 			"aws-us-west-2-ac": {
 				TaskQueueTypes: []enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_ACTIVITY},
+				RegionIds:      []string{"aws-us-west-2"},
 				Provider:       &computepb.ComputeProvider{Type: "aws-lambda"},
 				Scaler:         &computepb.ComputeScaler{Type: "no-sync", Details: scalerDetails},
 			},
 			"aws-us-east-1-wf": {
 				TaskQueueTypes: []enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_WORKFLOW},
+				RegionIds:      []string{"aws-us-east-1"},
 				Provider:       &computepb.ComputeProvider{Type: "aws-lambda"},
 				Scaler:         &computepb.ComputeScaler{Type: "no-sync"},
 			},
@@ -254,10 +258,12 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	// Like describe-version, the Task Queue types are not shown.
 	s.NotContains(groups, "TaskQueueTypes")
 	s.ContainsOnSameLine(cards[0], "ScalingGroup", "aws-us-east-1-wf")
+	s.ContainsOnSameLine(cards[0], "RegionId", "aws-us-east-1")
 	s.ContainsOnSameLine(cards[0], "Provider", "aws-lambda")
 	s.ContainsOnSameLine(cards[0], "Scaler", "no-sync")
 	s.NotContains(cards[0], "(")
 	s.ContainsOnSameLine(cards[1], "ScalingGroup", "aws-us-west-2-ac")
+	s.ContainsOnSameLine(cards[1], "RegionId", "aws-us-west-2")
 	s.ContainsOnSameLine(cards[1], "Scaler",
 		"no-sync (scale_up_backlog_threshold 2, max_worker_lifetime_ms 300000, scale_up_dispatch_rate_epsilon 0.05)")
 
@@ -265,6 +271,7 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	s.NoError(res.Err)
 	var described struct {
 		ScalingGroups map[string]struct {
+			RegionId string `json:"regionId"`
 			Provider struct {
 				Type string `json:"type"`
 			} `json:"provider"`
@@ -281,9 +288,11 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &described))
 	s.Len(described.ScalingGroups, 2)
 	wf := described.ScalingGroups["aws-us-east-1-wf"]
+	s.Equal("aws-us-east-1", wf.RegionId)
 	s.Equal("aws-lambda", wf.Provider.Type)
 	s.Equal("no-sync", wf.Scaler.Type)
 	ac := described.ScalingGroups["aws-us-west-2-ac"]
+	s.Equal("aws-us-west-2", ac.RegionId)
 	s.Equal("aws-lambda", ac.Provider.Type)
 	s.Equal("no-sync", ac.Scaler.Type)
 	// The no-sync settings that are set are shown; the others are left out.
@@ -487,6 +496,37 @@ func (s *SharedServerSuite) TestVersion_Describe_MatchesDescribeVersion() {
 		}
 	}
 	s.Empty(fake.takeUpdates())
+}
+
+func (s *SharedServerSuite) TestVersion_Describe_Regions() {
+	fake := s.newFakeComputeConfigServer()
+	cc := twoScalingGroupComputeConfig()
+	cc.ScalingGroups["default"] = &computepb.ComputeConfigScalingGroup{
+		Provider: &computepb.ComputeProvider{Type: "aws-lambda"},
+		Scaler:   &computepb.ComputeScaler{Type: "no-sync"},
+	}
+	fake.setComputeConfig(cc)
+	args := []string{"worker", "deployment", "version", "describe", "--address", s.Address(), "--deployment-name", "d", "--build-id", "b"}
+
+	// The text summary is unchanged: one entry per provider.
+	res := s.Execute(args...)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "ComputeConfigSummary", "aws-lambda")
+	s.NotContains(res.Stdout.String(), "aws-us-east-1")
+
+	// Scaling groups with a region show it; the one without a region does not.
+	res = s.Execute(append(args, "-o", "json")...)
+	s.NoError(res.Err)
+	var described struct {
+		ComputeConfig struct {
+			ScalingGroups map[string]map[string]any `json:"scalingGroups"`
+		} `json:"computeConfig"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &described))
+	groups := described.ComputeConfig.ScalingGroups
+	s.Equal("aws-us-east-1", groups["aws-us-east-1-wf"]["regionId"])
+	s.Equal("aws-us-west-2", groups["aws-us-west-2-ac"]["regionId"])
+	s.NotContains(groups["default"], "regionId")
 }
 
 // TestVersion_CreateDescribeDelete runs against the real server, with a Version
