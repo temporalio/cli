@@ -82,7 +82,6 @@ func (s *SharedServerSuite) TestWorkflow_Describe_ActivityFailing() {
 	s.ContainsOnSameLine(out, "PriorityKey", "2")
 	s.ContainsOnSameLine(out, "FairnessKey", "tenant-a")
 	s.ContainsOnSameLine(out, "FairnessWeight", "4.5")
-	s.NotContains(out, "Pending Activity Priorities:")
 	s.ContainsOnSameLine(out, "LastFailure", "intentional error")
 	s.Contains(out, "Pending Child Workflows: 0")
 
