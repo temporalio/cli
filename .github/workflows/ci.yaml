@@ -124,8 +124,11 @@ jobs:
           printf '%s\n' "$TEMPORAL_TLS_KEY_CONTENT" >> client.key
           go run ./cmd/temporal workflow list --limit 2
 
+      # Disabled: since the cloud api key update on 2026-10-09, these steps fail
+      # against sdk-ci namespace with "Request unauthorized" error.
+      # Remove "&& false" to re-enable here and in the next.
       - name: Test cloud API key env var
-        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
+        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' && false }}
         env:
           TEMPORAL_ADDRESS: ca-central-1.aws.api.temporal.io:7233
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
@@ -134,7 +137,7 @@ jobs:
         run: go run ./cmd/temporal workflow list --limit 2
 
       - name: Test cloud API key arg
-        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
+        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' && false }}
         env:
           TEMPORAL_ADDRESS: ca-central-1.aws.api.temporal.io:7233
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
