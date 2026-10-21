@@ -411,6 +411,16 @@ func (s *SharedServerSuite) TestTaskQueue_Config_FairnessWeightOverrides() {
 	s.Equal(float32(2.0), config.FairnessWeightOverrides["HighPriority"])
 	s.Equal(float32(0.5), config.FairnessWeightOverrides["LowPriority"])
 
+	res = s.Execute(
+		"task-queue", "config", "get",
+		"--address", s.Address(),
+		"--task-queue", taskQueue,
+		"--task-queue-type", "activity",
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Fairness Key Weight: HighPriority", "2")
+	s.ContainsOnSameLine(res.Stdout.String(), "Fairness Key Weight: LowPriority", "0.5")
+
 	// Unset one weight using default
 	res = s.Execute(
 		"task-queue", "config", "set",
