@@ -1269,6 +1269,19 @@ commands:
           --aws-agentcore-assume-role-external-id AgentcoreAssumeRoleExternalID
       ```
 
+      Or pass a deployed Modal application and function that spawns a Worker in
+      the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --modal-app-name YourModalApp \
+          --modal-function-name YourModalFunction \
+          --modal-environment main
+      ```
+
       Or pass compute provider information for a GCP Cloud Run worker pool
       that spawns a Worker in the Worker Deployment:
 
@@ -1354,6 +1367,33 @@ commands:
           When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
           and --aws-agentcore-assume-role-external-id are required unless this
           flag is passed, in which case both must be omitted.
+      - name: modal-app-name
+        type: string
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function. Required when configuring a Modal compute provider.
+      - name: modal-function-name
+        type: string
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for task queue targets in the Worker Deployment. Required when
+          configuring a Modal compute provider.
+      - name: modal-environment
+        type: string
+        description: |
+          Modal environment containing the deployed application. Required when
+          configuring a Modal compute provider.
+      - name: modal-workspace-id
+        type: string
+        description: |
+          Optional Modal workspace ID used to select the workspace's credential
+          grant. Omit when the server uses ambient Modal credentials.
+      - name: modal-version
+        type: string
+        description: |
+          Optional deployed Modal application version, expressed as a
+          non-negative integer. Omit to use the application's current deployed
+          version.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1664,6 +1704,17 @@ commands:
           --aws-agentcore-assume-role-external-id UpdatedExternalID
       ```
 
+      To update the Modal application and function associated with an existing
+      Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --modal-app-name UpdatedModalApp \
+          --modal-function-name UpdatedModalFunction \
+          --modal-environment main
+      ```
+
       To update the GCP Cloud Run worker pool associated with an existing
       Worker Deployment Version:
 
@@ -1771,6 +1822,33 @@ commands:
           When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
           and --aws-agentcore-assume-role-external-id are required unless this
           flag is passed, in which case both must be omitted.
+      - name: modal-app-name
+        type: string
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function. Required when configuring a Modal compute provider.
+      - name: modal-function-name
+        type: string
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for task queue targets in the Worker Deployment. Required when
+          configuring a Modal compute provider.
+      - name: modal-environment
+        type: string
+        description: |
+          Modal environment containing the deployed application. Required when
+          configuring a Modal compute provider.
+      - name: modal-workspace-id
+        type: string
+        description: |
+          Optional Modal workspace ID used to select the workspace's credential
+          grant. Omit when the server uses ambient Modal credentials.
+      - name: modal-version
+        type: string
+        description: |
+          Optional deployed Modal application version, expressed as a
+          non-negative integer. Omit to use the application's current deployed
+          version.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1990,6 +2068,18 @@ commands:
           --assume-role-external-id YourExternalID
       ```
 
+      Create a Worker Deployment Version with compute configuration for a
+      Modal function that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config modal create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name YourModalApp \
+          --function-name YourModalFunction \
+          --environment YourModalEnvironment
+      ```
+
       Remove a scaling group from the compute configuration of a Version:
 
       ```
@@ -2206,6 +2296,168 @@ commands:
           function ARN to invoke when there are no active pollers for task
           queue targets in the Worker Deployment. Required when changing the
           compute provider.
+
+  - name: temporal worker deployment version compute-config modal
+    summary: Create or update Modal compute configuration (Experimental)
+    description: |
+      Modal commands set the compute configuration of a Worker Deployment
+      Version for a Modal function that spawns a Worker in the Worker
+      Deployment:
+
+      ```
+      temporal worker deployment version compute-config modal [command]
+      ```
+
+      Create a Worker Deployment Version with Modal compute configuration:
+
+      ```
+      temporal worker deployment version compute-config modal create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name YourModalApp \
+          --function-name YourModalFunction \
+          --environment YourModalEnvironment
+      ```
+
+      Update the Modal compute configuration of an existing Worker Deployment
+      Version:
+
+      ```
+      temporal worker deployment version compute-config modal update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name UpdatedModalApp \
+          --function-name UpdatedModalFunction \
+          --environment UpdatedModalEnvironment
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal worker deployment version compute-config modal create
+    summary: Create a Version with Modal compute configuration (Experimental)
+    description: |
+      Create a new Worker Deployment Version with compute configuration for a
+      Modal function that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config modal create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name YourModalApp \
+          --function-name YourModalFunction \
+          --environment YourModalEnvironment
+      ```
+
+      To select a specific Modal workspace or deployed application version,
+      pass --workspace-id or --version. To tune when Workers are started, pass
+      any of the scaling flags. Each scaling flag that is not set keeps the
+      server default.
+
+      The Worker Deployment must already exist; create it with
+      `temporal worker deployment create`.
+
+      If a Worker Deployment Version with the supplied BuildID already exists,
+      this command will return an error. To update its compute configuration,
+      use `temporal worker deployment version compute-config modal update`.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - no-sync-scaler
+    options:
+      - name: app-name
+        type: string
+        required: true
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function.
+      - name: function-name
+        type: string
+        required: true
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for Task Queue targets in the Worker Deployment.
+      - name: environment
+        type: string
+        required: true
+        description: Modal environment containing the deployed application.
+      - name: workspace-id
+        type: string
+        description: |
+          Optional Modal workspace ID used to select the workspace's credential
+          grant. Omit when the server uses ambient Modal credentials.
+      - name: version
+        type: string
+        description: |
+          Optional deployed Modal application version, expressed as a
+          non-negative integer.
+
+  - name: temporal worker deployment version compute-config modal update
+    summary: Update Modal compute configuration for a Version (Experimental)
+    description: |
+      Update a scaling group in the compute configuration of a Worker
+      Deployment Version for a Modal function that spawns a Worker in the
+      Worker Deployment. Only the settings that are passed change, and the
+      other scaling groups are not affected.
+
+      To update the Modal application and function associated with an existing
+      Worker Deployment Version:
+
+      ```
+      temporal worker deployment version compute-config modal update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name UpdatedModalApp \
+          --function-name UpdatedModalFunction \
+          --environment UpdatedModalEnvironment
+      ```
+
+      To update only the scaling settings or Task Queue types, pass those flags
+      without provider fields. Provider fields require --app-name,
+      --function-name, and --environment together. Changing the provider resets
+      the scaling settings to the scaling flags passed with it. Optional
+      --workspace-id and --version values are omitted from the provider when
+      empty.
+
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error. To create it, use
+      `temporal worker deployment version compute-config modal create`.
+
+      Returns an error if all compute configuration fields are empty.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - no-sync-scaler
+    options:
+      - name: app-name
+        type: string
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function. Required when changing the compute provider.
+      - name: function-name
+        type: string
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for Task Queue targets in the Worker Deployment. Required when
+          changing the compute provider.
+      - name: environment
+        type: string
+        description: |
+          Modal environment containing the deployed application. Required when
+          changing the compute provider.
+      - name: workspace-id
+        type: string
+        description: |
+          Optional Modal workspace ID used to select the workspace's credential
+          grant. Omit when the server uses ambient Modal credentials.
+      - name: version
+        type: string
+        description: |
+          Optional deployed Modal application version, expressed as a
+          non-negative integer.
 
   - name: temporal worker deployment version compute-config remove
     summary: Remove compute configuration from a Version (Experimental)
