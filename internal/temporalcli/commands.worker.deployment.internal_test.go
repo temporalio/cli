@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/internal/printer"
+	commonpb "go.temporal.io/api/common/v1"
 	computepb "go.temporal.io/api/compute/v1"
 	deploymentpb "go.temporal.io/api/deployment/v1"
 	enumspb "go.temporal.io/api/enums/v1"
@@ -24,6 +25,7 @@ func TestScalerTypeForProvider(t *testing.T) {
 	}{
 		{"aws-lambda is invoke-based -> no-sync", "aws-lambda", "no-sync", false},
 		{"aws-agentcore is invoke-based -> no-sync", "aws-agentcore", "no-sync", false},
+		{"modal is invoke-based -> no-sync", "modal", "no-sync", false},
 		{"gcp-cloud-run is worker-set-based -> rate-based", "gcp-cloud-run", "rate-based", false},
 		{"unknown provider errors", "azure-container-apps", "", true},
 		{"empty provider errors", "", "", true},
@@ -45,10 +47,65 @@ func TestScalerTypeForProvider(t *testing.T) {
 // scaler mapping; a missing entry makes scalerTypeForProvider error before the
 // request is sent, so this guards against forgetting to map a newly-added provider.
 func TestScalerTypeByProviderCoversAllProviders(t *testing.T) {
-	for _, providerType := range []string{"aws-lambda", "aws-agentcore", "gcp-cloud-run"} {
+	for _, providerType := range []string{"aws-lambda", "aws-agentcore", "gcp-cloud-run", "modal"} {
 		_, ok := scalerTypeByProvider[providerType]
 		require.Truef(t, ok, "provider %q has no scaler mapping", providerType)
 	}
+}
+
+func TestModalProviderDetailsPayload(t *testing.T) {
+	decode := func(t *testing.T, payload *commonpb.Payload) map[string]any {
+		t.Helper()
+		var details map[string]any
+		require.NoError(t, converter.GetDefaultDataConverter().FromPayload(payload, &details))
+		return details
+	}
+
+	p, err := modalProviderDetailsPayload("payments", "worker", "main", "", "")
+	require.NoError(t, err)
+	details := decode(t, p)
+	require.Equal(t, "payments", details["app_name"])
+	require.Equal(t, "worker", details["function_name"])
+	require.Equal(t, "main", details["environment"])
+	require.NotContains(t, details, "workspace_id")
+	require.NotContains(t, details, "version")
+
+	p, err = modalProviderDetailsPayload("payments", "worker", "staging", "ws-123", "42")
+	require.NoError(t, err)
+	details = decode(t, p)
+	require.Equal(t, "staging", details["environment"])
+	require.Equal(t, "ws-123", details["workspace_id"])
+	require.Equal(t, "42", details["version"])
+
+	_, err = modalProviderDetailsPayload("", "worker", "main", "", "")
+	require.ErrorContains(t, err, "missing required Modal provider detail: app_name")
+	_, err = modalProviderDetailsPayload("payments", "", "main", "", "")
+	require.ErrorContains(t, err, "missing required Modal provider detail: function_name")
+	_, err = modalProviderDetailsPayload("payments", "worker", "", "", "")
+	require.ErrorContains(t, err, "missing required Modal provider detail: environment")
+	_, err = modalProviderDetailsPayload("payments", "worker", "main", "", "-1")
+	require.ErrorContains(t, err, "must be a non-negative integer string")
+	_, err = modalProviderDetailsPayload("payments", "worker", "main", "", "latest")
+	require.ErrorContains(t, err, "must be a non-negative integer string")
+}
+
+func TestComputeProviderConfig_Modal(t *testing.T) {
+	providerType, payload, err := computeProviderConfig(&ComputeConfigArgs{
+		modalAppName:      "payments",
+		modalFunctionName: "worker",
+		modalEnvironment:  "main",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "modal", providerType)
+	require.NotNil(t, payload)
+
+	_, _, err = computeProviderConfig(&ComputeConfigArgs{
+		awsLambdaFunctionArn: "arn:aws:lambda:us-east-1:123:function:worker",
+		modalAppName:         "payments",
+		modalFunctionName:    "worker",
+		modalEnvironment:     "main",
+	})
+	require.ErrorContains(t, err, "cannot combine")
 }
 
 func TestGCPCloudRunScalerDetails(t *testing.T) {
