@@ -241,7 +241,7 @@ func (s *SharedServerSuite) SetupSuite() {
 				"frontend.namespaceRPS.visibility": 10000,
 				// Disable DescribeTaskQueue cache.
 				"frontend.activityAPIsEnabled": true,
-				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
+				// Required by TestWorkflow_Show_SystemNexusOperationWithCodec
 				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
 				// the __temporal_system endpoint from inside a workflow.
 				"history.enableSignalWithStartFromWorkflow":        true,
