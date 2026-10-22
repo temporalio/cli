@@ -1863,22 +1863,6 @@ commands:
       temporal worker deployment version [command] [options]
       ```
 
-      Create a Version:
-
-      ```
-      temporal worker deployment version create \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID
-      ```
-
-      Describe a Version:
-
-      ```
-      temporal worker deployment version describe \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID
-      ```
-
       Note: This is an experimental feature and may change in the future.
 
   - name: temporal worker deployment version create
@@ -1972,39 +1956,11 @@ commands:
       A Worker Deployment Version's compute configuration is made of one or
       more scaling groups. Each scaling group is identified by a key, uses a
       single compute provider, and may be limited to specific Task Queue
-      types:
+      types. Each compute provider has its own command, such as
+      `aws-lambda`, to create and update scaling groups:
 
       ```
       temporal worker deployment version compute-config [command] [options]
-      ```
-
-      Create a Worker Deployment Version with compute configuration for an
-      AWS Lambda function that spawns a Worker in the Worker Deployment:
-
-      ```
-      temporal worker deployment version compute-config aws-lambda create \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID \
-          --function-arn YourLambdaFunctionARN \
-          --assume-role-arn YourAssumeRoleARN \
-          --assume-role-external-id YourExternalID
-      ```
-
-      Remove a scaling group from the compute configuration of a Version:
-
-      ```
-      temporal worker deployment version compute-config remove \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID \
-          --scaling-group YourScalingGroup
-      ```
-
-      Show the scaling groups in the compute configuration of a Version:
-
-      ```
-      temporal worker deployment version compute-config describe \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID
       ```
 
       Note: This is an experimental feature and may change in the future.
@@ -2037,31 +1993,7 @@ commands:
       Deployment:
 
       ```
-      temporal worker deployment version compute-config aws-lambda [command]
-      ```
-
-      Create a Worker Deployment Version with AWS Lambda compute
-      configuration:
-
-      ```
-      temporal worker deployment version compute-config aws-lambda create \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID \
-          --function-arn YourLambdaFunctionARN \
-          --assume-role-arn YourAssumeRoleARN \
-          --assume-role-external-id YourExternalID
-      ```
-
-      Update the AWS Lambda compute configuration of an existing Worker
-      Deployment Version:
-
-      ```
-      temporal worker deployment version compute-config aws-lambda update \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID \
-          --function-arn YourLambdaFunctionARN \
-          --assume-role-arn YourAssumeRoleARN \
-          --assume-role-external-id YourExternalID
+      temporal worker deployment version compute-config aws-lambda [command] [options]
       ```
 
       Note: This is an experimental feature and may change in the future.
@@ -2081,8 +2013,10 @@ commands:
           --assume-role-external-id YourExternalID
       ```
 
-      To tune when Workers are started, pass any of the scaling flags. Each
-      one that is not set keeps the server default:
+      To tune when Workers are started, pass any of the scaling flags (the
+      --scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and
+      --metrics-poll-interval-ms). Each one that is not set keeps the
+      server default:
 
       ```
       temporal worker deployment version compute-config aws-lambda create \
@@ -2123,8 +2057,8 @@ commands:
     description: |
       Update a scaling group in the compute configuration of a Worker
       Deployment Version, for an AWS Lambda function that spawns a Worker in
-      the Worker Deployment. Only the settings that are passed change, and
-      the other scaling groups are not affected.
+      the Worker Deployment. Only the scaling group named by --scaling-group
+      ("default" when unset) changes; other scaling groups are not affected.
 
       To update the AWS Lambda function and the AWS IAM role associated with
       an existing Worker Deployment Version:
@@ -2138,9 +2072,10 @@ commands:
           --assume-role-external-id YourExternalID
       ```
 
-      To update only the scaling settings of an existing Worker Deployment
-      Version, supply the scaling flags without the provider fields. Scaling
-      flags that are not passed go back to the server default:
+      To update only the scaling settings of an existing scaling group,
+      supply the scaling flags without the provider fields. The scaling
+      settings are replaced as a whole, so scaling flags that are not passed
+      go back to their defaults:
 
       ```
       temporal worker deployment version compute-config aws-lambda update \
@@ -2164,12 +2099,17 @@ commands:
           --task-queue-type activity
       ```
 
-      To make a scaling group serve every Task Queue type again, remove it
-      and set it again without --task-queue-type.
-
-      Provider fields are only required when changing the compute provider,
-      and must be passed together. Changing the provider resets the scaling
-      settings to the scaling flags passed with it.
+      The provider fields are --function-arn, --assume-role-arn,
+      --assume-role-external-id, and --skip-role-and-external-id. The
+      scaling flags are the --scale-up-* and --suppress-* flags,
+      --max-worker-lifetime-ms, and --metrics-poll-interval-ms. The
+      provider fields are only needed when changing the compute provider,
+      and then must be passed together: --function-arn with either both
+      role flags or --skip-role-and-external-id. Changing the provider
+      also resets the scaling settings: scaling flags passed with it are
+      applied, and the rest, or all of them if none are passed, go back to
+      their defaults. --task-queue-type can be passed with any of these,
+      and the types passed replace the existing ones.
 
       If a Worker Deployment Version with the supplied BuildID does not exist,
       this command will return an error. To create it, use
@@ -5883,9 +5823,9 @@ option-sets:
         description: |
           At each Task Queue metrics check (see --metrics-poll-interval-ms),
           start a new Worker if the backlog is larger than this number of
-          tasks. A task that arrives while no Worker is waiting for it still
-          starts a Worker, subject to --scale-up-cooloff-ms. Defaults to 0 when
-          unset.
+          tasks. Defaults to 0 when unset. A task that arrives while no Worker
+          is waiting for it still starts a Worker, subject to
+          --scale-up-cooloff-ms.
       - name: scale-up-cooloff-ms
         type: int
         description: |
