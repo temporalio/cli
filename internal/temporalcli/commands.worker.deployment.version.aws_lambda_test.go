@@ -25,9 +25,6 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_Update() {
 	deploymentName := uuid.NewString()
 	lambdaArgs := lambdaComputeConfigArgs("update", s.Address(), deploymentName,
 		"--scaling-group", "aws-us-east-1-wf",
-		"--task-queue-type", "activity",
-		"--task-queue-type", "workflow",
-		"--task-queue-type", "activity",
 	)
 
 	// The Version exists but the scaling group does not, so it is created.
@@ -45,10 +42,10 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_Update() {
 	s.Len(req.GetComputeConfigScalingGroups(), 1)
 	update := req.GetComputeConfigScalingGroups()["aws-us-east-1-wf"]
 	s.NotNil(update)
-	s.Equal([]string{"task_queue_types", "provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths())
+	s.Equal([]string{"provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths())
 	sg := update.GetScalingGroup()
-	// De-duplicated and sorted.
-	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_WORKFLOW, enumspb.TASK_QUEUE_TYPE_ACTIVITY}, sg.GetTaskQueueTypes())
+	// Scaling groups set from the CLI serve every Task Queue type.
+	s.Empty(sg.GetTaskQueueTypes())
 	s.Equal("aws-lambda", sg.GetProvider().GetType())
 	s.Equal(map[string]any{
 		"arn":              "arn:aws:lambda:us-east-1:123:function:payments-worker:17",
@@ -72,7 +69,7 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_Update() {
 	updates = fake.takeUpdates()
 	s.Len(updates, 1)
 	update = updates[0].GetComputeConfigScalingGroups()["aws-us-east-1-wf"]
-	s.Equal([]string{"task_queue_types", "provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths())
+	s.Equal([]string{"provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths())
 	s.Equal(
 		"arn:aws:lambda:us-east-1:123:function:payments-worker:18",
 		s.decodePayloadMap(update.GetScalingGroup().GetProvider().GetDetails())["arn"],
@@ -166,23 +163,6 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_UpdateError() {
 	s.ErrorContains(res.Err, "error updating worker deployment version compute config: invalid compute config")
 }
 
-func (s *SharedServerSuite) TestComputeConfig_AwsLambda_TaskQueueTypes() {
-	fake := s.newFakeComputeConfigServer()
-	fake.setComputeConfig(nil)
-
-	res := s.Execute(lambdaComputeConfigArgs("update", s.Address(), uuid.NewString(),
-		"--scaling-group", "use1",
-		"--task-queue-type", "nexus",
-		"--task-queue-type", "workflow",
-	)...)
-	s.NoError(res.Err)
-	s.Empty(res.Stderr.String())
-	updates := fake.takeUpdates()
-	s.Len(updates, 1)
-	sg := updates[0].GetComputeConfigScalingGroups()["use1"].GetScalingGroup()
-	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_WORKFLOW, enumspb.TASK_QUEUE_TYPE_NEXUS}, sg.GetTaskQueueTypes())
-}
-
 func (s *SharedServerSuite) TestComputeConfig_AwsLambda_ScalerSettings() {
 	fake := s.newFakeComputeConfigServer()
 	fake.versionMissing = true
@@ -263,15 +243,6 @@ func (s *SharedServerSuite) TestComputeConfig_AwsLambda_PartialUpdate() {
 	s.Equal("no-sync", sg.GetScaler().GetType())
 	s.Equal(map[string]any{"scale_up_cooloff_ms": float64(500)}, s.decodePayloadMap(sg.GetScaler().GetDetails()))
 	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_ACTIVITY}, sg.GetTaskQueueTypes())
-
-	// --task-queue-type on its own changes only the Task Queue types.
-	res = s.Execute(args("--scaling-group", "aws-us-east-1-wf", "--task-queue-type", "nexus")...)
-	s.NoError(res.Err)
-	s.Equal([]string{"task_queue_types"}, onlyUpdate("aws-us-east-1-wf").GetUpdateMask().GetPaths())
-	sg = stored("aws-us-east-1-wf")
-	s.Equal([]enumspb.TaskQueueType{enumspb.TASK_QUEUE_TYPE_NEXUS}, sg.GetTaskQueueTypes())
-	s.Equal("aws-lambda", sg.GetProvider().GetType())
-	s.Equal("no-sync", sg.GetScaler().GetType())
 
 	// The provider flags replace the provider and reset the scaling settings to
 	// the scaling flags passed with them, which here are none.

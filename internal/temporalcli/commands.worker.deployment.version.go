@@ -14,7 +14,6 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	computepb "go.temporal.io/api/compute/v1"
 	deploymentpb "go.temporal.io/api/deployment/v1"
-	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
@@ -111,19 +110,15 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigDescribeCommand) run(cctx *
 	}
 
 	type scalingGroupCard struct {
-		ScalingGroup   string
-		TaskQueueTypes string `cli:",cardOmitEmpty"`
-		Provider       string `cli:",cardOmitEmpty"`
-		Scaler         string `cli:",cardOmitEmpty"`
+		ScalingGroup string
+		Provider     string `cli:",cardOmitEmpty"`
+		Scaler       string `cli:",cardOmitEmpty"`
 	}
 	keys := slices.Sorted(maps.Keys(described.ScalingGroups))
 	cards := make([]scalingGroupCard, 0, len(keys))
 	for _, key := range keys {
 		sg := described.ScalingGroups[key]
-		card := scalingGroupCard{
-			ScalingGroup:   key,
-			TaskQueueTypes: strings.Join(sg.TaskQueueTypes, ", "),
-		}
+		card := scalingGroupCard{ScalingGroup: key}
 		if sg.Provider != nil {
 			card.Provider = sg.Provider.Type
 		}
@@ -217,30 +212,13 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigRemoveCommand) run(cctx *Co
 }
 
 // scalingGroup builds the provider-independent part of a scaling group from
-// the --scaling-group and --task-queue-type flags.
+// the --scaling-group flag. Scaling groups set from the CLI serve every Task
+// Queue type.
 func (o *ScalingGroupOptions) scalingGroup() (*computepb.ComputeConfigScalingGroup, error) {
 	if o.ScalingGroup == "" {
 		return nil, fmt.Errorf("--scaling-group cannot be empty")
 	}
-	sg := &computepb.ComputeConfigScalingGroup{}
-	for _, t := range o.TaskQueueType.Values {
-		var tqType enumspb.TaskQueueType
-		switch t {
-		case "workflow":
-			tqType = enumspb.TASK_QUEUE_TYPE_WORKFLOW
-		case "activity":
-			tqType = enumspb.TASK_QUEUE_TYPE_ACTIVITY
-		case "nexus":
-			tqType = enumspb.TASK_QUEUE_TYPE_NEXUS
-		default:
-			return nil, fmt.Errorf("invalid --task-queue-type %q", t)
-		}
-		if !slices.Contains(sg.TaskQueueTypes, tqType) {
-			sg.TaskQueueTypes = append(sg.TaskQueueTypes, tqType)
-		}
-	}
-	slices.Sort(sg.TaskQueueTypes)
-	return sg, nil
+	return &computepb.ComputeConfigScalingGroup{}, nil
 }
 
 // update builds the provider-independent part of a scaling group update: the
@@ -250,13 +228,7 @@ func (o *ScalingGroupOptions) update() (*computepb.ComputeConfigScalingGroup, []
 	if err != nil {
 		return nil, nil, err
 	}
-	var paths []string
-	if o.FlagSet.Changed("task-queue-type") {
-		paths = append(paths, "task_queue_types")
-	} else {
-		sg.TaskQueueTypes = nil
-	}
-	return sg, paths, nil
+	return sg, nil, nil
 }
 
 // createVersionWithScalingGroup creates a Worker Deployment Version with one
@@ -442,9 +414,8 @@ type formattedComputeConfigDescription struct {
 }
 
 type formattedScalingGroupDescription struct {
-	TaskQueueTypes []string                        `json:"taskQueueTypes,omitempty"`
-	Provider       *formattedComputeConfigProvider `json:"provider,omitempty"`
-	Scaler         *formattedScalerDescription     `json:"scaler,omitempty"`
+	Provider *formattedComputeConfigProvider `json:"provider,omitempty"`
+	Scaler   *formattedScalerDescription     `json:"scaler,omitempty"`
 }
 
 type formattedScalerDescription struct {
@@ -463,13 +434,6 @@ func formatComputeConfigDescription(cc *computepb.ComputeConfig) formattedComput
 	out := formattedComputeConfigDescription{ScalingGroups: map[string]formattedScalingGroupDescription{}}
 	for name, msgSG := range cc.GetScalingGroups() {
 		var sg formattedScalingGroupDescription
-		for _, t := range msgSG.GetTaskQueueTypes() {
-			str, err := taskQueueTypeProtoToStr(t)
-			if err != nil {
-				str = fmt.Sprintf("%d", t)
-			}
-			sg.TaskQueueTypes = append(sg.TaskQueueTypes, str)
-		}
 		if p := msgSG.GetProvider(); p != nil {
 			sg.Provider = &formattedComputeConfigProvider{Type: p.GetType()}
 		}

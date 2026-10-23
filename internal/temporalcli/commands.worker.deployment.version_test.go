@@ -95,8 +95,6 @@ func (f *fakeComputeConfigServer) update(key string, update *computepb.ComputeCo
 	src := update.GetScalingGroup()
 	for _, path := range update.GetUpdateMask().GetPaths() {
 		switch path {
-		case "task_queue_types":
-			merged.TaskQueueTypes = src.GetTaskQueueTypes()
 		case "provider.type", "provider.details":
 			if merged.Provider == nil {
 				merged.Provider = &computepb.ComputeProvider{}
@@ -253,13 +251,13 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	s.True(found)
 	cards := strings.Split(strings.TrimSpace(groups), "\n\n")
 	s.Len(cards, 2)
+	// Like describe-version, the Task Queue types are not shown.
+	s.NotContains(groups, "TaskQueueTypes")
 	s.ContainsOnSameLine(cards[0], "ScalingGroup", "aws-us-east-1-wf")
-	s.ContainsOnSameLine(cards[0], "TaskQueueTypes", "workflow")
 	s.ContainsOnSameLine(cards[0], "Provider", "aws-lambda")
 	s.ContainsOnSameLine(cards[0], "Scaler", "no-sync")
 	s.NotContains(cards[0], "(")
 	s.ContainsOnSameLine(cards[1], "ScalingGroup", "aws-us-west-2-ac")
-	s.ContainsOnSameLine(cards[1], "TaskQueueTypes", "activity")
 	s.ContainsOnSameLine(cards[1], "Scaler",
 		"no-sync (scale_up_backlog_threshold 2, max_worker_lifetime_ms 300000, scale_up_dispatch_rate_epsilon 0.05)")
 
@@ -267,8 +265,7 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	s.NoError(res.Err)
 	var described struct {
 		ScalingGroups map[string]struct {
-			TaskQueueTypes []string `json:"taskQueueTypes"`
-			Provider       struct {
+			Provider struct {
 				Type string `json:"type"`
 			} `json:"provider"`
 			Scaler struct {
@@ -280,14 +277,13 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 			} `json:"scaler"`
 		} `json:"scalingGroups"`
 	}
+	s.NotContains(res.Stdout.String(), "taskQueueTypes")
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &described))
 	s.Len(described.ScalingGroups, 2)
 	wf := described.ScalingGroups["aws-us-east-1-wf"]
-	s.Equal([]string{"workflow"}, wf.TaskQueueTypes)
 	s.Equal("aws-lambda", wf.Provider.Type)
 	s.Equal("no-sync", wf.Scaler.Type)
 	ac := described.ScalingGroups["aws-us-west-2-ac"]
-	s.Equal([]string{"activity"}, ac.TaskQueueTypes)
 	s.Equal("aws-lambda", ac.Provider.Type)
 	s.Equal("no-sync", ac.Scaler.Type)
 	// The no-sync settings that are set are shown; the others are left out.
