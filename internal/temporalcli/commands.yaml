@@ -3555,11 +3555,6 @@ commands:
           Keys must be identifiers, and values must be JSON values.
           For example: `YourKey="YourString"`
           Can be passed multiple times.
-      - name: internal-principal-auth
-        type: bool
-        description: |
-          Authenticate development-server frontend calls as Temporal's internal
-          principal. Intended for testing internal-only server features.
       - name: log-config
         type: bool
         description: Print the server config to stderr.
