@@ -93,6 +93,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		}
 		opts.UIAssetPath, opts.UICodecEndpoint, opts.PublicPath = t.UiAssetPath, t.UiCodecEndpoint, t.UiPublicPath
 		opts.UIDisableNewsFetch = t.UiDisableNewsFetch
+		opts.UIVersion = Version
 	}
 	// Pragmas and dyn config
 	var err error
