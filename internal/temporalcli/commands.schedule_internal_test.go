@@ -11,7 +11,7 @@ import (
 )
 
 func TestScheduleTimeSkippingConfig(t *testing.T) {
-	config, err := scheduleTimeSkippingConfig(5*time.Hour, true, 17)
+	config, err := scheduleTimeSkippingConfig(5*time.Hour, "", true, 17)
 	require.NoError(t, err)
 
 	require.True(t, config.Enabled)
@@ -19,6 +19,10 @@ func TestScheduleTimeSkippingConfig(t *testing.T) {
 	require.Equal(t, int32(17), config.MaxSessionSkipCount)
 	require.NotEmpty(t, config.FastForwardConfig.ID)
 	require.Equal(t, 5*time.Hour, config.FastForwardConfig.Duration)
+
+	config, err = scheduleTimeSkippingConfig(5*time.Hour, "YourFastForwardId", false, 0)
+	require.NoError(t, err)
+	require.Equal(t, "YourFastForwardId", config.FastForwardConfig.ID)
 }
 
 func TestTimeSkippingToPrintable(t *testing.T) {

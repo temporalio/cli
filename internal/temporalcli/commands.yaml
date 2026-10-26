@@ -3275,25 +3275,57 @@ commands:
 
   - name: temporal schedule time-skipping
     summary: Manage Schedule time skipping (Experimental)
-    description: Fast-forward a Schedule or disable its time skipping.
+    description: |
+      Enable or disable Schedule time skipping. For example:
+
+      ```
+      temporal schedule time-skipping enable \
+          --namespace YourNamespace \
+          --schedule-id YourScheduleId \
+          --fast-forward-duration 5h
+      ```
+
+      Use enable to set a fast-forward target for the Schedule.
 
   - name: temporal schedule time-skipping disable
     summary: Disable Schedule time skipping (Experimental)
-    description: Disable time skipping for a Schedule.
+    description: |
+      Disable time skipping for a Schedule:
+
+      ```
+      temporal schedule time-skipping disable \
+          --namespace YourNamespace \
+          --schedule-id YourScheduleId
+      ```
+
+      The Schedule remains available after time skipping is disabled.
     option-sets:
       - schedule-id
 
-  - name: temporal schedule time-skipping fast-forward
-    summary: Fast-forward a Schedule (Experimental)
-    description: Enable time skipping and advance a Schedule by the specified duration.
+  - name: temporal schedule time-skipping enable
+    summary: Enable Schedule time skipping (Experimental)
+    description: |
+      Enable time skipping for a Schedule and set a fast-forward target:
+
+      ```
+      temporal schedule time-skipping enable \
+          --namespace YourNamespace \
+          --schedule-id YourScheduleId \
+          --fast-forward-duration 5h
+      ```
+
+      The fast-forward target is relative to the current virtual time.
     option-sets:
       - schedule-id
       - schedule-time-skipping-options
     options:
-      - name: duration
+      - name: fast-forward-duration
         type: duration
         required: true
-        description: Duration to fast-forward. Must be greater than zero.
+        description: Set a fast-forward target this far ahead of the current virtual time. Must be greater than zero.
+      - name: fast-forward-id
+        type: string
+        description: Identify this fast-forward in Schedule status. Generated if omitted. Not an idempotency key.
 
   - name: temporal schedule update
     summary: Update Schedule details

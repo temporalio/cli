@@ -601,19 +601,22 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 	})
 }
 
-func scheduleTimeSkippingConfig(fastForward time.Duration, disablePropagation bool, maxSkips int) (*client.TimeSkippingConfig, error) {
+func scheduleTimeSkippingConfig(fastForward time.Duration, fastForwardID string, disablePropagation bool, maxSkips int) (*client.TimeSkippingConfig, error) {
 	if fastForward <= 0 {
-		return nil, errors.New("--duration must be greater than zero")
+		return nil, errors.New("--fast-forward-duration must be greater than zero")
 	}
 	if maxSkips < 0 || maxSkips > math.MaxInt32 {
 		return nil, fmt.Errorf("--max-skip-per-session must be between 0 and %d", math.MaxInt32)
+	}
+	if fastForwardID == "" {
+		fastForwardID = uuid.NewString()
 	}
 	config := &client.TimeSkippingConfig{
 		Enabled:             true,
 		DisablePropagation:  disablePropagation,
 		MaxSessionSkipCount: int32(maxSkips),
 		FastForwardConfig: &client.FastForwardConfig{
-			ID:       uuid.NewString(),
+			ID:       fastForwardID,
 			Duration: fastForward,
 		},
 	}
@@ -638,11 +641,11 @@ func (c *TemporalScheduleTimeSkippingDisableCommand) run(cctx *CommandContext, a
 	return patchScheduleTimeSkipping(cctx, c.Parent.Parent, c.ScheduleId, &client.TimeSkippingConfig{Enabled: false})
 }
 
-func (c *TemporalScheduleTimeSkippingFastForwardCommand) run(cctx *CommandContext, args []string) error {
+func (c *TemporalScheduleTimeSkippingEnableCommand) run(cctx *CommandContext, args []string) error {
 	if c.Command.Flags().Changed("max-skip-per-session") && c.MaxSkipPerSession <= 0 {
 		return errors.New("--max-skip-per-session must be greater than zero")
 	}
-	config, err := scheduleTimeSkippingConfig(c.Duration.Duration(), c.DisablePropagation, c.MaxSkipPerSession)
+	config, err := scheduleTimeSkippingConfig(c.FastForwardDuration.Duration(), c.FastForwardId, c.DisablePropagation, c.MaxSkipPerSession)
 	if err != nil {
 		return err
 	}
