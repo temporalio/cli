@@ -56,3 +56,25 @@ func TestTimeSkippingToPrintable(t *testing.T) {
 	require.Equal(t, targetTime, printable.FastForward.TargetTime)
 	require.True(t, printable.FastForward.HasCompleted)
 }
+
+func TestScheduleTimeSkippingPollStatus(t *testing.T) {
+	const id = "YourFastForwardId"
+	for _, tc := range []struct {
+		name   string
+		info   *commonpb.TimeSkippingInfo
+		status string
+		reason string
+	}{
+		{name: "removed", status: "failed", reason: "fast-forward was removed or was not found in Schedule status"},
+		{name: "replaced", info: &commonpb.TimeSkippingInfo{FastForwardInfo: &commonpb.TimeSkippingFastForwardInfo{FastForwardId: "other"}}, status: "failed", reason: `fast-forward was replaced by "other"`},
+		{name: "completed", info: &commonpb.TimeSkippingInfo{FastForwardInfo: &commonpb.TimeSkippingFastForwardInfo{FastForwardId: id, HasCompleted: true}}, status: "completed"},
+		{name: "disabled", info: &commonpb.TimeSkippingInfo{FastForwardInfo: &commonpb.TimeSkippingFastForwardInfo{FastForwardId: id}}, status: "failed", reason: "time skipping was disabled before fast-forward completed"},
+		{name: "pending", info: &commonpb.TimeSkippingInfo{EffectiveConfig: &commonpb.TimeSkippingConfig{Enabled: true}, FastForwardInfo: &commonpb.TimeSkippingFastForwardInfo{FastForwardId: id}}, status: "pending"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			status, reason := scheduleTimeSkippingPollStatus(tc.info, id)
+			require.Equal(t, tc.status, status)
+			require.Equal(t, tc.reason, reason)
+		})
+	}
+}

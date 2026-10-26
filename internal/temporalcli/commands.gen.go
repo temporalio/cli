@@ -2760,6 +2760,7 @@ func NewTemporalScheduleTimeSkippingCommand(cctx *CommandContext, parent *Tempor
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingDisableCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingEnableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingPollCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -2817,6 +2818,39 @@ func NewTemporalScheduleTimeSkippingEnableCommand(cctx *CommandContext, parent *
 	s.Command.Flags().StringVar(&s.FastForwardId, "fast-forward-id", "", "Identify this fast-forward in Schedule status. Generated if omitted. Not an idempotency key.")
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.ScheduleTimeSkippingOptionsOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleTimeSkippingPollCommand struct {
+	Parent  *TemporalScheduleTimeSkippingCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	FastForwardId string
+	Timeout       cliext.FlagDuration
+}
+
+func NewTemporalScheduleTimeSkippingPollCommand(cctx *CommandContext, parent *TemporalScheduleTimeSkippingCommand) *TemporalScheduleTimeSkippingPollCommand {
+	var s TemporalScheduleTimeSkippingPollCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "poll [flags]"
+	s.Command.Short = "Poll a Schedule fast-forward (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Poll Schedule status for the result of a specific fast-forward:\n\n\x1b[1mtemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId \\\n    --timeout 5m\x1b[0m\n\nA poll timeout means the fast-forward may still be running; poll again to check its status."
+	} else {
+		s.Command.Long = "Poll Schedule status for the result of a specific fast-forward:\n\n```\ntemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId \\\n    --timeout 5m\n```\n\nA poll timeout means the fast-forward may still be running; poll again to check its status."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.FastForwardId, "fast-forward-id", "", "ID of the fast-forward to poll. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "fast-forward-id")
+	s.Timeout = 0
+	s.Command.Flags().Var(&s.Timeout, "timeout", "Maximum time to wait. Omit to wait until completion or interruption.")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

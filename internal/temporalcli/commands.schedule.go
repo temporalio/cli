@@ -1,6 +1,7 @@
 package temporalcli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -652,6 +653,73 @@ func (c *TemporalScheduleTimeSkippingEnableCommand) run(cctx *CommandContext, ar
 	return patchScheduleTimeSkipping(cctx, c.Parent.Parent, c.ScheduleId, config)
 }
 
+const scheduleTimeSkippingPollInterval = 100 * time.Millisecond
+
+func scheduleTimeSkippingPollStatus(info *commonpb.TimeSkippingInfo, fastForwardID string) (string, string) {
+	ff := info.GetFastForwardInfo()
+	if ff == nil || ff.GetFastForwardId() == "" {
+		return "failed", "fast-forward was removed or was not found in Schedule status"
+	}
+	if ff.GetFastForwardId() != fastForwardID {
+		return "failed", fmt.Sprintf("fast-forward was replaced by %q", ff.GetFastForwardId())
+	}
+	if ff.GetHasCompleted() {
+		return "completed", ""
+	}
+	if !info.GetEffectiveConfig().GetEnabled() {
+		return "failed", "time skipping was disabled before fast-forward completed"
+	}
+	return "pending", ""
+}
+
+func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args []string) error {
+	if c.Command.Flags().Changed("timeout") && c.Timeout.Duration() <= 0 {
+		return errors.New("--timeout must be greater than zero")
+	}
+	ctx := context.Context(cctx)
+	if c.Timeout.Duration() > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.Timeout.Duration())
+		defer cancel()
+	}
+	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	handle := cl.ScheduleClient().GetHandle(ctx, c.ScheduleId)
+	ticker := time.NewTicker(scheduleTimeSkippingPollInterval)
+	defer ticker.Stop()
+	for {
+		desc, err := handle.Describe(ctx)
+		if err != nil {
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				cctx.Printer.Println("poll timed out")
+				return nil
+			}
+			return err
+		}
+		status, reason := scheduleTimeSkippingPollStatus(desc.Info.TimeSkippingInfo, c.FastForwardId)
+		if status != "pending" {
+			if reason == "" {
+				cctx.Printer.Println(status)
+			} else {
+				cctx.Printer.Printlnf("%s: %s", status, reason)
+			}
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				cctx.Printer.Println("poll timed out")
+				return nil
+			}
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
 func printScheduleTimeSkippingResult(
 	cctx *CommandContext,
 	action string,
@@ -674,6 +742,8 @@ func printScheduleTimeSkippingResult(
 	if ff := config.FastForwardConfig; ff != nil {
 		cctx.Printer.Printlnf("Fast-forward duration: %s", formatDuration(ff.Duration))
 		cctx.Printer.Printlnf("Fast-forward ID: %s", ff.ID)
+		cctx.Printer.Println("Poll fast-forward:")
+		cctx.Printer.Printlnf("  temporal schedule time-skipping poll --namespace %s --schedule-id %s --fast-forward-id %s", namespace, scheduleID, ff.ID)
 	}
 	cctx.Printer.Println()
 	cctx.Printer.Println("Check status:")

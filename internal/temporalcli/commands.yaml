@@ -3327,6 +3327,31 @@ commands:
         type: string
         description: Identify this fast-forward in Schedule status. Generated if omitted. Not an idempotency key.
 
+  - name: temporal schedule time-skipping poll
+    summary: Poll a Schedule fast-forward (Experimental)
+    description: |
+      Poll Schedule status for the result of a specific fast-forward:
+
+      ```
+      temporal schedule time-skipping poll \
+          --namespace YourNamespace \
+          --schedule-id YourScheduleId \
+          --fast-forward-id YourFastForwardId \
+          --timeout 5m
+      ```
+
+      A poll timeout means the fast-forward may still be running; poll again to check its status.
+    option-sets:
+      - schedule-id
+    options:
+      - name: fast-forward-id
+        type: string
+        required: true
+        description: ID of the fast-forward to poll.
+      - name: timeout
+        type: duration
+        description: Maximum time to wait. Omit to wait until completion or interruption.
+
   - name: temporal schedule update
     summary: Update Schedule details
     description: |
