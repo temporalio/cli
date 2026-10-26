@@ -72,6 +72,18 @@ func (v *ScheduleConfigurationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.TimeZone, "time-zone", "", "Interpret calendar specs with the `TZ` time zone. For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.")
 }
 
+type ScheduleTimeSkippingOptionsOptions struct {
+	DisablePropagation bool
+	MaxSkipPerSession  int
+	FlagSet            *pflag.FlagSet
+}
+
+func (v *ScheduleTimeSkippingOptionsOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.BoolVar(&v.DisablePropagation, "disable-propagation", false, "Do not propagate time skipping to Workflows started by this Schedule.")
+	f.IntVar(&v.MaxSkipPerSession, "max-skip-per-session", 0, "Override the server default maximum skips per session.")
+}
+
 type ScheduleCreateOnlyOptions struct {
 	ScheduleSearchAttribute []string
 	ScheduleMemo            []string
@@ -2528,6 +2540,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -2729,6 +2742,75 @@ func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *T
 	return &s
 }
 
+type TemporalScheduleTimeSkippingCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+}
+
+func NewTemporalScheduleTimeSkippingCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleTimeSkippingCommand {
+	var s TemporalScheduleTimeSkippingCommand
+	s.Parent = parent
+	s.Command.Use = "time-skipping"
+	s.Command.Short = "Manage Schedule time skipping (Experimental)"
+	s.Command.Long = "Fast-forward a Schedule or disable its time skipping."
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingDisableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingFastForwardCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalScheduleTimeSkippingDisableCommand struct {
+	Parent  *TemporalScheduleTimeSkippingCommand
+	Command cobra.Command
+	ScheduleIdOptions
+}
+
+func NewTemporalScheduleTimeSkippingDisableCommand(cctx *CommandContext, parent *TemporalScheduleTimeSkippingCommand) *TemporalScheduleTimeSkippingDisableCommand {
+	var s TemporalScheduleTimeSkippingDisableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "disable [flags]"
+	s.Command.Short = "Disable Schedule time skipping (Experimental)"
+	s.Command.Long = "Disable time skipping for a Schedule."
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleTimeSkippingFastForwardCommand struct {
+	Parent  *TemporalScheduleTimeSkippingCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	ScheduleTimeSkippingOptionsOptions
+	Duration cliext.FlagDuration
+}
+
+func NewTemporalScheduleTimeSkippingFastForwardCommand(cctx *CommandContext, parent *TemporalScheduleTimeSkippingCommand) *TemporalScheduleTimeSkippingFastForwardCommand {
+	var s TemporalScheduleTimeSkippingFastForwardCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "fast-forward [flags]"
+	s.Command.Short = "Fast-forward a Schedule (Experimental)"
+	s.Command.Long = "Enable time skipping and advance a Schedule by the specified duration."
+	s.Command.Args = cobra.NoArgs
+	s.Duration = 0
+	s.Command.Flags().Var(&s.Duration, "duration", "Duration to fast-forward. Must be greater than zero. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "duration")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleTimeSkippingOptionsOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
 type TemporalScheduleToggleCommand struct {
 	Parent  *TemporalScheduleCommand
 	Command cobra.Command
@@ -2850,25 +2932,26 @@ func NewTemporalServerCommand(cctx *CommandContext, parent *TemporalCommand) *Te
 }
 
 type TemporalServerStartDevCommand struct {
-	Parent             *TemporalServerCommand
-	Command            cobra.Command
-	DbFilename         string
-	Namespace          []string
-	Port               int
-	HttpPort           int
-	MetricsPort        int
-	UiPort             int
-	Headless           bool
-	Ip                 string
-	UiIp               string
-	UiPublicPath       string
-	UiAssetPath        string
-	UiCodecEndpoint    string
-	UiDisableNewsFetch bool
-	SqlitePragma       []string
-	DynamicConfigValue []string
-	LogConfig          bool
-	SearchAttribute    []string
+	Parent                *TemporalServerCommand
+	Command               cobra.Command
+	DbFilename            string
+	Namespace             []string
+	Port                  int
+	HttpPort              int
+	MetricsPort           int
+	UiPort                int
+	Headless              bool
+	Ip                    string
+	UiIp                  string
+	UiPublicPath          string
+	UiAssetPath           string
+	UiCodecEndpoint       string
+	UiDisableNewsFetch    bool
+	SqlitePragma          []string
+	DynamicConfigValue    []string
+	InternalPrincipalAuth bool
+	LogConfig             bool
+	SearchAttribute       []string
 }
 
 func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServerCommand) *TemporalServerStartDevCommand {
@@ -2898,6 +2981,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().BoolVar(&s.UiDisableNewsFetch, "ui-disable-news-fetch", false, "Disable the Web UI newsfeed. When set, the UI will not request the newsfeed and the button to open the newsfeed panel is hidden.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "SQLite pragma statements in \"PRAGMA=VALUE\" format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
+	s.Command.Flags().BoolVar(&s.InternalPrincipalAuth, "internal-principal-auth", false, "Authenticate development-server frontend calls as Temporal's internal principal. Intended for testing internal-only server features.")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Print the server config to stderr.")
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Search attributes to register using `KEY=VALUE` pairs. Keys must be identifiers, and values must be the search attribute type, which is one of the following: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
 	s.Command.Run = func(c *cobra.Command, args []string) {

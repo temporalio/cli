@@ -3,11 +3,13 @@ package temporalcli
 import (
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/cli/cliext"
 	"github.com/temporalio/cli/internal/printer"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -43,10 +45,11 @@ type printableSchedule struct {
 	// Info
 	NextRunTime      time.Time
 	LastRunTime      time.Time
-	RunningWorkflows []string      // describe only
-	CreatedAt        time.Time     `cli:",cardOmitEmpty"` // describe only
-	LastUpdateAt     time.Time     `cli:",cardOmitEmpty"` // describe only
-	ActionCounts     *actionCounts `cli:",cardOmitEmpty"` // describe only
+	RunningWorkflows []string                       // describe only
+	CreatedAt        time.Time                      `cli:",cardOmitEmpty"` // describe only
+	LastUpdateAt     time.Time                      `cli:",cardOmitEmpty"` // describe only
+	ActionCounts     *actionCounts                  `cli:",cardOmitEmpty"` // describe only
+	TimeSkipping     *printableScheduleTimeSkipping `cli:",cardOmitEmpty"` // describe only
 	// SearchAttributes, Memo
 	SearchAttributes *commonpb.SearchAttributes `cli:",cardOmitEmpty"`
 	Memo             *commonpb.Memo             `cli:",cardOmitEmpty"`
@@ -56,6 +59,21 @@ type actionCounts struct {
 	Total               int
 	MissedCatchupWindow int
 	SkippedOverlap      int
+}
+
+type printableScheduleTimeSkipping struct {
+	EffectiveEnabled        bool
+	MaxSessionSkipCount     int32
+	CurrentSessionSkipCount int32
+	CurrentTime             time.Time                     `cli:",cardOmitEmpty"`
+	FastForward             *printableScheduleFastForward `cli:",cardOmitEmpty"`
+}
+
+type printableScheduleFastForward struct {
+	Id           string
+	Duration     string
+	TargetTime   time.Time `cli:",cardOmitEmpty"`
+	HasCompleted bool
 }
 
 // Neither protojson nor fmt print structs containing time.Durations nicely, so do it manually
@@ -104,7 +122,33 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 		MissedCatchupWindow: desc.Info.NumActionsMissedCatchupWindow,
 		SkippedOverlap:      desc.Info.NumActionsSkippedOverlap,
 	}
+	out.TimeSkipping = timeSkippingToPrintable(desc.Info.TimeSkippingInfo)
+	return out
+}
 
+func timeSkippingToPrintable(info *commonpb.TimeSkippingInfo) *printableScheduleTimeSkipping {
+	if info == nil {
+		return nil
+	}
+
+	out := &printableScheduleTimeSkipping{
+		EffectiveEnabled:        info.GetEffectiveConfig().GetEnabled(),
+		MaxSessionSkipCount:     info.GetEffectiveConfig().GetMaxSessionSkipCount(),
+		CurrentSessionSkipCount: info.GetCurrentSessionSkipCount(),
+	}
+	if currentTime := info.GetCurrentTime(); currentTime != nil {
+		out.CurrentTime = currentTime.AsTime()
+	}
+	if ff := info.GetFastForwardInfo(); ff != nil {
+		out.FastForward = &printableScheduleFastForward{
+			Id:           ff.GetFastForwardId(),
+			Duration:     formatDuration(ff.GetFastForwardDuration().AsDuration()),
+			HasCompleted: ff.GetHasCompleted(),
+		}
+		if targetTime := ff.GetTargetTime(); targetTime != nil {
+			out.FastForward.TargetTime = targetTime.AsTime()
+		}
+	}
 	return out
 }
 
@@ -297,7 +341,6 @@ func (c *TemporalScheduleCreateCommand) run(cctx *CommandContext, args []string)
 		// TriggerImmediately not supported
 		// ScheduleBackfill not supported
 	}
-
 	if err = c.toScheduleSpec(&opts.Spec); err != nil {
 		return err
 	} else if opts.Action, err = toScheduleAction(&c.SharedWorkflowStartOptions, &c.PayloadInputOptions); err != nil {
@@ -424,6 +467,7 @@ func (c *TemporalScheduleListCommand) run(cctx *CommandContext, args []string) e
 			"CreatedAt",
 			"LastUpdateAt",
 			"ActionCounts",
+			"TimeSkipping",
 		},
 		Table: &printer.TableOptions{},
 	}
@@ -531,7 +575,6 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 			Paused: c.Paused,
 		},
 	}
-
 	if newSchedule.Policy.Overlap, err = enumspb.ScheduleOverlapPolicyFromString(c.OverlapPolicy.Value); err != nil {
 		return err
 	}
@@ -556,6 +599,87 @@ func (c *TemporalScheduleUpdateCommand) run(cctx *CommandContext, args []string)
 			}, nil
 		},
 	})
+}
+
+func scheduleTimeSkippingConfig(fastForward time.Duration, disablePropagation bool, maxSkips int) (*client.TimeSkippingConfig, error) {
+	if fastForward <= 0 {
+		return nil, errors.New("--duration must be greater than zero")
+	}
+	if maxSkips < 0 || maxSkips > math.MaxInt32 {
+		return nil, fmt.Errorf("--max-skip-per-session must be between 0 and %d", math.MaxInt32)
+	}
+	config := &client.TimeSkippingConfig{
+		Enabled:             true,
+		DisablePropagation:  disablePropagation,
+		MaxSessionSkipCount: int32(maxSkips),
+		FastForwardConfig: &client.FastForwardConfig{
+			ID:       uuid.NewString(),
+			Duration: fastForward,
+		},
+	}
+	return config, nil
+}
+
+func patchScheduleTimeSkipping(cctx *CommandContext, parent *TemporalScheduleCommand, scheduleID string, config *client.TimeSkippingConfig) error {
+	cl, err := dialClient(cctx, &parent.ClientOptions)
+	if err != nil {
+		return err
+	}
+	defer cl.Close()
+	err = cl.ScheduleClient().GetHandle(cctx, scheduleID).SetTimeSkippingConfig(cctx, client.ScheduleSetTimeSkippingConfigOptions{Config: config})
+	if err != nil {
+		return err
+	}
+	printScheduleTimeSkippingResult(cctx, "updated", parent.Namespace, scheduleID, config)
+	return nil
+}
+
+func (c *TemporalScheduleTimeSkippingDisableCommand) run(cctx *CommandContext, args []string) error {
+	return patchScheduleTimeSkipping(cctx, c.Parent.Parent, c.ScheduleId, &client.TimeSkippingConfig{Enabled: false})
+}
+
+func (c *TemporalScheduleTimeSkippingFastForwardCommand) run(cctx *CommandContext, args []string) error {
+	if c.Command.Flags().Changed("max-skip-per-session") && c.MaxSkipPerSession <= 0 {
+		return errors.New("--max-skip-per-session must be greater than zero")
+	}
+	config, err := scheduleTimeSkippingConfig(c.Duration.Duration(), c.DisablePropagation, c.MaxSkipPerSession)
+	if err != nil {
+		return err
+	}
+	return patchScheduleTimeSkipping(cctx, c.Parent.Parent, c.ScheduleId, config)
+}
+
+func printScheduleTimeSkippingResult(
+	cctx *CommandContext,
+	action string,
+	namespace string,
+	scheduleID string,
+	config *client.TimeSkippingConfig,
+) {
+	if config == nil || cctx.JSONOutput {
+		return
+	}
+	cctx.Printer.Printlnf("Schedule %s: %s", action, scheduleID)
+	if config.Enabled {
+		cctx.Printer.Println("Time skipping: enabled")
+	} else {
+		cctx.Printer.Println("Time skipping: disabled")
+	}
+	if config.MaxSessionSkipCount > 0 {
+		cctx.Printer.Printlnf("Maximum skips per session: %d", config.MaxSessionSkipCount)
+	}
+	if ff := config.FastForwardConfig; ff != nil {
+		cctx.Printer.Printlnf("Fast-forward duration: %s", formatDuration(ff.Duration))
+		cctx.Printer.Printlnf("Fast-forward ID: %s", ff.ID)
+	}
+	cctx.Printer.Println()
+	cctx.Printer.Println("Check status:")
+	cctx.Printer.Printlnf("  temporal schedule describe --namespace %s --schedule-id %s", namespace, scheduleID)
+	if config.Enabled {
+		cctx.Printer.Println()
+		cctx.Printer.Println("Disable time skipping:")
+		cctx.Printer.Printlnf("  temporal schedule time-skipping disable --namespace %s --schedule-id %s", namespace, scheduleID)
+	}
 }
 
 func formatCalendarSpec(spec client.ScheduleCalendarSpec) *schedpb.CalendarSpec {

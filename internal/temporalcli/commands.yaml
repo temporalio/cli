@@ -3273,6 +3273,28 @@ commands:
       - schedule-id
       - overlap-policy
 
+  - name: temporal schedule time-skipping
+    summary: Manage Schedule time skipping (Experimental)
+    description: Fast-forward a Schedule or disable its time skipping.
+
+  - name: temporal schedule time-skipping disable
+    summary: Disable Schedule time skipping (Experimental)
+    description: Disable time skipping for a Schedule.
+    option-sets:
+      - schedule-id
+
+  - name: temporal schedule time-skipping fast-forward
+    summary: Fast-forward a Schedule (Experimental)
+    description: Enable time skipping and advance a Schedule by the specified duration.
+    option-sets:
+      - schedule-id
+      - schedule-time-skipping-options
+    options:
+      - name: duration
+        type: duration
+        required: true
+        description: Duration to fast-forward. Must be greater than zero.
+
   - name: temporal schedule update
     summary: Update Schedule details
     description: |
@@ -3476,6 +3498,11 @@ commands:
           Keys must be identifiers, and values must be JSON values.
           For example: `YourKey="YourString"`
           Can be passed multiple times.
+      - name: internal-principal-auth
+        type: bool
+        description: |
+          Authenticate development-server frontend calls as Temporal's internal
+          principal. Intended for testing internal-only server features.
       - name: log-config
         type: bool
         description: Print the server config to stderr.
@@ -5401,6 +5428,15 @@ option-sets:
           Interpret calendar specs with the `TZ` time zone.
           For a list of time zones, see:
           https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+
+  - name: schedule-time-skipping-options
+    options:
+      - name: disable-propagation
+        type: bool
+        description: Do not propagate time skipping to Workflows started by this Schedule.
+      - name: max-skip-per-session
+        type: int
+        description: Override the server default maximum skips per session.
 
   - name: schedule-create-only
     options:
