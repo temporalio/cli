@@ -158,6 +158,9 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigRemoveCommand) run(cctx *Co
 	if removeOne && c.ScalingGroup == "" {
 		return fmt.Errorf("--scaling-group cannot be empty")
 	}
+	if removeOne && c.Yes {
+		return fmt.Errorf("--yes cannot be used with --scaling-group")
+	}
 
 	worker := c.Parent.Parent.Parent.Parent
 	cl, err := dialClient(cctx, &worker.ClientOptions)

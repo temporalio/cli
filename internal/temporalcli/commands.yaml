@@ -1956,8 +1956,7 @@ commands:
       A Worker Deployment Version's compute configuration is made of one
       or more scaling groups. Each scaling group is identified by a key
       and is made of a compute provider that starts Workers and a scaler
-      that decides when to start them. Scaling groups set from the CLI
-      serve every Task Queue type. Each compute provider has its own
+      that decides when to start them. Each compute provider has its own
       command, such as `aws-lambda`, to create and update scaling groups:
 
       ```
@@ -2090,7 +2089,7 @@ commands:
       scaler flags are the --scale-up-* and --suppress-* flags,
       --max-worker-lifetime-ms, and --metrics-poll-interval-ms. The
       provider flags are only needed when changing the compute provider,
-      and then must be passed together: --function-arn with either both
+      and they must be passed together: --function-arn with either both
       role flags or --skip-role-and-external-id. Changing the provider
       also resets the scaler: scaler flags passed with it are applied, and
       the rest, or all of them if none are passed, go back to their
@@ -2154,7 +2153,9 @@ commands:
       - name: yes
         short: y
         type: bool
-        description: Don't prompt to confirm removing all scaling groups.
+        description: |
+          Don't prompt to confirm removing all scaling groups. Only allowed
+          when --scaling-group is not set.
 
   - name: temporal worker deployment manager-identity
     summary: Manager Identity commands change the `ManagerIdentity` of a Worker Deployment

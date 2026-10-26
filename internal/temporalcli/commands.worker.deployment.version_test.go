@@ -380,6 +380,17 @@ func (s *SharedServerSuite) TestComputeConfig_Remove_EmptyScalingGroup() {
 		"--scaling-group", "",
 	)
 	s.ErrorContains(res.Err, "--scaling-group cannot be empty")
+
+	// --yes only skips the prompt for removing all scaling groups.
+	res = s.Execute(
+		"worker", "deployment", "version", "compute-config", "remove",
+		"--address", s.Address(),
+		"--deployment-name", uuid.NewString(),
+		"--build-id", "build-17",
+		"--scaling-group", "default",
+		"--yes",
+	)
+	s.EqualError(res.Err, "--yes cannot be used with --scaling-group")
 	s.Empty(fake.takeUpdates())
 }
 
