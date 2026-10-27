@@ -64,6 +64,7 @@ type actionCounts struct {
 
 type printableScheduleTimeSkipping struct {
 	EffectiveEnabled        bool
+	DisablePropagation      bool
 	MaxSessionSkipCount     int32
 	CurrentSessionSkipCount int32
 	CurrentTime             time.Time                     `cli:",cardOmitEmpty"`
@@ -134,6 +135,7 @@ func timeSkippingToPrintable(info *commonpb.TimeSkippingInfo) *printableSchedule
 
 	out := &printableScheduleTimeSkipping{
 		EffectiveEnabled:        info.GetEffectiveConfig().GetEnabled(),
+		DisablePropagation:      info.GetEffectiveConfig().GetDisablePropagation(),
 		MaxSessionSkipCount:     info.GetEffectiveConfig().GetMaxSessionSkipCount(),
 		CurrentSessionSkipCount: info.GetCurrentSessionSkipCount(),
 	}

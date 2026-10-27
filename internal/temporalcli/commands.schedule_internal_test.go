@@ -29,6 +29,7 @@ func TestTimeSkippingToPrintable(t *testing.T) {
 	targetTime := time.Date(2026, time.September, 27, 12, 0, 0, 0, time.UTC)
 	config := &commonpb.TimeSkippingConfig{
 		Enabled:             true,
+		DisablePropagation:  true,
 		MaxSessionSkipCount: 200,
 		FastForwardConfig: &commonpb.FastForwardConfig{
 			Id:       "ff-id",
@@ -49,12 +50,16 @@ func TestTimeSkippingToPrintable(t *testing.T) {
 
 	printable := timeSkippingToPrintable(info)
 	require.True(t, printable.EffectiveEnabled)
+	require.True(t, printable.DisablePropagation)
 	require.Equal(t, int32(200), printable.MaxSessionSkipCount)
 	require.Equal(t, int32(4), printable.CurrentSessionSkipCount)
 	require.Equal(t, "ff-id", printable.FastForward.Id)
 	require.Equal(t, "5h 0m 0s", printable.FastForward.Duration)
 	require.Equal(t, targetTime, printable.FastForward.TargetTime)
 	require.True(t, printable.FastForward.HasCompleted)
+
+	config.DisablePropagation = false
+	require.False(t, timeSkippingToPrintable(info).DisablePropagation)
 }
 
 func TestScheduleTimeSkippingPollStatus(t *testing.T) {
