@@ -2117,11 +2117,11 @@ commands:
           compute provider.
 
   - name: temporal worker deployment version compute-config modal-function
-    summary: Create or update Modal compute configuration (Experimental)
+    summary: Create or update Modal Function compute configuration (Experimental)
     description: |
-      Modal commands set the compute configuration of a Worker Deployment
-      Version for a Modal function that spawns a Worker in the Worker
-      Deployment:
+      Modal Function commands set the compute configuration of a Worker
+      Deployment Version for a Modal Function that spawns a Worker in the
+      Worker Deployment:
 
       ```
       temporal worker deployment version compute-config modal-function [command]
@@ -2130,10 +2130,10 @@ commands:
       Note: This is an experimental feature and may change in the future.
 
   - name: temporal worker deployment version compute-config modal-function create
-    summary: Create a Version with Modal compute configuration (Experimental)
+    summary: Create a Version with Modal Function compute configuration (Experimental)
     description: |
       Create a new Worker Deployment Version with compute configuration for a
-      Modal function that spawns a Worker in the Worker Deployment:
+      Modal Function that spawns a Worker in the Worker Deployment:
 
       ```
       temporal worker deployment version compute-config modal-function create \
@@ -2145,9 +2145,24 @@ commands:
       ```
 
       To select a specific Modal workspace or deployed application version,
-      pass --workspace-id or --app-version. To tune when Workers are started,
-      pass any of the scaler flags. Each scaler flag that is not set keeps
-      the server default.
+      pass --workspace-id or --app-version.
+
+      To tune when Workers are started, pass any of the scaler flags (the
+      --scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and
+      --metrics-poll-interval-ms). Each one that is not set keeps the
+      server default:
+
+      ```
+      temporal worker deployment version compute-config modal-function create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name YourModalApp \
+          --function-name YourModalFunction \
+          --environment YourModalEnvironment \
+          --scale-up-backlog-threshold 5 \
+          --scale-up-cooloff-ms 500 \
+          --max-worker-lifetime-ms 300000
+      ```
 
       The Worker Deployment must already exist; create it with
       `temporal worker deployment create`.
@@ -2181,19 +2196,21 @@ commands:
       - name: workspace-id
         type: string
         description: |
-          Optional Modal workspace ID used to select the workspace's credential
-          grant. Omit when the server uses ambient Modal credentials.
+          Modal workspace ID that selects which of the account's Modal
+          credentials to use. Required when the server stores credentials per
+          workspace; omit when it uses a single Modal API key.
       - name: app-version
         type: string
         description: |
           Optional deployed Modal application version, expressed as a
-          non-negative integer.
+          non-negative integer. Omit to use the application's current deployed
+          version. A value of 0 also selects the current deployed version.
 
   - name: temporal worker deployment version compute-config modal-function update
-    summary: Update Modal compute configuration for a Version (Experimental)
+    summary: Update Modal Function compute configuration for a Version (Experimental)
     description: |
       Update a scaling group in the compute configuration of a Worker
-      Deployment Version for a Modal function that spawns a Worker in the
+      Deployment Version for a Modal Function that spawns a Worker in the
       Worker Deployment. Only the scaling group named by --scaling-group
       ("default" when unset) changes; other scaling groups are not affected.
 
@@ -2221,39 +2238,11 @@ commands:
           --max-worker-lifetime-ms 300000
       ```
 
-      To add a scaling group that is only used while the Namespace is
-      active in one region:
-
-      ```
-      temporal worker deployment version compute-config modal-function update \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID \
-          --scaling-group YourScalingGroup \
-          --region-id aws-us-east-1 \
-          --app-name YourModalApp \
-          --function-name YourModalFunction \
-          --environment YourModalEnvironment
-      ```
-
-      To update only the region of a scaling group, supply --region-id
-      without the other flags. The region passed replaces the existing
-      one, and the provider and scaler are not changed:
-
-      ```
-      temporal worker deployment version compute-config modal-function update \
-          --deployment-name YourDeploymentName \
-          --build-id YourBuildID \
-          --scaling-group YourScalingGroup \
-          --region-id aws-us-west-2
-      ```
-
       Provider fields require --app-name, --function-name, and --environment
       together. Changing the provider also resets the scaler: scaler flags
       passed with it are applied, and the rest, or all of them if none are
       passed, go back to their defaults. Optional --workspace-id and
       --app-version values are omitted from the provider when empty.
-      --region-id can be passed with any of these, and the region passed
-      replaces the existing one.
 
       If a Worker Deployment Version with the supplied BuildID does not exist,
       this command will return an error. To create it, use
@@ -2286,13 +2275,16 @@ commands:
       - name: workspace-id
         type: string
         description: |
-          Optional Modal workspace ID used to select the workspace's credential
-          grant. Omit when the server uses ambient Modal credentials.
+          Modal workspace ID that selects which of the account's Modal
+          credentials to use. Required when the server stores credentials per
+          workspace; omit when it uses a single Modal API key.
       - name: app-version
         type: string
         description: |
           Optional deployed Modal application version, expressed as a
-          non-negative integer.
+          non-negative integer. When changing the provider, omit to use the
+          application's current deployed version. A value of 0 also selects
+          the current deployed version.
 
   - name: temporal worker deployment version compute-config remove
     summary: Remove compute configuration from a Version (Experimental)

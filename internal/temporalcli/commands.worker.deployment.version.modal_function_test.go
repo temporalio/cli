@@ -14,7 +14,7 @@ func modalComputeConfigArgs(verb, address, deploymentName string, extra ...strin
 	}, extra...)
 }
 
-func (s *SharedServerSuite) TestComputeConfig_Modal_Create() {
+func (s *SharedServerSuite) TestComputeConfig_ModalFunction_Create() {
 	fake := s.newFakeComputeConfigServer()
 	fake.versionMissing = true
 	deploymentName := uuid.NewString()
@@ -22,7 +22,6 @@ func (s *SharedServerSuite) TestComputeConfig_Modal_Create() {
 	res := s.Execute(modalComputeConfigArgs("create", s.Address(), deploymentName,
 		"--workspace-id", "ws-123",
 		"--app-version", "7",
-		"--region-id", "aws-us-east-1",
 	)...)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
@@ -34,7 +33,6 @@ func (s *SharedServerSuite) TestComputeConfig_Modal_Create() {
 	s.NotEmpty(creates[0].GetRequestId())
 	sg := creates[0].GetComputeConfig().GetScalingGroups()["default"]
 	s.NotNil(sg)
-	s.Equal([]string{"aws-us-east-1"}, sg.GetRegionIds())
 	s.Equal("modal-function", sg.GetProvider().GetType())
 	s.Equal(map[string]any{
 		"app_name":      "payments",
@@ -52,14 +50,13 @@ func (s *SharedServerSuite) TestComputeConfig_Modal_Create() {
 	s.Len(fake.takeCreates(), 1)
 }
 
-func (s *SharedServerSuite) TestComputeConfig_Modal_Update() {
+func (s *SharedServerSuite) TestComputeConfig_ModalFunction_Update() {
 	fake := s.newFakeComputeConfigServer()
 	fake.setComputeConfig(nil)
 	deploymentName := uuid.NewString()
 
 	res := s.Execute(modalComputeConfigArgs("update", s.Address(), deploymentName,
 		"--scaling-group", "modal-workflows",
-		"--region-id", "aws-us-east-1",
 		"--scale-up-backlog-threshold", "5",
 	)...)
 	s.NoError(res.Err)
@@ -69,9 +66,8 @@ func (s *SharedServerSuite) TestComputeConfig_Modal_Update() {
 	s.Len(updates, 1)
 	update := updates[0].GetComputeConfigScalingGroups()["modal-workflows"]
 	s.NotNil(update)
-	s.Equal([]string{"region_ids", "provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths())
+	s.Equal([]string{"provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths())
 	sg := update.GetScalingGroup()
-	s.Equal([]string{"aws-us-east-1"}, sg.GetRegionIds())
 	s.Equal("modal-function", sg.GetProvider().GetType())
 	s.Equal(map[string]any{
 		"app_name":      "payments",
@@ -98,10 +94,9 @@ func (s *SharedServerSuite) TestComputeConfig_Modal_Update() {
 	s.Nil(update.GetScalingGroup().GetProvider())
 	s.Equal(map[string]any{"max_worker_lifetime_ms": float64(300000)},
 		s.decodePayloadMap(update.GetScalingGroup().GetScaler().GetDetails()))
-	s.Equal([]string{"aws-us-east-1"}, fake.computeConfig.GetScalingGroups()["modal-workflows"].GetRegionIds())
 }
 
-func (s *SharedServerSuite) TestComputeConfig_Modal_UpdateMissingVersion() {
+func (s *SharedServerSuite) TestComputeConfig_ModalFunction_UpdateMissingVersion() {
 	fake := s.newFakeComputeConfigServer()
 	fake.versionMissing = true
 
@@ -112,7 +107,7 @@ func (s *SharedServerSuite) TestComputeConfig_Modal_UpdateMissingVersion() {
 	s.Len(fake.takeUpdates(), 1)
 }
 
-func (s *SharedServerSuite) TestComputeConfig_Modal_Errors() {
+func (s *SharedServerSuite) TestComputeConfig_ModalFunction_Errors() {
 	fake := s.newFakeComputeConfigServer()
 	fake.setComputeConfig(nil)
 	deploymentName := uuid.NewString()

@@ -42,7 +42,7 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand)
 	return updateVersionScalingGroup(cctx, c.Parent.Parent.Parent.Parent.Parent, c.deploymentVersion(), c.ScalingGroup, update, "modal-function")
 }
 
-// provider returns the Modal provider to set, or nil to leave it unchanged.
+// provider returns the Modal Function provider to set, or nil to leave it unchanged.
 // The required provider flags are passed together because provider details are
 // replaced as a whole; workspace and application version remain optional.
 func (c *TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand) provider() (*computepb.ComputeProvider, error) {
@@ -60,10 +60,12 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand)
 	return modalProvider(c.AppName, c.FunctionName, c.Environment, c.WorkspaceId, c.AppVersion)
 }
 
-// The Modal compute provider.
+// The Modal Function compute provider.
 const modalProviderType = "modal-function"
 
-// modalProvider builds the Modal compute provider from the provider flags.
+// modalProvider builds the Modal Function compute provider from the provider
+// flags. Provider config keys:
+// https://github.com/temporalio/temporal-auto-scaled-workers/blob/main/wci/workflow/compute_provider/modal_function.go
 func modalProvider(appName, functionName, environment, workspaceID, version string) (*computepb.ComputeProvider, error) {
 	payload, err := modalProviderDetailsPayload(appName, functionName, environment, workspaceID, version)
 	if err != nil {
@@ -96,8 +98,9 @@ func validateModalProviderDetails(details map[string]any) error {
 }
 
 // modalProviderDetailsPayload returns the encoded Payload expected by WCI's
-// invoke-based Modal provider. The environment is part of the compute resource
-// identity and must be explicit so provider updates cannot silently change it.
+// invoke-based Modal Function provider. The environment is part of the compute
+// resource identity and must be explicit so provider updates cannot silently
+// change it.
 func modalProviderDetailsPayload(
 	appName string,
 	functionName string,
@@ -105,8 +108,6 @@ func modalProviderDetailsPayload(
 	workspaceID string,
 	version string,
 ) (*commonpb.Payload, error) {
-	// Map keys from temporal-auto-scaled-workers:
-	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/324950cf843e560ff0c6531070bb1d4e139d5000/wci/workflow/compute_provider/modal.go#L18-L24
 	providerDetails := map[string]any{
 		"app_name":      appName,
 		"function_name": functionName,
