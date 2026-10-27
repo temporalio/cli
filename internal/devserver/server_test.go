@@ -8,61 +8,95 @@ import (
 	"go.temporal.io/server/common/log"
 )
 
-func TestTimeSkippingDynamicConfigDefaults(t *testing.T) {
-	config := dynamicconfig.NewCollection(devServerDynamicConfig(nil, true), log.NewNoopLogger())
-	for _, namespace := range []string{"default", "timeskipping-test"} {
-		require.True(t, dynamicconfig.WorkflowTimeSkippingEnabled.Get(config)(namespace))
-		require.True(t, dynamicconfig.CHASMSchedulerTimeSkippingEnabled.Get(config)(namespace))
-		require.True(t, dynamicconfig.EnableCHASMSchedulerCreation.Get(config)(namespace))
-		require.Equal(t, 100, dynamicconfig.CHASMSchedulerCreationRolloutPercent.Get(config)(namespace))
-		require.True(t, dynamicconfig.EnableCHASMSchedulerRouting.Get(config)(namespace))
+func timeSkippingConfigForTest(values map[string]any, enabled bool) dynamicconfig.StaticClient {
+	config := make(dynamicconfig.StaticClient)
+	for key, value := range values {
+		config[dynamicconfig.MakeKey(key)] = value
 	}
+	if enabled {
+		applyTimeSkippingDynamicConfig(config)
+	}
+	return config
 }
 
-func TestTimeSkippingDynamicConfigDefaultOff(t *testing.T) {
-	values := devServerDynamicConfig(nil, false)
-	for key := range timeSkippingDynamicConfigDefaults {
-		_, present := values[key]
-		require.False(t, present, "unexpected override for %s", key)
+func TestDevServerTimeSkippingDynamicConfigPrecedence(t *testing.T) {
+	disabled := map[dynamicconfig.Key]any{
+		dynamicconfig.WorkflowTimeSkippingEnabled.Key():          false,
+		dynamicconfig.CHASMSchedulerTimeSkippingEnabled.Key():    false,
+		dynamicconfig.EnableCHASMSchedulerCreation.Key():         false,
+		dynamicconfig.CHASMSchedulerCreationRolloutPercent.Key(): 0,
+		dynamicconfig.EnableCHASMSchedulerRouting.Key():          false,
 	}
-	config := dynamicconfig.NewCollection(values, log.NewNoopLogger())
-	for _, namespace := range []string{"default", "timeskipping-test"} {
-		require.False(t, dynamicconfig.WorkflowTimeSkippingEnabled.Get(config)(namespace))
-		require.False(t, dynamicconfig.CHASMSchedulerTimeSkippingEnabled.Get(config)(namespace))
-		require.False(t, dynamicconfig.EnableCHASMSchedulerCreation.Get(config)(namespace))
-		require.Equal(t, 0, dynamicconfig.CHASMSchedulerCreationRolloutPercent.Get(config)(namespace))
+	type wantConfig struct {
+		workflow, schedule, creation, routing bool
+		rollout, maxSkip                      int
 	}
-}
+	serverDefaults := wantConfig{routing: true, maxSkip: 200}
+	allEnabled := wantConfig{workflow: true, schedule: true, creation: true, routing: true, rollout: 100, maxSkip: 200}
+	allDisabled := wantConfig{maxSkip: 200}
+	granularDisabled := wantConfig{maxSkip: 50}
 
-func TestTimeSkippingDynamicConfigNamespaceOverride(t *testing.T) {
-	values := map[string]any{
-		dynamicconfig.WorkflowTimeSkippingEnabled.Key().String(): []dynamicconfig.ConstrainedValue{{
-			Value:       false,
-			Constraints: dynamicconfig.Constraints{Namespace: "timeskipping-test"},
-		}},
-		dynamicconfig.CHASMSchedulerTimeSkippingEnabled.Key().String(): []dynamicconfig.ConstrainedValue{{
-			Value:       false,
-			Constraints: dynamicconfig.Constraints{Namespace: "timeskipping-test"},
-		}},
+	granular := make(map[string]any, len(disabled)+1)
+	globalScalar := make(map[string]any, len(disabled))
+	globalYAML := make(map[string]any, len(disabled))
+	for key, value := range disabled {
+		granular[key.String()] = []dynamicconfig.ConstrainedValue{{
+			Value: value, Constraints: dynamicconfig.Constraints{Namespace: "timeskipping-test"},
+		}}
+		globalScalar[key.String()] = value
+		globalYAML[key.String()] = []dynamicconfig.ConstrainedValue{{Value: value}}
 	}
-	config := dynamicconfig.NewCollection(devServerDynamicConfig(values, true), log.NewNoopLogger())
-	for _, enabled := range []func(string) bool{
-		dynamicconfig.WorkflowTimeSkippingEnabled.Get(config),
-		dynamicconfig.CHASMSchedulerTimeSkippingEnabled.Get(config),
+	granular[dynamicconfig.TimeSkippingMaxSkipPerSession.Key().String()] = []dynamicconfig.ConstrainedValue{{
+		Value: 50, Constraints: dynamicconfig.Constraints{Namespace: "timeskipping-test"},
+	}}
+
+	for _, tc := range []struct {
+		name     string
+		enabled  bool
+		explicit map[string]any
+		wantTest wantConfig
+		wantElse wantConfig
+		shape    string
+	}{
+		{name: "flag off", wantTest: serverDefaults, wantElse: serverDefaults, shape: "absent"},
+		{name: "no explicit config", enabled: true, wantTest: allEnabled, wantElse: allEnabled, shape: "defaults"},
+		{name: "namespace explicit config", enabled: true, explicit: granular, wantTest: granularDisabled, wantElse: allEnabled, shape: "granular"},
+		{name: "global explicit scalar config", enabled: true, explicit: globalScalar, wantTest: allDisabled, wantElse: allDisabled, shape: "global"},
+		{name: "global explicit YAML config", enabled: true, explicit: globalYAML, wantTest: allDisabled, wantElse: allDisabled, shape: "global"},
 	} {
-		require.False(t, enabled("timeskipping-test"))
-		require.True(t, enabled("another-namespace"))
+		t.Run(tc.name, func(t *testing.T) {
+			raw := timeSkippingConfigForTest(tc.explicit, tc.enabled)
+			for key, fallback := range timeSkippingDynamicConfigDefaults {
+				switch tc.shape {
+				case "absent":
+					_, present := raw[key]
+					require.False(t, present, "unexpected override for %s", key)
+				case "defaults":
+					require.Equal(t, fallback, raw[key], "key %s", key)
+				case "granular":
+					require.Len(t, tc.explicit[key.String()].([]dynamicconfig.ConstrainedValue), 1, "input for %s was mutated", key)
+					require.Equal(t, []dynamicconfig.ConstrainedValue{
+						{Value: disabled[key], Constraints: dynamicconfig.Constraints{Namespace: "timeskipping-test"}},
+						{Value: fallback},
+					}, raw[key], "key %s", key)
+				case "global":
+					require.Equal(t, tc.explicit[key.String()], raw[key], "key %s was replaced or appended to", key)
+				}
+			}
+			config := dynamicconfig.NewCollection(raw, log.NewNoopLogger())
+			for namespace, want := range map[string]wantConfig{
+				"timeskipping-test": tc.wantTest,
+				"another-namespace": tc.wantElse,
+			} {
+				t.Run(namespace, func(t *testing.T) {
+					require.Equal(t, want.workflow, dynamicconfig.WorkflowTimeSkippingEnabled.Get(config)(namespace))
+					require.Equal(t, want.schedule, dynamicconfig.CHASMSchedulerTimeSkippingEnabled.Get(config)(namespace))
+					require.Equal(t, want.creation, dynamicconfig.EnableCHASMSchedulerCreation.Get(config)(namespace))
+					require.Equal(t, want.rollout, dynamicconfig.CHASMSchedulerCreationRolloutPercent.Get(config)(namespace))
+					require.Equal(t, want.routing, dynamicconfig.EnableCHASMSchedulerRouting.Get(config)(namespace))
+					require.Equal(t, want.maxSkip, dynamicconfig.TimeSkippingMaxSkipPerSession.Get(config)(namespace))
+				})
+			}
+		})
 	}
-}
-
-func TestTimeSkippingDynamicConfigGlobalOverride(t *testing.T) {
-	key := dynamicconfig.WorkflowTimeSkippingEnabled.Key().String()
-	config := dynamicconfig.NewCollection(devServerDynamicConfig(map[string]any{key: false}, true), log.NewNoopLogger())
-	require.False(t, dynamicconfig.WorkflowTimeSkippingEnabled.Get(config)("default"))
-
-	yamlValues := map[string]any{
-		key: []dynamicconfig.ConstrainedValue{{Value: false}},
-	}
-	config = dynamicconfig.NewCollection(devServerDynamicConfig(yamlValues, true), log.NewNoopLogger())
-	require.False(t, dynamicconfig.WorkflowTimeSkippingEnabled.Get(config)("another-namespace"))
 }
