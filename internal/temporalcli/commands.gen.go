@@ -4296,6 +4296,7 @@ func NewTemporalWorkerDeploymentVersionComputeConfigCommand(cctx *CommandContext
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigRemoveCommand(cctx, &s).Command)
 	return &s
 }
@@ -4411,6 +4412,112 @@ func NewTemporalWorkerDeploymentVersionComputeConfigDescribeCommand(cctx *Comman
 	}
 	s.Command.Args = cobra.NoArgs
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigCommand) *TemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand
+	s.Parent = parent
+	s.Command.Use = "modal-function"
+	s.Command.Short = "Create or update Modal compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Modal commands set the compute configuration of a Worker Deployment\nVersion for a Modal function that spawns a Worker in the Worker\nDeployment:\n\n\x1b[1mtemporal worker deployment version compute-config modal-function [command]\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Modal commands set the compute configuration of a Worker Deployment\nVersion for a Modal function that spawns a Worker in the Worker\nDeployment:\n\n```\ntemporal worker deployment version compute-config modal-function [command]\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigModalFunctionCreateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	NoSyncScalerOptions
+	AppName      string
+	FunctionName string
+	Environment  string
+	WorkspaceId  string
+	AppVersion   string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionCreateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand) *TemporalWorkerDeploymentVersionComputeConfigModalFunctionCreateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigModalFunctionCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a Version with Modal compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for a\nModal function that spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment version compute-config modal-function create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --app-name YourModalApp \\\n    --function-name YourModalFunction \\\n    --environment YourModalEnvironment\x1b[0m\n\nTo select a specific Modal workspace or deployed application version,\npass --workspace-id or --app-version. To tune when Workers are started,\npass any of the scaler flags. Each scaler flag that is not set keeps\nthe server default.\n\nThe Worker Deployment must already exist; create it with\n\x1b[1mtemporal worker deployment create\x1b[0m.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse \x1b[1mtemporal worker deployment version compute-config modal-function update\x1b[0m.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for a\nModal function that spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment version compute-config modal-function create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --app-name YourModalApp \\\n    --function-name YourModalFunction \\\n    --environment YourModalEnvironment\n```\n\nTo select a specific Modal workspace or deployed application version,\npass --workspace-id or --app-version. To tune when Workers are started,\npass any of the scaler flags. Each scaler flag that is not set keeps\nthe server default.\n\nThe Worker Deployment must already exist; create it with\n`temporal worker deployment create`.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse `temporal worker deployment version compute-config modal-function update`.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AppName, "app-name", "", "Name of the deployed Modal application containing the Worker function. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "app-name")
+	s.Command.Flags().StringVar(&s.FunctionName, "function-name", "", "Name of the Modal function to invoke when there are no active pollers for Task Queue targets in the Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "function-name")
+	s.Command.Flags().StringVar(&s.Environment, "environment", "", "Modal environment containing the deployed application. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "environment")
+	s.Command.Flags().StringVar(&s.WorkspaceId, "workspace-id", "", "Optional Modal workspace ID used to select the workspace's credential grant. Omit when the server uses ambient Modal credentials.")
+	s.Command.Flags().StringVar(&s.AppVersion, "app-version", "", "Optional deployed Modal application version, expressed as a non-negative integer.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.NoSyncScalerOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	NoSyncScalerOptions
+	AppName      string
+	FunctionName string
+	Environment  string
+	WorkspaceId  string
+	AppVersion   string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand) *TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update Modal compute configuration for a Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version for a Modal function that spawns a Worker in the\nWorker Deployment. Only the scaling group named by --scaling-group\n(\"default\" when unset) changes; other scaling groups are not affected.\n\nTo update the Modal application and function associated with an existing\nWorker Deployment Version:\n\n\x1b[1mtemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --app-name UpdatedModalApp \\\n    --function-name UpdatedModalFunction \\\n    --environment UpdatedModalEnvironment\x1b[0m\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags. The scaler is replaced as a\nwhole, so scaler flags that are not passed go back to their defaults:\n\n\x1b[1mtemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scale-up-backlog-threshold 5 \\\n    --max-worker-lifetime-ms 300000\x1b[0m\n\nTo add a scaling group that is only used while the Namespace is\nactive in one region:\n\n\x1b[1mtemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scaling-group YourScalingGroup \\\n    --region-id aws-us-east-1 \\\n    --app-name YourModalApp \\\n    --function-name YourModalFunction \\\n    --environment YourModalEnvironment\x1b[0m\n\nTo update only the region of a scaling group, supply --region-id\nwithout the other flags. The region passed replaces the existing\none, and the provider and scaler are not changed:\n\n\x1b[1mtemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scaling-group YourScalingGroup \\\n    --region-id aws-us-west-2\x1b[0m\n\nProvider fields require --app-name, --function-name, and --environment\ntogether. Changing the provider also resets the scaler: scaler flags\npassed with it are applied, and the rest, or all of them if none are\npassed, go back to their defaults. Optional --workspace-id and\n--app-version values are omitted from the provider when empty.\n--region-id can be passed with any of these, and the region passed\nreplaces the existing one.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n\x1b[1mtemporal worker deployment version compute-config modal-function create\x1b[0m.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version for a Modal function that spawns a Worker in the\nWorker Deployment. Only the scaling group named by --scaling-group\n(\"default\" when unset) changes; other scaling groups are not affected.\n\nTo update the Modal application and function associated with an existing\nWorker Deployment Version:\n\n```\ntemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --app-name UpdatedModalApp \\\n    --function-name UpdatedModalFunction \\\n    --environment UpdatedModalEnvironment\n```\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags. The scaler is replaced as a\nwhole, so scaler flags that are not passed go back to their defaults:\n\n```\ntemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scale-up-backlog-threshold 5 \\\n    --max-worker-lifetime-ms 300000\n```\n\nTo add a scaling group that is only used while the Namespace is\nactive in one region:\n\n```\ntemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scaling-group YourScalingGroup \\\n    --region-id aws-us-east-1 \\\n    --app-name YourModalApp \\\n    --function-name YourModalFunction \\\n    --environment YourModalEnvironment\n```\n\nTo update only the region of a scaling group, supply --region-id\nwithout the other flags. The region passed replaces the existing\none, and the provider and scaler are not changed:\n\n```\ntemporal worker deployment version compute-config modal-function update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scaling-group YourScalingGroup \\\n    --region-id aws-us-west-2\n```\n\nProvider fields require --app-name, --function-name, and --environment\ntogether. Changing the provider also resets the scaler: scaler flags\npassed with it are applied, and the rest, or all of them if none are\npassed, go back to their defaults. Optional --workspace-id and\n--app-version values are omitted from the provider when empty.\n--region-id can be passed with any of these, and the region passed\nreplaces the existing one.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n`temporal worker deployment version compute-config modal-function create`.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.AppName, "app-name", "", "Name of the deployed Modal application containing the Worker function. Required when changing the compute provider.")
+	s.Command.Flags().StringVar(&s.FunctionName, "function-name", "", "Name of the Modal function to invoke when there are no active pollers for Task Queue targets in the Worker Deployment. Required when changing the compute provider.")
+	s.Command.Flags().StringVar(&s.Environment, "environment", "", "Modal environment containing the deployed application. Required when changing the compute provider.")
+	s.Command.Flags().StringVar(&s.WorkspaceId, "workspace-id", "", "Optional Modal workspace ID used to select the workspace's credential grant. Omit when the server uses ambient Modal credentials.")
+	s.Command.Flags().StringVar(&s.AppVersion, "app-version", "", "Optional deployed Modal application version, expressed as a non-negative integer.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.NoSyncScalerOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
