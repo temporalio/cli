@@ -72,6 +72,18 @@ func (v *ScheduleConfigurationOptions) BuildFlags(f *pflag.FlagSet) {
 	f.StringVar(&v.TimeZone, "time-zone", "", "Interpret calendar specs with the `TZ` time zone. For a list of time zones, see: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.")
 }
 
+type ScheduleTimeSkippingOptionsOptions struct {
+	DisablePropagation bool
+	MaxSkipPerSession  int
+	FlagSet            *pflag.FlagSet
+}
+
+func (v *ScheduleTimeSkippingOptionsOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.BoolVar(&v.DisablePropagation, "disable-propagation", false, "Do not propagate time skipping to Workflows started by this Schedule.")
+	f.IntVar(&v.MaxSkipPerSession, "max-skip-per-session", 0, "Override the server default maximum skips per session.")
+}
+
 type ScheduleCreateOnlyOptions struct {
 	ScheduleSearchAttribute []string
 	ScheduleMemo            []string
@@ -2528,6 +2540,7 @@ func NewTemporalScheduleCommand(cctx *CommandContext, parent *TemporalCommand) *
 	s.Command.AddCommand(&NewTemporalScheduleDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleListMatchingTimesCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleToggleCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTriggerCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleUpdateCommand(cctx, &s).Command)
@@ -2720,6 +2733,123 @@ func NewTemporalScheduleListMatchingTimesCommand(cctx *CommandContext, parent *T
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "start-time")
 	s.Command.Flags().Var(&s.EndTime, "end-time", "End of time range to list matching times. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "end-time")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleTimeSkippingCommand struct {
+	Parent  *TemporalScheduleCommand
+	Command cobra.Command
+}
+
+func NewTemporalScheduleTimeSkippingCommand(cctx *CommandContext, parent *TemporalScheduleCommand) *TemporalScheduleTimeSkippingCommand {
+	var s TemporalScheduleTimeSkippingCommand
+	s.Parent = parent
+	s.Command.Use = "time-skipping"
+	s.Command.Short = "Manage Schedule time skipping (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Enable or disable Schedule time skipping. For example:\n\n\x1b[1mtemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\x1b[0m\n\nUse enable to set a fast-forward target for the Schedule."
+	} else {
+		s.Command.Long = "Enable or disable Schedule time skipping. For example:\n\n```\ntemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\n```\n\nUse enable to set a fast-forward target for the Schedule."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingDisableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingEnableCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingPollCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalScheduleTimeSkippingDisableCommand struct {
+	Parent  *TemporalScheduleTimeSkippingCommand
+	Command cobra.Command
+	ScheduleIdOptions
+}
+
+func NewTemporalScheduleTimeSkippingDisableCommand(cctx *CommandContext, parent *TemporalScheduleTimeSkippingCommand) *TemporalScheduleTimeSkippingDisableCommand {
+	var s TemporalScheduleTimeSkippingDisableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "disable [flags]"
+	s.Command.Short = "Disable Schedule time skipping (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Disable time skipping for a Schedule:\n\n\x1b[1mtemporal schedule time-skipping disable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId\x1b[0m\n\nThe Schedule remains available after time skipping is disabled."
+	} else {
+		s.Command.Long = "Disable time skipping for a Schedule:\n\n```\ntemporal schedule time-skipping disable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId\n```\n\nThe Schedule remains available after time skipping is disabled."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleTimeSkippingEnableCommand struct {
+	Parent  *TemporalScheduleTimeSkippingCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	ScheduleTimeSkippingOptionsOptions
+	FastForwardDuration cliext.FlagDuration
+	FastForwardId       string
+}
+
+func NewTemporalScheduleTimeSkippingEnableCommand(cctx *CommandContext, parent *TemporalScheduleTimeSkippingCommand) *TemporalScheduleTimeSkippingEnableCommand {
+	var s TemporalScheduleTimeSkippingEnableCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "enable [flags]"
+	s.Command.Short = "Enable Schedule time skipping (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Enable time skipping for a Schedule and set a fast-forward target:\n\n\x1b[1mtemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\x1b[0m\n\nThe fast-forward target is relative to the current virtual time."
+	} else {
+		s.Command.Long = "Enable time skipping for a Schedule and set a fast-forward target:\n\n```\ntemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\n```\n\nThe fast-forward target is relative to the current virtual time."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.FastForwardDuration = 0
+	s.Command.Flags().Var(&s.FastForwardDuration, "fast-forward-duration", "Set a fast-forward target this far ahead of the current virtual time. Must be greater than zero. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "fast-forward-duration")
+	s.Command.Flags().StringVar(&s.FastForwardId, "fast-forward-id", "", "Identify this fast-forward in Schedule status. Generated if omitted. Not an idempotency key.")
+	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
+	s.ScheduleTimeSkippingOptionsOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalScheduleTimeSkippingPollCommand struct {
+	Parent  *TemporalScheduleTimeSkippingCommand
+	Command cobra.Command
+	ScheduleIdOptions
+	FastForwardId string
+	Timeout       cliext.FlagDuration
+}
+
+func NewTemporalScheduleTimeSkippingPollCommand(cctx *CommandContext, parent *TemporalScheduleTimeSkippingCommand) *TemporalScheduleTimeSkippingPollCommand {
+	var s TemporalScheduleTimeSkippingPollCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "poll [flags]"
+	s.Command.Short = "Poll a Schedule fast-forward (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Poll Schedule status for the result of a specific fast-forward:\n\n\x1b[1mtemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId \\\n    --timeout 5m\x1b[0m\n\nA poll timeout means the fast-forward may still be running; poll again to check its status."
+	} else {
+		s.Command.Long = "Poll Schedule status for the result of a specific fast-forward:\n\n```\ntemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId \\\n    --timeout 5m\n```\n\nA poll timeout means the fast-forward may still be running; poll again to check its status."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.FastForwardId, "fast-forward-id", "", "ID of the fast-forward to poll. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "fast-forward-id")
+	s.Timeout = 0
+	s.Command.Flags().Var(&s.Timeout, "timeout", "Maximum time to wait. Omit to wait until completion or interruption.")
 	s.ScheduleIdOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
