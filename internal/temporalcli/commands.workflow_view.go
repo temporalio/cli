@@ -141,6 +141,11 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		RootWorkflowId:       info.GetRootExecution().GetWorkflowId(),
 		RootRunId:            info.GetRootExecution().GetRunId(),
 	}, printer.StructuredOptions{})
+	if tsi := resp.GetWorkflowExtendedInfo().GetTimeSkippingInfo(); tsi != nil {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Time Skipping:"))
+		_ = cctx.Printer.PrintStructured(timeSkippingToPrintable(tsi), printer.StructuredOptions{})
+	}
 
 	if priority := info.GetPriority(); priority != nil &&
 		(priority.GetPriorityKey() != 0 || priority.GetFairnessKey() != "" || priority.GetFairnessWeight() != 0) {
