@@ -23,6 +23,7 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type versionSummariesRowType struct {
@@ -63,9 +64,9 @@ type formattedWorkerDeploymentListEntryType struct {
 }
 
 type formattedDrainageInfo struct {
-	DrainageStatus  string    `json:"drainageStatus"`
-	LastChangedTime time.Time `json:"lastChangedTime"`
-	LastCheckedTime time.Time `json:"lastCheckedTime"`
+	DrainageStatus  string     `json:"drainageStatus"`
+	LastChangedTime *time.Time `json:"lastChangedTime,omitempty"`
+	LastCheckedTime *time.Time `json:"lastCheckedTime,omitempty"`
 }
 
 type formattedTaskQueueInfoRowType struct {
@@ -109,17 +110,19 @@ type priorityStatsDisplayRow struct {
 }
 
 type formattedWorkerDeploymentVersionInfoType struct {
-	DeploymentName     string                          `json:"deploymentName"`
-	BuildID            string                          `json:"BuildID"`
-	CreateTime         time.Time                       `json:"createTime"`
-	RoutingChangedTime time.Time                       `json:"routingChangedTime"`
-	CurrentSinceTime   time.Time                       `json:"currentSinceTime"`
-	RampingSinceTime   time.Time                       `json:"rampingSinceTime"`
-	RampPercentage     float32                         `json:"rampPercentage"`
-	DrainageInfo       formattedDrainageInfo           `json:"drainageInfo"`
-	TaskQueuesInfos    []formattedTaskQueueInfoRowType `json:"taskQueuesInfos"`
-	Metadata           map[string]*common.Payload      `json:"metadata"`
-	ComputeConfig      *formattedComputeConfig         `json:"computeConfig,omitempty"`
+	DeploymentName       string                          `json:"deploymentName"`
+	BuildID              string                          `json:"BuildID"`
+	Status               string                          `json:"status"`
+	CreateTime           time.Time                       `json:"createTime"`
+	RoutingChangedTime   *time.Time                      `json:"routingChangedTime,omitempty"`
+	CurrentSinceTime     *time.Time                      `json:"currentSinceTime,omitempty"`
+	RampingSinceTime     *time.Time                      `json:"rampingSinceTime,omitempty"`
+	RampPercentage       float32                         `json:"rampPercentage"`
+	DrainageInfo         *formattedDrainageInfo          `json:"drainageInfo,omitempty"`
+	LastModifierIdentity string                          `json:"lastModifierIdentity,omitempty"`
+	TaskQueuesInfos      []formattedTaskQueueInfoRowType `json:"taskQueuesInfos"`
+	Metadata             map[string]*common.Payload      `json:"metadata"`
+	ComputeConfig        *formattedComputeConfig         `json:"computeConfig,omitempty"`
 }
 
 type formattedComputeConfig struct {
@@ -136,11 +139,12 @@ type formattedComputeConfigProvider struct {
 }
 
 type formattedComputeConfigScaler struct {
-	Type              string   `json:"type"`
-	MinInstances      *int64   `json:"minInstances,omitempty"`
-	MaxInstances      *int64   `json:"maxInstances,omitempty"`
-	InitialInstances  *int64   `json:"initialInstances,omitempty"`
-	UtilizationTarget *float64 `json:"utilizationTarget,omitempty"`
+	Type                   string   `json:"type"`
+	MinInstances           *int64   `json:"minInstances,omitempty"`
+	MaxInstances           *int64   `json:"maxInstances,omitempty"`
+	InitialInstances       *int64   `json:"initialInstances,omitempty"`
+	UtilizationTarget      *float64 `json:"utilizationTarget,omitempty"`
+	ScaleDownStabilization string   `json:"scaleDownStabilization,omitempty"`
 }
 
 func drainageStatusToStr(drainage client.WorkerDeploymentVersionDrainageStatus) (string, error) {
@@ -307,6 +311,13 @@ func drainageStatusProtoToStr(status enumspb.VersionDrainageStatus) (string, err
 	}
 }
 
+// versionStatusProtoToStr converts a version status to a lowercase string, e.g.
+// WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT becomes "current". Values unknown to
+// this CLI fall back to their numeric enum string rather than failing.
+func versionStatusProtoToStr(status enumspb.WorkerDeploymentVersionStatus) string {
+	return strings.ToLower(strings.TrimPrefix(status.String(), "WORKER_DEPLOYMENT_VERSION_STATUS_"))
+}
+
 func taskQueueTypeProtoToStr(taskQueueType enumspb.TaskQueueType) (string, error) {
 	switch taskQueueType {
 	case enumspb.TASK_QUEUE_TYPE_UNSPECIFIED:
@@ -367,20 +378,42 @@ func formatTaskQueuesInfosProto(tqis []*workflowservice.DescribeWorkerDeployment
 	return tqiRows, nil
 }
 
-func formatDrainageInfoProto(drainageInfo *deploymentpb.VersionDrainageInfo) (formattedDrainageInfo, error) {
+// optionalTimestampToTime converts a timestamp that the server may leave unset
+// (e.g. RampingSinceTime for a version that was never ramped) to a time.Time.
+// Both a nil timestamp and the Unix epoch are treated as unset and return the
+// zero time.Time, so that text output omits the field instead of rendering it
+// as "a long while ago".
+func optionalTimestampToTime(t *timestamppb.Timestamp) time.Time {
+	if t == nil || (t.GetSeconds() == 0 && t.GetNanos() == 0) {
+		return time.Time{}
+	}
+	return t.AsTime()
+}
+
+// optionalTimestampToTimePtr is like optionalTimestampToTime but returns nil for
+// an unset timestamp, so that JSON output omits the field.
+func optionalTimestampToTimePtr(t *timestamppb.Timestamp) *time.Time {
+	tm := optionalTimestampToTime(t)
+	if tm.IsZero() {
+		return nil
+	}
+	return &tm
+}
+
+func formatDrainageInfoProto(drainageInfo *deploymentpb.VersionDrainageInfo) (*formattedDrainageInfo, error) {
 	if drainageInfo == nil {
-		return formattedDrainageInfo{}, nil
+		return nil, nil
 	}
 
 	drainageStr, err := drainageStatusProtoToStr(drainageInfo.GetStatus())
 	if err != nil {
-		return formattedDrainageInfo{}, err
+		return nil, err
 	}
 
-	return formattedDrainageInfo{
+	return &formattedDrainageInfo{
 		DrainageStatus:  drainageStr,
-		LastChangedTime: drainageInfo.GetLastChangedTime().AsTime(),
-		LastCheckedTime: drainageInfo.GetLastCheckedTime().AsTime(),
+		LastChangedTime: optionalTimestampToTimePtr(drainageInfo.GetLastChangedTime()),
+		LastCheckedTime: optionalTimestampToTimePtr(drainageInfo.GetLastCheckedTime()),
 	}, nil
 }
 
@@ -393,6 +426,7 @@ const (
 	scalerKeyMaxCount          = "max_count"
 	scalerKeyInitialCount      = "initial_count"
 	scalerKeyUtilizationTarget = "utilization_target"
+	scalerKeyNoSyncQuietMs     = "no_sync_quiet_ms"
 )
 
 // scalerCountFromMap reads an integer worker-count value from a decoded scaler
@@ -427,10 +461,11 @@ func scalerFloatFromMap(m map[string]any, key string) (float64, bool) {
 // scalerSettings holds the rate-based scaler settings surfaced for display. Each
 // field is nil when the corresponding key is absent from the scaler details.
 type scalerSettings struct {
-	minInstances      *int64
-	maxInstances      *int64
-	initialInstances  *int64
-	utilizationTarget *float64
+	minInstances           *int64
+	maxInstances           *int64
+	initialInstances       *int64
+	utilizationTarget      *float64
+	scaleDownStabilization *time.Duration
 }
 
 // decodeScalerSettings extracts the rate-based scaler settings from a
@@ -458,6 +493,12 @@ func decodeScalerSettings(s *computepb.ComputeScaler) scalerSettings {
 	}
 	if v, ok := scalerFloatFromMap(m, scalerKeyUtilizationTarget); ok {
 		out.utilizationTarget = &v
+	}
+	if v, ok := scalerCountFromMap(m, scalerKeyNoSyncQuietMs); ok {
+		// The WCI key is stored in milliseconds; surface it as a duration to match
+		// how the CLI renders other duration fields (e.g. ApproximateBacklogAge).
+		d := time.Duration(v) * time.Millisecond
+		out.scaleDownStabilization = &d
 	}
 	return out
 }
@@ -490,6 +531,9 @@ func formatComputeConfigProto(cc *computepb.ComputeConfig) *formattedComputeConf
 			fs.MaxInstances = set.maxInstances
 			fs.InitialInstances = set.initialInstances
 			fs.UtilizationTarget = set.utilizationTarget
+			if set.scaleDownStabilization != nil {
+				fs.ScaleDownStabilization = formatDuration(*set.scaleDownStabilization)
+			}
 			sg.Scaler = fs
 		}
 		sgs[name] = sg
@@ -514,17 +558,19 @@ func workerDeploymentVersionInfoProtoToRows(deploymentInfo *deploymentpb.WorkerD
 	computeConfig := formatComputeConfigProto(deploymentInfo.GetComputeConfig())
 
 	return formattedWorkerDeploymentVersionInfoType{
-		DeploymentName:     deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
-		BuildID:            deploymentInfo.GetDeploymentVersion().GetBuildId(),
-		CreateTime:         deploymentInfo.GetCreateTime().AsTime(),
-		RoutingChangedTime: deploymentInfo.GetRoutingChangedTime().AsTime(),
-		CurrentSinceTime:   deploymentInfo.GetCurrentSinceTime().AsTime(),
-		RampingSinceTime:   deploymentInfo.GetRampingSinceTime().AsTime(),
-		RampPercentage:     deploymentInfo.GetRampPercentage(),
-		DrainageInfo:       drainage,
-		TaskQueuesInfos:    tqi,
-		Metadata:           deploymentInfo.GetMetadata().GetEntries(),
-		ComputeConfig:      computeConfig,
+		DeploymentName:       deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
+		BuildID:              deploymentInfo.GetDeploymentVersion().GetBuildId(),
+		Status:               versionStatusProtoToStr(deploymentInfo.GetStatus()),
+		CreateTime:           deploymentInfo.GetCreateTime().AsTime(),
+		RoutingChangedTime:   optionalTimestampToTimePtr(deploymentInfo.GetRoutingChangedTime()),
+		CurrentSinceTime:     optionalTimestampToTimePtr(deploymentInfo.GetCurrentSinceTime()),
+		RampingSinceTime:     optionalTimestampToTimePtr(deploymentInfo.GetRampingSinceTime()),
+		RampPercentage:       deploymentInfo.GetRampPercentage(),
+		DrainageInfo:         drainage,
+		LastModifierIdentity: deploymentInfo.GetLastModifierIdentity(),
+		TaskQueuesInfos:      tqi,
+		Metadata:             deploymentInfo.GetMetadata().GetEntries(),
+		ComputeConfig:        computeConfig,
 	}, nil
 }
 
@@ -540,7 +586,8 @@ func computeConfigSummaryStr(cc *computepb.ComputeConfig) string {
 		}
 		summary := p.GetType()
 		// Append whichever scaler settings are present so the one-line summary
-		// reflects the configured limits (ordered min, initial, max, utilization).
+		// reflects the configured limits (ordered min, initial, max, utilization,
+		// scale-down-stabilization).
 		set := decodeScalerSettings(sg.GetScaler())
 		parts := []string{}
 		if set.minInstances != nil {
@@ -554,6 +601,9 @@ func computeConfigSummaryStr(cc *computepb.ComputeConfig) string {
 		}
 		if set.utilizationTarget != nil {
 			parts = append(parts, fmt.Sprintf("utilization %g", *set.utilizationTarget))
+		}
+		if set.scaleDownStabilization != nil {
+			parts = append(parts, fmt.Sprintf("scale-down-stabilization %s", formatDuration(*set.scaleDownStabilization)))
 		}
 		if len(parts) > 0 {
 			summary = fmt.Sprintf("%s (%s)", summary, strings.Join(parts, ", "))
@@ -575,43 +625,43 @@ func printWorkerDeploymentVersionInfoProto(cctx *CommandContext, deploymentInfo 
 	if !cctx.JSONOutput {
 		cctx.Printer.Println(color.MagentaString(msg))
 		var drainageStr string
-		var drainageLastChangedTime time.Time
-		var drainageLastCheckedTime time.Time
-		if deploymentInfo.GetDrainageInfo() != nil {
-			drainageStr, err = drainageStatusProtoToStr(deploymentInfo.GetDrainageInfo().GetStatus())
-			if err != nil {
-				return err
-			}
-			drainageLastChangedTime = deploymentInfo.GetDrainageInfo().GetLastChangedTime().AsTime()
-			drainageLastCheckedTime = deploymentInfo.GetDrainageInfo().GetLastCheckedTime().AsTime()
+		var drainageLastChangedTime, drainageLastCheckedTime *time.Time
+		if drainage := fDeploymentInfo.DrainageInfo; drainage != nil {
+			drainageStr = drainage.DrainageStatus
+			drainageLastChangedTime = drainage.LastChangedTime
+			drainageLastCheckedTime = drainage.LastCheckedTime
 		}
 		computeConfigSummary := computeConfigSummaryStr(deploymentInfo.GetComputeConfig())
 
 		printMe := struct {
 			DeploymentName          string
 			BuildID                 string
+			Status                  string
 			CreateTime              time.Time
-			RoutingChangedTime      time.Time `cli:",cardOmitEmpty"`
-			CurrentSinceTime        time.Time `cli:",cardOmitEmpty"`
-			RampingSinceTime        time.Time `cli:",cardOmitEmpty"`
+			RoutingChangedTime      *time.Time `cli:",cardOmitEmpty"`
+			CurrentSinceTime        *time.Time `cli:",cardOmitEmpty"`
+			RampingSinceTime        *time.Time `cli:",cardOmitEmpty"`
 			RampPercentage          float32
 			DrainageStatus          string                     `cli:",cardOmitEmpty"`
-			DrainageLastChangedTime time.Time                  `cli:",cardOmitEmpty"`
-			DrainageLastCheckedTime time.Time                  `cli:",cardOmitEmpty"`
+			DrainageLastChangedTime *time.Time                 `cli:",cardOmitEmpty"`
+			DrainageLastCheckedTime *time.Time                 `cli:",cardOmitEmpty"`
+			LastModifierIdentity    string                     `cli:",cardOmitEmpty"`
 			Metadata                map[string]*common.Payload `cli:",cardOmitEmpty"`
 			ComputeConfigSummary    string                     `cli:",cardOmitEmpty"`
 		}{
-			DeploymentName:          deploymentInfo.GetDeploymentVersion().GetDeploymentName(),
-			BuildID:                 deploymentInfo.GetDeploymentVersion().GetBuildId(),
-			CreateTime:              deploymentInfo.GetCreateTime().AsTime(),
-			RoutingChangedTime:      deploymentInfo.GetRoutingChangedTime().AsTime(),
-			CurrentSinceTime:        deploymentInfo.GetCurrentSinceTime().AsTime(),
-			RampingSinceTime:        deploymentInfo.GetRampingSinceTime().AsTime(),
-			RampPercentage:          deploymentInfo.GetRampPercentage(),
+			DeploymentName:          fDeploymentInfo.DeploymentName,
+			BuildID:                 fDeploymentInfo.BuildID,
+			Status:                  fDeploymentInfo.Status,
+			CreateTime:              fDeploymentInfo.CreateTime,
+			RoutingChangedTime:      fDeploymentInfo.RoutingChangedTime,
+			CurrentSinceTime:        fDeploymentInfo.CurrentSinceTime,
+			RampingSinceTime:        fDeploymentInfo.RampingSinceTime,
+			RampPercentage:          fDeploymentInfo.RampPercentage,
 			DrainageStatus:          drainageStr,
 			DrainageLastChangedTime: drainageLastChangedTime,
 			DrainageLastCheckedTime: drainageLastCheckedTime,
-			Metadata:                deploymentInfo.GetMetadata().GetEntries(),
+			LastModifierIdentity:    fDeploymentInfo.LastModifierIdentity,
+			Metadata:                fDeploymentInfo.Metadata,
 			ComputeConfigSummary:    computeConfigSummary,
 		}
 		err := cctx.Printer.PrintStructured(printMe, printer.StructuredOptions{})
@@ -989,8 +1039,19 @@ func (c *TemporalWorkerDeploymentManagerIdentityUnsetCommand) run(cctx *CommandC
 	return nil
 }
 
-func validateAWSLambdaProviderDetails(details map[string]any) error {
-	for _, key := range []string{"arn", "role", "role_external_id"} {
+func validateAWSLambdaProviderDetails(details map[string]any, skipRoleAndExternalID bool) error {
+	if _, ok := details["arn"]; !ok {
+		return fmt.Errorf("missing required AWS Lambda provider detail: arn")
+	}
+	if skipRoleAndExternalID {
+		for _, key := range []string{"role", "role_external_id"} {
+			if _, ok := details[key]; ok {
+				return fmt.Errorf("AWS Lambda provider detail %q must not be set when --aws-lambda-skip-role-and-external-id is passed", key)
+			}
+		}
+		return nil
+	}
+	for _, key := range []string{"role", "role_external_id"} {
 		if _, ok := details[key]; !ok {
 			return fmt.Errorf("missing required AWS Lambda provider detail: %s", key)
 		}
@@ -1004,11 +1065,13 @@ func awsLambdaProviderDetailsPayload(
 	functionARN string,
 	assumeRoleARN string,
 	assumeRoleExternalID string,
+	skipRoleAndExternalID bool,
 ) (*commonpb.Payload, error) {
 	// Map keys from temporal-auto-scaled-workers:
 	// https://github.com/temporalio/temporal-auto-scaled-workers/blob/c4a7e69b6504365d7e5326b0b8e6cd95e3293f96/wci/workflow/compute_provider/aws_lambda.go#L16-L20
-	providerDetails := map[string]any{
-		"arn": functionARN,
+	providerDetails := map[string]any{}
+	if functionARN != "" {
+		providerDetails["arn"] = functionARN
 	}
 	if assumeRoleARN != "" {
 		providerDetails["role"] = assumeRoleARN
@@ -1016,7 +1079,52 @@ func awsLambdaProviderDetailsPayload(
 	if assumeRoleExternalID != "" {
 		providerDetails["role_external_id"] = assumeRoleExternalID
 	}
-	err := validateAWSLambdaProviderDetails(providerDetails)
+	err := validateAWSLambdaProviderDetails(providerDetails, skipRoleAndExternalID)
+	if err != nil {
+		return nil, err
+	}
+	dc := converter.GetDefaultDataConverter()
+	return dc.ToPayload(&providerDetails)
+}
+
+func validateAWSAgentcoreProviderDetails(details map[string]any, skipRoleAndExternalID bool) error {
+	if v, ok := details["endpoint_arn"].(string); !ok || v == "" {
+		return fmt.Errorf("missing required AWS Agentcore provider detail: endpoint_arn")
+	}
+	if skipRoleAndExternalID {
+		for _, key := range []string{"role", "role_external_id"} {
+			if _, ok := details[key]; ok {
+				return fmt.Errorf("AWS Agentcore provider detail %q must not be set when --aws-agentcore-skip-role-and-external-id is passed", key)
+			}
+		}
+		return nil
+	}
+	for _, key := range []string{"role", "role_external_id"} {
+		if v, ok := details[key].(string); !ok || v == "" {
+			return fmt.Errorf("missing required AWS Agentcore provider detail: %s", key)
+		}
+	}
+	return nil
+}
+
+// awsAgentcoreProviderDetailsPayload validates the AWS AgentCore inputs and returns encoded payload
+func awsAgentcoreProviderDetailsPayload(
+	endpointARN string,
+	assumeRoleARN string,
+	assumeRoleExternalID string,
+	skipRoleAndExternalID bool,
+) (*commonpb.Payload, error) {
+	providerDetails := map[string]any{}
+	if endpointARN != "" {
+		providerDetails["endpoint_arn"] = endpointARN
+	}
+	if assumeRoleARN != "" {
+		providerDetails["role"] = assumeRoleARN
+	}
+	if assumeRoleExternalID != "" {
+		providerDetails["role_external_id"] = assumeRoleExternalID
+	}
+	err := validateAWSAgentcoreProviderDetails(providerDetails, skipRoleAndExternalID)
 	if err != nil {
 		return nil, err
 	}
@@ -1059,41 +1167,87 @@ func gcpCloudRunProviderDetailsPayload(
 	return dc.ToPayload(&providerDetails)
 }
 
+// ComputeConfigArgs holds ComputeConfig specific args along with helpers for distinguishing between desired compute
+// provider
+type ComputeConfigArgs struct {
+	awsLambdaFunctionArn              string
+	awsLambdaAssumeRoleArn            string
+	awsLambdaAssumeRoleExternalId     string
+	awsLambdaSkipRoleAndExternalId    bool
+	awsAgentcoreEndpointArn           string
+	awsAgentcoreAssumeRoleArn         string
+	awsAgentcoreAssumeRoleExternalId  string
+	awsAgentcoreSkipRoleAndExternalId bool
+	gcpCloudRunProject                string
+	gcpCloudRunRegion                 string
+	gcpCloudRunWorkerPool             string
+	gcpCloudRunServiceAccount         string
+}
+
+func (c *ComputeConfigArgs) hasAwsLambdaArgs() bool {
+	return c.awsLambdaFunctionArn != "" ||
+		c.awsLambdaAssumeRoleArn != "" ||
+		c.awsLambdaAssumeRoleExternalId != "" ||
+		c.awsLambdaSkipRoleAndExternalId
+}
+
+func (c *ComputeConfigArgs) hasAwsAgentcoreArgs() bool {
+	return c.awsAgentcoreEndpointArn != "" ||
+		c.awsAgentcoreAssumeRoleArn != "" ||
+		c.awsAgentcoreAssumeRoleExternalId != "" ||
+		c.awsAgentcoreSkipRoleAndExternalId
+}
+
+func (c *ComputeConfigArgs) hasGcpCloudRunArgs() bool {
+	return c.gcpCloudRunProject != "" ||
+		c.gcpCloudRunRegion != "" ||
+		c.gcpCloudRunWorkerPool != "" ||
+		c.gcpCloudRunServiceAccount != ""
+}
+
 // computeProviderConfig selects the single compute provider for a Worker
 // Deployment Version's "default" scaling group from the command's flags. It
-// enforces that AWS Lambda and GCP Cloud Run flags are not mixed, then
-// dispatches on the trigger flag (--aws-lambda-function-arn /
+// enforces that flags for different providers are not mixed, then dispatches on
+// the trigger flag (--aws-lambda-function-arn / --aws-agentcore-endpoint-arn /
 // --gcp-cloud-run-worker-pool). Returns an empty providerType when no provider
 // flags are set, leaving the "no configuration" decision to the caller.
-func computeProviderConfig(
-	awsLambdaFunctionARN string,
-	awsLambdaAssumeRoleARN string,
-	awsLambdaAssumeRoleExternalID string,
-	gcpCloudRunProject string,
-	gcpCloudRunRegion string,
-	gcpCloudRunWorkerPool string,
-	gcpCloudRunServiceAccount string,
-) (providerType string, detailsPayload *commonpb.Payload, err error) {
-	awsSet := awsLambdaFunctionARN != "" || awsLambdaAssumeRoleARN != "" || awsLambdaAssumeRoleExternalID != ""
-	gcpSet := gcpCloudRunProject != "" || gcpCloudRunRegion != "" || gcpCloudRunWorkerPool != "" || gcpCloudRunServiceAccount != ""
-	if awsSet && gcpSet {
-		return "", nil, fmt.Errorf("cannot combine --aws-lambda-* and --gcp-cloud-run-* flags; a Worker Deployment Version supports a single compute provider")
+func computeProviderConfig(c *ComputeConfigArgs) (providerType string, detailsPayload *commonpb.Payload, err error) {
+	awsLambdaSet := c.hasAwsLambdaArgs()
+	awsAgentcoreSet := c.hasAwsAgentcoreArgs()
+	gcpSet := c.hasGcpCloudRunArgs()
+	setCount := 0
+	for _, set := range []bool{awsLambdaSet, awsAgentcoreSet, gcpSet} {
+		if set {
+			setCount++
+		}
+	}
+	if setCount > 1 {
+		return "", nil, fmt.Errorf("cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags; a Worker Deployment Version supports a single compute provider")
 	}
 
 	switch {
-	case awsLambdaFunctionARN != "":
+	case c.hasAwsLambdaArgs():
 		p, err := awsLambdaProviderDetailsPayload(
-			awsLambdaFunctionARN,
-			awsLambdaAssumeRoleARN,
-			awsLambdaAssumeRoleExternalID,
+			c.awsLambdaFunctionArn,
+			c.awsLambdaAssumeRoleArn,
+			c.awsLambdaAssumeRoleExternalId,
+			c.awsLambdaSkipRoleAndExternalId,
 		)
 		return "aws-lambda", p, err
-	case gcpCloudRunWorkerPool != "":
+	case c.hasAwsAgentcoreArgs():
+		p, err := awsAgentcoreProviderDetailsPayload(
+			c.awsAgentcoreEndpointArn,
+			c.awsAgentcoreAssumeRoleArn,
+			c.awsAgentcoreAssumeRoleExternalId,
+			c.awsAgentcoreSkipRoleAndExternalId,
+		)
+		return "aws-agentcore", p, err
+	case c.hasGcpCloudRunArgs():
 		p, err := gcpCloudRunProviderDetailsPayload(
-			gcpCloudRunProject,
-			gcpCloudRunRegion,
-			gcpCloudRunWorkerPool,
-			gcpCloudRunServiceAccount,
+			c.gcpCloudRunProject,
+			c.gcpCloudRunRegion,
+			c.gcpCloudRunWorkerPool,
+			c.gcpCloudRunServiceAccount,
 		)
 		return "gcp-cloud-run", p, err
 	default:
@@ -1107,6 +1261,7 @@ func computeProviderConfig(
 // WCI rejects an incompatible pairing at CreateWorkerDeploymentVersion.
 var scalerTypeByProvider = map[string]string{
 	"aws-lambda":    "no-sync",
+	"aws-agentcore": "no-sync",
 	"gcp-cloud-run": "rate-based",
 }
 
@@ -1120,50 +1275,41 @@ func scalerTypeForProvider(providerType string) (string, error) {
 	return "", fmt.Errorf("no scaler mapping for compute provider %q", providerType)
 }
 
-// gcpCloudRunScalerDetails builds the ComputeScaler.Details payload from the GCP
-// Cloud Run scaling flags. It carries two independent groups of rate-based scaler
-// settings:
-//   - the instance-count group (min_count/max_count/initial_count), which is
-//     all-or-none and must satisfy min <= initial <= max, and
-//   - utilization_target, a standalone fraction in (0, 1].
-//
-// The *Set booleans come from cobra's Flags().Changed, so an omitted flag stays
-// distinct from an explicit 0. Returns a nil payload when nothing is set, leaving
-// WCI's defaults (min 0, max 30, initial 0, utilization_target 0.8) in effect.
-// Every setting is GCP Cloud Run only; any use with another provider is rejected.
-// Config keys mirror the WCI rate-based scaler:
-// https://github.com/temporalio/temporal-auto-scaled-workers/blob/main/wci/workflow/scaling_algorithm/rate_based.go
 // gcpScalerFlags holds the GCP Cloud Run scaling flag values together with
 // whether each was actually set (from cobra's Flags().Changed). Pairing each
 // value with its Set bool keeps an omitted flag distinct from an explicit 0 and
 // removes the positional-argument risk of passing the raw values around.
 type gcpScalerFlags struct {
-	min            int
-	minSet         bool
-	max            int
-	maxSet         bool
-	initial        int
-	initialSet     bool
-	utilization    float32
-	utilizationSet bool
+	min                       int
+	minSet                    bool
+	max                       int
+	maxSet                    bool
+	initial                   int
+	initialSet                bool
+	utilization               float32
+	utilizationSet            bool
+	scaleDownStabilization    time.Duration
+	scaleDownStabilizationSet bool
 }
 
 func (f gcpScalerFlags) anySet() bool {
-	return f.minSet || f.maxSet || f.initialSet || f.utilizationSet
+	return f.minSet || f.maxSet || f.initialSet || f.utilizationSet || f.scaleDownStabilizationSet
 }
 
 func (f gcpScalerFlags) allSet() bool {
-	return f.minSet && f.maxSet && f.initialSet && f.utilizationSet
+	return f.minSet && f.maxSet && f.initialSet && f.utilizationSet && f.scaleDownStabilizationSet
 }
 
 // gcpCloudRunScalerDetails builds the ComputeScaler.Details payload from the GCP
-// Cloud Run scaling flags (min/max/initial instance counts and utilization
-// target). The four form a single all-or-none group: setting any one requires
-// all four. That keeps the min<=initial<=max relationship self-contained and
-// avoids comparing an explicit value against WCI's default for an unset sibling.
-// Returns a nil payload when nothing is set, leaving WCI's defaults (min 0,
-// max 30, initial 0, utilization_target 0.8) in effect. Every setting is GCP
-// Cloud Run only; any use with another provider is rejected.
+// Cloud Run scaling flags (min/max/initial instance counts, utilization target,
+// and the scale-down stabilization duration). The five form a single all-or-none group:
+// setting any one requires all five. That keeps the min<=initial<=max
+// relationship self-contained, always writes the full scaler config so an update
+// never leaves a stale sibling behind, and avoids comparing an explicit value
+// against WCI's default for an unset sibling. Returns a nil payload when nothing
+// is set, leaving WCI's defaults (min 0, max 30, initial 0, utilization_target
+// 0.8, no_sync_quiet_ms 90000) in effect. Every setting is GCP Cloud Run only;
+// any use with another provider is rejected.
 func gcpCloudRunScalerDetails(providerType string, f gcpScalerFlags) (*commonpb.Payload, error) {
 	if !f.anySet() {
 		return nil, nil
@@ -1174,7 +1320,7 @@ func gcpCloudRunScalerDetails(providerType string, f gcpScalerFlags) (*commonpb.
 		return nil, fmt.Errorf("the Cloud Run scaling flags are only valid with --gcp-cloud-run-worker-pool")
 	}
 	if !f.allSet() {
-		return nil, fmt.Errorf("--gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and --gcp-cloud-run-utilization-target must be set together")
+		return nil, fmt.Errorf("--gcp-cloud-run-min-instances, --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, --gcp-cloud-run-utilization-target, and --gcp-cloud-run-scale-down-stabilization-duration must be set together")
 	}
 	if f.min < 0 {
 		return nil, fmt.Errorf("--gcp-cloud-run-min-instances cannot be negative")
@@ -1193,11 +1339,21 @@ func gcpCloudRunScalerDetails(providerType string, f gcpScalerFlags) (*commonpb.
 	if f.utilization <= 0 || f.utilization > 1 {
 		return nil, fmt.Errorf("--gcp-cloud-run-utilization-target must be greater than 0 and at most 1")
 	}
+	// Validate the raw duration before converting: Milliseconds() truncates
+	// toward zero, which would hide a negative sub-millisecond value (turning it
+	// into 0, disabling the wait) or silently round a fractional millisecond.
+	if f.scaleDownStabilization < 0 {
+		return nil, fmt.Errorf("--gcp-cloud-run-scale-down-stabilization-duration cannot be negative")
+	}
+	if f.scaleDownStabilization%time.Millisecond != 0 {
+		return nil, fmt.Errorf("--gcp-cloud-run-scale-down-stabilization-duration must be a whole number of milliseconds")
+	}
 	details := map[string]any{
 		scalerKeyMinCount:          f.min,
 		scalerKeyMaxCount:          f.max,
 		scalerKeyInitialCount:      f.initial,
 		scalerKeyUtilizationTarget: f.utilization,
+		scalerKeyNoSyncQuietMs:     f.scaleDownStabilization.Milliseconds(),
 	}
 	dc := converter.GetDefaultDataConverter()
 	return dc.ToPayload(&details)
@@ -1210,6 +1366,7 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) gcpScalerFlags() gcpScale
 		max: c.GcpCloudRunMaxInstances, maxSet: f.Changed("gcp-cloud-run-max-instances"),
 		initial: c.GcpCloudRunInitialInstances, initialSet: f.Changed("gcp-cloud-run-initial-instances"),
 		utilization: c.GcpCloudRunUtilizationTarget, utilizationSet: f.Changed("gcp-cloud-run-utilization-target"),
+		scaleDownStabilization: c.GcpCloudRunScaleDownStabilizationDuration.Duration(), scaleDownStabilizationSet: f.Changed("gcp-cloud-run-scale-down-stabilization-duration"),
 	}
 }
 
@@ -1226,15 +1383,20 @@ func (c *TemporalWorkerDeploymentCreateVersionCommand) run(cctx *CommandContext,
 	deploymentName := c.DeploymentName
 	requestID := uuid.NewString()
 
-	providerType, detailsPayload, err := computeProviderConfig(
-		c.AwsLambdaFunctionArn,
-		c.AwsLambdaAssumeRoleArn,
-		c.AwsLambdaAssumeRoleExternalId,
-		c.GcpCloudRunProject,
-		c.GcpCloudRunRegion,
-		c.GcpCloudRunWorkerPool,
-		c.GcpCloudRunServiceAccount,
-	)
+	providerType, detailsPayload, err := computeProviderConfig(&ComputeConfigArgs{
+		awsLambdaFunctionArn:              c.AwsLambdaFunctionArn,
+		awsLambdaAssumeRoleArn:            c.AwsLambdaAssumeRoleArn,
+		awsLambdaAssumeRoleExternalId:     c.AwsLambdaAssumeRoleExternalId,
+		awsLambdaSkipRoleAndExternalId:    c.AwsLambdaSkipRoleAndExternalId,
+		awsAgentcoreEndpointArn:           c.AwsAgentcoreEndpointArn,
+		awsAgentcoreAssumeRoleArn:         c.AwsAgentcoreAssumeRoleArn,
+		awsAgentcoreAssumeRoleExternalId:  c.AwsAgentcoreAssumeRoleExternalId,
+		awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
+		gcpCloudRunProject:                c.GcpCloudRunProject,
+		gcpCloudRunRegion:                 c.GcpCloudRunRegion,
+		gcpCloudRunWorkerPool:             c.GcpCloudRunWorkerPool,
+		gcpCloudRunServiceAccount:         c.GcpCloudRunServiceAccount,
+	})
 	if err != nil {
 		return err
 	}
@@ -1291,6 +1453,7 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) gcpScalerFla
 		max: c.GcpCloudRunMaxInstances, maxSet: f.Changed("gcp-cloud-run-max-instances"),
 		initial: c.GcpCloudRunInitialInstances, initialSet: f.Changed("gcp-cloud-run-initial-instances"),
 		utilization: c.GcpCloudRunUtilizationTarget, utilizationSet: f.Changed("gcp-cloud-run-utilization-target"),
+		scaleDownStabilization: c.GcpCloudRunScaleDownStabilizationDuration.Duration(), scaleDownStabilizationSet: f.Changed("gcp-cloud-run-scale-down-stabilization-duration"),
 	}
 }
 
@@ -1317,23 +1480,29 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 		RequestId: requestID,
 	}
 
+	computeConfigArgs := &ComputeConfigArgs{
+		awsLambdaFunctionArn:              c.AwsLambdaFunctionArn,
+		awsLambdaAssumeRoleArn:            c.AwsLambdaAssumeRoleArn,
+		awsLambdaAssumeRoleExternalId:     c.AwsLambdaAssumeRoleExternalId,
+		awsLambdaSkipRoleAndExternalId:    c.AwsLambdaSkipRoleAndExternalId,
+		awsAgentcoreEndpointArn:           c.AwsAgentcoreEndpointArn,
+		awsAgentcoreAssumeRoleArn:         c.AwsAgentcoreAssumeRoleArn,
+		awsAgentcoreAssumeRoleExternalId:  c.AwsAgentcoreAssumeRoleExternalId,
+		awsAgentcoreSkipRoleAndExternalId: c.AwsAgentcoreSkipRoleAndExternalId,
+		gcpCloudRunProject:                c.GcpCloudRunProject,
+		gcpCloudRunRegion:                 c.GcpCloudRunRegion,
+		gcpCloudRunWorkerPool:             c.GcpCloudRunWorkerPool,
+		gcpCloudRunServiceAccount:         c.GcpCloudRunServiceAccount,
+	}
+
 	if c.Remove {
-		if c.AwsLambdaFunctionArn != "" || c.AwsLambdaAssumeRoleArn != "" || c.AwsLambdaAssumeRoleExternalId != "" ||
-			c.GcpCloudRunProject != "" || c.GcpCloudRunRegion != "" || c.GcpCloudRunWorkerPool != "" || c.GcpCloudRunServiceAccount != "" ||
+		if computeConfigArgs.hasAwsLambdaArgs() || computeConfigArgs.hasAwsAgentcoreArgs() || computeConfigArgs.hasGcpCloudRunArgs() ||
 			c.gcpScalerFlags().anySet() {
-			return fmt.Errorf("--remove cannot be combined with --aws-lambda-* or --gcp-cloud-run-* flags")
+			return fmt.Errorf("--remove cannot be combined with --aws-lambda-*, --aws-agentcore-*, or --gcp-cloud-run-* flags")
 		}
 		request.RemoveComputeConfigScalingGroups = []string{"default"}
 	} else {
-		providerType, detailsPayload, err := computeProviderConfig(
-			c.AwsLambdaFunctionArn,
-			c.AwsLambdaAssumeRoleArn,
-			c.AwsLambdaAssumeRoleExternalId,
-			c.GcpCloudRunProject,
-			c.GcpCloudRunRegion,
-			c.GcpCloudRunWorkerPool,
-			c.GcpCloudRunServiceAccount,
-		)
+		providerType, detailsPayload, err := computeProviderConfig(computeConfigArgs)
 		if err != nil {
 			return err
 		}

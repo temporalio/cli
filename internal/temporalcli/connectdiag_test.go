@@ -1,0 +1,809 @@
+package temporalcli
+
+import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"errors"
+	"fmt"
+	"io"
+	"math/big"
+	"net"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.temporal.io/api/serviceerror"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+// newTestCert generates a self-signed server certificate for 127.0.0.1.
+func newTestCert(t *testing.T) tls.Certificate {
+	return newTestCertValidFor(t, -time.Hour, time.Hour)
+}
+
+// newTestCertValidFor generates a self-signed server certificate whose
+// validity window is offset from now, so callers can produce an expired or
+// not-yet-valid certificate.
+func newTestCertValidFor(t *testing.T, notBefore, notAfter time.Duration) tls.Certificate {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	template := x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "connectdiag-test"},
+		NotBefore:             time.Now().Add(notBefore),
+		NotAfter:              time.Now().Add(notAfter),
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		DNSNames:              []string{"localhost"},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	require.NoError(t, err)
+	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key, Leaf: mustParseCert(t, der)}
+}
+
+func mustParseCert(t *testing.T, der []byte) *x509.Certificate {
+	t.Helper()
+	cert, err := x509.ParseCertificate(der)
+	require.NoError(t, err)
+	return cert
+}
+
+func certPool(t *testing.T, cert tls.Certificate) *x509.CertPool {
+	t.Helper()
+	pool := x509.NewCertPool()
+	pool.AddCert(cert.Leaf)
+	return pool
+}
+
+// serveTLS accepts connections and completes TLS handshakes until the
+// listener closes. Returned address is host:port.
+func serveTLS(t *testing.T, cfg *tls.Config) string {
+	t.Helper()
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				// Drive the handshake; keep the connection open briefly so
+				// post-handshake alerts (TLS 1.3 client-cert enforcement)
+				// reach the client, then close.
+				if tlsConn, ok := conn.(*tls.Conn); ok {
+					_ = tlsConn.HandshakeContext(context.Background())
+					buf := make([]byte, 1)
+					_ = tlsConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+					_, _ = tlsConn.Read(buf)
+				}
+				conn.Close()
+			}()
+		}
+	}()
+	return ln.Addr().String()
+}
+
+func testDiagnose(t *testing.T, address string, tlsCfg *tls.Config) *connectDiagnosis {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	// Mirror the SDK's eager GetSystemInfo failure shape.
+	origErr := fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded"))
+	return diagnoseConnection(ctx, connectTarget{Address: address, TLS: tlsCfg}, origErr)
+}
+
+func TestDiagnoseConnection_ClientCertRequired(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certPool(t, cert),
+	})
+
+	// Client trusts the server CA but has no client cert.
+	d := testDiagnose(t, addr, &tls.Config{RootCAs: certPool(t, cert)})
+	// This test also pins the authoritative Go crypto/tls alert text
+	// ("certificate required" / "bad certificate") that classifyTLSAlert
+	// depends on; if it fails after a Go upgrade, revisit classifyTLSAlert.
+	assert.Equal(t, causeClientCertRequired, d.Cause)
+	requireStage(t, d, diagOK, "TCP connection established")
+	requireStage(t, d, diagFail, "server requires mTLS")
+}
+
+func TestGenericTLSHandshakeFailureDoesNotImplyClientCertificate(t *testing.T) {
+	err := errors.New("remote error: tls: handshake failure")
+	assert.Equal(t, causeUnknown, classifyTLSAlert(err))
+
+	d := &connectDiagnosis{}
+	d.classifyTLSError(err, true)
+	assert.Equal(t, causeUnknown, d.Cause)
+	requireStage(t, d, diagFail, "remote error: tls: handshake failure")
+	assert.Nil(t, suggestAction(d, connectMeta{Address: "example:7233"}))
+	for _, stage := range d.Stages {
+		assert.NotContains(t, stage.Label, "mTLS")
+		assert.NotContains(t, stage.Label, "client certificate")
+	}
+
+	client, server := net.Pipe()
+	t.Cleanup(func() { _ = client.Close() })
+	go func() {
+		defer server.Close()
+		buf := make([]byte, 4096)
+		_, _ = server.Read(buf)
+		// TLS alert record: fatal handshake_failure (alert 40).
+		_, _ = server.Write([]byte{21, 3, 3, 0, 2, 2, 40})
+	}()
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	cause, detail := probeServerSpeaksTLS(ctx, client, "example.com")
+	assert.Equal(t, causeUnknown, cause)
+	assert.Empty(t, detail)
+}
+
+func TestDiagnoseConnection_ServerPlaintext(t *testing.T) {
+	// Plain TCP listener that immediately writes a non-TLS response.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				_, _ = conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
+				// Drain the client's ClientHello before closing: closing with
+				// unread data pending sends an RST, which on Windows discards
+				// the response before the client can read it.
+				_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+				buf := make([]byte, 1024)
+				for {
+					if _, err := conn.Read(buf); err != nil {
+						return
+					}
+				}
+			}()
+		}
+	}()
+
+	d := testDiagnose(t, ln.Addr().String(), &tls.Config{InsecureSkipVerify: true})
+	assert.Equal(t, causeServerPlaintext, d.Cause)
+	requireStage(t, d, diagFail, "did not respond with TLS")
+}
+
+func TestDiagnoseConnection_ServerSpeaksTLS(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+
+	// No TLS configured on the client.
+	d := testDiagnose(t, addr, nil)
+	assert.Equal(t, causeServerSpeaksTLS, d.Cause)
+	requireStage(t, d, diagFail, "server expects TLS")
+}
+
+func TestDiagnoseConnection_Refused(t *testing.T) {
+	// Grab a port and close it so nothing is listening.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := ln.Addr().String()
+	require.NoError(t, ln.Close())
+
+	d := testDiagnose(t, addr, nil)
+	assert.Equal(t, causeTCPRefused, d.Cause)
+	requireStage(t, d, diagSkipped, "DNS lookup skipped")
+	requireStage(t, d, diagFail, "TCP connection refused")
+}
+
+func TestDiagnoseConnection_DNSFailure(t *testing.T) {
+	// .invalid is reserved (RFC 2606) and can never resolve.
+	d := testDiagnose(t, "does-not-exist.invalid:7233", nil)
+	assert.Equal(t, causeDNS, d.Cause)
+	requireStage(t, d, diagFail, "DNS lookup")
+}
+
+func TestDiagnoseConnection_UnknownCA(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+
+	// Client does not trust the server's self-signed cert.
+	d := testDiagnose(t, addr, &tls.Config{})
+	assert.Equal(t, causeCAVerify, d.Cause)
+	requireStage(t, d, diagFail, "cannot verify server certificate")
+}
+
+func TestDiagnoseConnection_HealthyTLSFallsThroughToGRPC(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+
+	// TLS is fine; the original (gRPC-level) error should be classified.
+	d := testDiagnose(t, addr, &tls.Config{RootCAs: certPool(t, cert)})
+	assert.Equal(t, causeTimeout, d.Cause)
+	requireStage(t, d, diagOK, "TLS handshake succeeded")
+	requireStage(t, d, diagInconclusive, "gRPC failure could not be diagnosed")
+}
+
+func TestDiagnoseConnection_CancellationDuringTLSIsSkippedAndPrompt(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	release := make(chan struct{})
+	tlsStarted := make(chan error, 1)
+	serverDone := make(chan struct{})
+	go func() {
+		defer close(serverDone)
+		conn, acceptErr := ln.Accept()
+		if acceptErr != nil {
+			tlsStarted <- acceptErr
+			return
+		}
+		defer conn.Close()
+		header := make([]byte, 5)
+		_, readErr := io.ReadFull(conn, header)
+		tlsStarted <- readErr
+		if readErr != nil {
+			return
+		}
+		<-release
+	}()
+	t.Cleanup(func() {
+		close(release)
+		_ = ln.Close()
+		select {
+		case <-serverDone:
+		case <-time.After(time.Second):
+			t.Error("TLS test server did not stop")
+		}
+	})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+	diagnosisDone := make(chan *connectDiagnosis, 1)
+	started := time.Now()
+	go func() {
+		diagnosisDone <- diagnoseConnection(ctx, connectTarget{Address: ln.Addr().String(), TLS: &tls.Config{InsecureSkipVerify: true}}, errors.New("dial failed"))
+	}()
+
+	select {
+	case tlsErr := <-tlsStarted:
+		require.NoError(t, tlsErr)
+	case d := <-diagnosisDone:
+		t.Fatalf("diagnosis completed before TLS handshake began: %+v", d)
+	case <-time.After(time.Second):
+		t.Fatal("TLS handshake did not begin")
+	}
+	cancel()
+
+	var d *connectDiagnosis
+	select {
+	case d = <-diagnosisDone:
+	case <-time.After(time.Second):
+		t.Fatal("diagnosis did not return after cancellation")
+	}
+
+	assert.Less(t, time.Since(started), time.Second)
+	assert.Equal(t, causeUnknown, d.Cause)
+	requireStage(t, d, diagSkipped, "TLS handshake check skipped: diagnosis canceled")
+	for _, stage := range d.Stages {
+		assert.False(t, stage.Status == diagOK && strings.Contains(stage.Label, "TLS handshake succeeded"))
+	}
+}
+
+func requireStage(t *testing.T, d *connectDiagnosis, status diagStatus, labelSubstr string) {
+	t.Helper()
+	for _, stage := range d.Stages {
+		if stage.Status == status && strings.Contains(stage.Label, labelSubstr) {
+			return
+		}
+	}
+	t.Fatalf("no stage with status %v containing %q in %+v", status, labelSubstr, d.Stages)
+}
+
+func TestClassifyGRPCError(t *testing.T) {
+	tests := []struct {
+		name   string
+		err    error
+		cause  connectCause
+		detail string
+	}{
+		{
+			name:  "serviceerror deadline exceeded",
+			err:   fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded")),
+			cause: causeTimeout,
+		},
+		{
+			name:  "plain context deadline",
+			err:   fmt.Errorf("failed reaching server: %w", context.DeadlineExceeded),
+			cause: causeTimeout,
+		},
+		{
+			name:  "unauthenticated status",
+			err:   fmt.Errorf("failed reaching server: %w", status.Error(codes.Unauthenticated, "bad credentials")),
+			cause: causeUnauthenticated,
+		},
+		{
+			name:  "permission denied status",
+			err:   fmt.Errorf("failed reaching server: %w", status.Error(codes.PermissionDenied, "nope")),
+			cause: causePermissionDenied,
+		},
+		{
+			name:  "unclassified error",
+			err:   fmt.Errorf("something else entirely"),
+			cause: causeUnknown,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cause, detail := classifyGRPCError(tt.err)
+			assert.Equal(t, tt.cause, cause)
+			if tt.detail != "" {
+				assert.Contains(t, detail, tt.detail)
+			}
+		})
+	}
+}
+
+func TestDiagnoseConnection_AuthStatusesUseTypedOriginalErrorWithoutSpeculativeProbe(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		code  codes.Code
+		cause connectCause
+		stage string
+	}{
+		{name: "unauthenticated", code: codes.Unauthenticated, cause: causeUnauthenticated, stage: "unauthenticated"},
+		{name: "permission denied", code: codes.PermissionDenied, cause: causePermissionDenied, stage: "denied"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			d := diagnoseConnection(t.Context(), connectTarget{Address: "does-not-exist.invalid:7233"},
+				fmt.Errorf("failed reaching server: %w", status.Error(tt.code, "server-controlled detail")))
+			assert.Equal(t, tt.cause, d.Cause)
+			require.Len(t, d.Stages, 1, "typed auth failures must not trigger post-failure network probes")
+			requireStage(t, d, diagFail, tt.stage)
+			assert.Nil(t, suggestAction(d, connectMeta{Address: d.Address}))
+		})
+	}
+}
+
+func TestConnectSummary(t *testing.T) {
+	origErr := fmt.Errorf("failed reaching server: context deadline exceeded")
+	tests := []struct {
+		cause connectCause
+		want  string
+	}{
+		{causeDNS, "could not resolve host"},
+		{causeTCPRefused, "connection refused"},
+		{causeTCPTimeout, "connection timed out"},
+		{causeServerPlaintext, "TLS is enabled but the server did not respond with TLS"},
+		{causeServerSpeaksTLS, "the server requires TLS but the CLI is connecting without it"},
+		{causeClientCertRequired, "server requires client certificate (mTLS)"},
+		{causeCAVerify, "cannot verify server TLS certificate"},
+		{causeHostnameMismatch, "server TLS certificate does not match host"},
+		// Unclassified failures keep the original error text (minus the SDK
+		// prefix) so scripts matching on it keep working.
+		{causeUnknown, "context deadline exceeded"},
+		{causeTimeout, "context deadline exceeded"},
+	}
+	for _, tt := range tests {
+		got := connectSummary(&connectDiagnosis{Cause: tt.cause}, origErr)
+		assert.Contains(t, got, tt.want, "cause %v", tt.cause)
+	}
+}
+
+func TestAuthSummariesDoNotCopyServerControlledStatusMessage(t *testing.T) {
+	assert.Equal(t, "authentication failed", connectSummary(
+		&connectDiagnosis{Cause: causeUnauthenticated, Detail: "attacker text\nrun this"},
+		errors.New("fallback attacker text"),
+	))
+	assert.Equal(t, "permission denied", connectSummary(
+		&connectDiagnosis{Cause: causePermissionDenied, Detail: "attacker text\nrun this"},
+		errors.New("fallback attacker text"),
+	))
+}
+
+func TestArmReadDeadlineUsesEarlierContextDeadlineAndCancellation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+	conn := &deadlineRecordingConn{}
+	stop := armReadDeadline(ctx, conn)
+	defer stop()
+	require.Eventually(t, func() bool { return !conn.deadline().IsZero() }, time.Second, time.Millisecond)
+	assert.WithinDuration(t, time.Now().Add(50*time.Millisecond), conn.deadline(), 25*time.Millisecond)
+	cancel()
+	require.Eventually(t, func() bool { return time.Until(conn.deadline()) <= 0 }, time.Second, time.Millisecond)
+}
+
+type deadlineRecordingConn struct {
+	mu sync.Mutex
+	d  time.Time
+}
+
+func (c *deadlineRecordingConn) Read([]byte) (int, error)         { return 0, io.EOF }
+func (c *deadlineRecordingConn) Write(p []byte) (int, error)      { return len(p), nil }
+func (c *deadlineRecordingConn) Close() error                     { return nil }
+func (c *deadlineRecordingConn) LocalAddr() net.Addr              { return nil }
+func (c *deadlineRecordingConn) RemoteAddr() net.Addr             { return nil }
+func (c *deadlineRecordingConn) SetDeadline(time.Time) error      { return nil }
+func (c *deadlineRecordingConn) SetWriteDeadline(time.Time) error { return nil }
+func (c *deadlineRecordingConn) SetReadDeadline(d time.Time) error {
+	c.mu.Lock()
+	c.d = d
+	c.mu.Unlock()
+	return nil
+}
+func (c *deadlineRecordingConn) deadline() time.Time { c.mu.Lock(); defer c.mu.Unlock(); return c.d }
+
+func TestSuggestFix(t *testing.T) {
+	tests := []struct {
+		name     string
+		diag     *connectDiagnosis
+		meta     connectMeta
+		contains []string
+	}{
+		{
+			name:     "mTLS uses long flags",
+			diag:     &connectDiagnosis{Cause: causeClientCertRequired},
+			meta:     connectMeta{Address: "myhost:7233"},
+			contains: []string{"requires client certificates", "--tls-cert-path", "--tls-key-path"},
+		},
+		{
+			name:     "refused on local default port",
+			diag:     &connectDiagnosis{Cause: causeTCPRefused},
+			meta:     connectMeta{Address: "127.0.0.1:7233"},
+			contains: []string{"temporal server start-dev"},
+		},
+		{
+			name:     "refused elsewhere",
+			diag:     &connectDiagnosis{Cause: causeTCPRefused},
+			meta:     connectMeta{Address: "myhost:9999"},
+			contains: []string{"Nothing is listening at myhost:9999"},
+		},
+		{
+			name:     "dns failure does not guess provenance",
+			diag:     &connectDiagnosis{Cause: causeDNS},
+			meta:     connectMeta{Address: "typo.example.com:7233"},
+			contains: []string{`Could not resolve "typo.example.com"`},
+		},
+		{
+			name:     "server speaks TLS",
+			diag:     &connectDiagnosis{Cause: causeServerSpeaksTLS},
+			meta:     connectMeta{Address: "myhost:7233"},
+			contains: []string{"requires TLS", "--tls"},
+		},
+		{
+			name:     "server plaintext",
+			diag:     &connectDiagnosis{Cause: causeServerPlaintext},
+			meta:     connectMeta{Address: "myhost:7233", TLSConfigured: true},
+			contains: []string{"does not appear to use TLS"},
+		},
+		{
+			name:     "rejected client cert points at the configured pair",
+			diag:     &connectDiagnosis{Cause: causeClientCertRejected},
+			meta:     connectMeta{Address: "myhost:7233"},
+			contains: []string{"rejected the client certificate", "has not expired"},
+		},
+		{
+			name:     "unusable server cert names the reason",
+			diag:     &connectDiagnosis{Cause: causeCertInvalid, Detail: "expired or not yet valid"},
+			meta:     connectMeta{Address: "myhost:7233"},
+			contains: []string{"trusted but not usable", "expired or not yet valid", "Renew or replace"},
+		},
+		{
+			name:     "plaintext remedy allows for implicitly enabled TLS",
+			diag:     &connectDiagnosis{Cause: causeServerPlaintext},
+			meta:     connectMeta{Address: "myhost:7233", TLSConfigured: true},
+			contains: []string{"--api-key", "effective settings"},
+		},
+		{
+			name:     "cert file unreadable",
+			diag:     &connectDiagnosis{Cause: causeCertFileUnreadable, Detail: "/nope.pem"},
+			meta:     connectMeta{Address: "myhost:7233"},
+			contains: []string{`Cannot read "/nope.pem"`},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := string(renderConnectionReport(connectionReport{Summary: "failure", Action: suggestAction(tt.diag, tt.meta)}, false, displayShellPOSIX))
+			for _, want := range tt.contains {
+				assert.Contains(t, got, want)
+			}
+		})
+	}
+	assert.Nil(t, suggestAction(&connectDiagnosis{Cause: causeUnauthenticated}, connectMeta{Address: "example:7233"}))
+	assert.Nil(t, suggestAction(&connectDiagnosis{Cause: causePermissionDenied}, connectMeta{Address: "example:7233"}))
+	assert.Nil(t, suggestAction(&connectDiagnosis{Cause: causeTimeout}, connectMeta{Address: "example:7233"}))
+	assert.Nil(t, suggestAction(&connectDiagnosis{Cause: causeUnknown}, connectMeta{Address: "example:7233"}))
+}
+
+func TestConnectErrorRendering(t *testing.T) {
+	origErr := fmt.Errorf("failed reaching server: context deadline exceeded")
+	d := &connectDiagnosis{
+		Address: "foo.bar.tmprl.cloud:7233",
+		Cause:   causeClientCertRequired,
+		Stages: []diagStage{
+			{diagOK, "DNS resolved (3 addresses)"},
+			{diagOK, "TCP connection established"},
+			{diagFail, "TLS handshake failed: server requires mTLS, no valid client certificate was provided"},
+		},
+	}
+	err := newConnectError(d, connectMeta{
+		Address:       "foo.bar.tmprl.cloud:7233",
+		Namespace:     "example.namespace",
+		TLSConfigured: true,
+	}, origErr)
+
+	msg := string(renderConnectionReport(connectionErrorReport(err), false, displayShellPOSIX))
+	assert.Contains(t, msg, "failed connecting to Temporal server at foo.bar.tmprl.cloud:7233: TLS handshake failed: server requires client certificate (mTLS)")
+	assert.Contains(t, msg, "Namespace: example.namespace")
+	assert.Contains(t, msg, "TLS: true")
+	assert.Contains(t, msg, "Connection checks for foo.bar.tmprl.cloud:7233")
+	assert.Contains(t, msg, "✓ DNS resolved (3 addresses)")
+	assert.Contains(t, msg, "✗ TLS handshake failed")
+	assert.Contains(t, msg, "--tls-cert-path")
+	// Unwrap preserves the original error.
+	assert.ErrorContains(t, err.Unwrap(), "context deadline exceeded")
+}
+
+// An expired certificate chains to a trusted root, so Go reports it as a
+// *tls.CertificateVerificationError just like an untrusted one. Classifying it
+// as causeCAVerify would tell the user to configure --tls-ca-path, which
+// cannot fix an expired certificate.
+func TestDiagnoseConnection_ExpiredCertIsNotACAProblem(t *testing.T) {
+	cert := newTestCertValidFor(t, -48*time.Hour, -24*time.Hour)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+
+	// The client trusts this exact certificate; the only defect is its expiry.
+	d := testDiagnose(t, addr, &tls.Config{RootCAs: certPool(t, cert)})
+	assert.Equal(t, causeCertInvalid, d.Cause)
+	requireStage(t, d, diagFail, "server certificate is not usable")
+
+	rendered := string(renderConnectionReport(
+		connectionReport{Summary: "failure", Action: suggestAction(d, connectMeta{Address: addr})},
+		false, displayShellPOSIX,
+	))
+	assert.Contains(t, rendered, "Renew or replace it")
+	assert.NotContains(t, rendered, "--tls-ca-path", "a CA cannot fix an expired certificate")
+}
+
+// Alert 42 means a certificate was sent and refused; alert 116 means none was
+// sent. Telling the first user to configure --tls-cert-path is useless advice,
+// because they already did.
+func TestRejectedClientCertIsDistinctFromMissingOne(t *testing.T) {
+	rejected := errors.New("remote error: tls: bad certificate")
+	required := errors.New("remote error: tls: certificate required")
+
+	assert.Equal(t, causeClientCertRejected, classifyTLSAlert(rejected))
+	assert.Equal(t, causeClientCertRequired, classifyTLSAlert(required))
+
+	d := &connectDiagnosis{}
+	d.classifyTLSError(rejected, true)
+	assert.Equal(t, causeClientCertRejected, d.Cause)
+	requireStage(t, d, diagFail, "server rejected the client certificate")
+
+	action := suggestAction(d, connectMeta{Address: "myhost:7233"})
+	require.NotNil(t, action)
+	assert.Contains(t, action.Label, "rejected the client certificate")
+	assert.NotContains(t, action.Label, "Configure both",
+		"the certificate is already configured; the remedy is to fix it, not to add one")
+
+	// Either alert still proves the server spoke TLS.
+	for _, alertErr := range []error{rejected, required} {
+		client, server := net.Pipe()
+		t.Cleanup(func() { _ = client.Close() })
+		go func() {
+			defer server.Close()
+			buf := make([]byte, 4096)
+			_, _ = server.Read(buf)
+			// Fatal alert: 42 bad_certificate or 116 certificate_required.
+			code := byte(42)
+			if strings.Contains(alertErr.Error(), "certificate required") {
+				code = 116
+			}
+			_, _ = server.Write([]byte{21, 3, 3, 0, 2, 2, code})
+		}()
+		ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+		cause, detail := probeServerSpeaksTLS(ctx, client, "example.com")
+		cancel()
+		assert.Equal(t, causeServerSpeaksTLS, cause)
+		assert.NotEmpty(t, detail)
+	}
+}
+
+// A scoped IPv6 literal is a valid endpoint. net.ParseIP rejects the zone, so
+// treating it as a name sends it to the resolver and reports a DNS failure
+// before the TCP endpoint is ever tried.
+func TestIsIPLiteralAcceptsScopedIPv6(t *testing.T) {
+	for _, host := range []string{"fe80::1%eth0", "fe80::1", "::1", "127.0.0.1"} {
+		assert.True(t, isIPLiteral(host), "%q is an IP literal", host)
+	}
+	for _, host := range []string{"localhost", "example.com", "", "not an ip"} {
+		assert.False(t, isIPLiteral(host), "%q is not an IP literal", host)
+	}
+}
+
+// The plaintext probe's SNI name follows --client-authority, which is the
+// authority gRPC uses on the insecure path. The configured-TLS probe
+// deliberately does not use it; see TestConfiguredTLSProbeIgnoresAuthority.
+func TestEffectiveServerNameHonorsAuthority(t *testing.T) {
+	assert.Equal(t, "myhost", effectiveServerName("myhost", ""))
+	assert.Equal(t, "authority.example", effectiveServerName("myhost", "authority.example"))
+	assert.Equal(t, "authority.example", effectiveServerName("myhost", "authority.example:7233"))
+}
+
+// The real gRPC transport advertises h2. A probe that offers no ALPN protocol
+// takes a different handshake path and can be rejected by a server that
+// requires one.
+func TestProbesAdvertiseH2(t *testing.T) {
+	var mu sync.Mutex
+	var offered [][]string
+	cert := newTestCert(t)
+	capture := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+			mu.Lock()
+			offered = append(offered, hello.SupportedProtos)
+			mu.Unlock()
+			return nil, nil
+		},
+	}
+
+	// Configured-TLS probe.
+	addr := serveTLS(t, capture)
+	testDiagnose(t, addr, &tls.Config{RootCAs: certPool(t, cert)})
+
+	// Plaintext-configured probe, which offers TLS opportunistically.
+	plaintextAddr := serveTLS(t, capture)
+	testDiagnose(t, plaintextAddr, nil)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.NotEmpty(t, offered)
+	for i, protos := range offered {
+		assert.Contains(t, protos, "h2", "probe %d must advertise h2", i)
+	}
+}
+
+// With --tls-server-name set to a wrong value, the address host is never
+// verified. Reporting the address host and telling the user to set the flag
+// they already set is not a remedy.
+func TestHostnameMismatchNamesTheVerifiedServerName(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+
+	d := testDiagnose(t, addr, &tls.Config{
+		RootCAs:    certPool(t, cert),
+		ServerName: "wrong.example",
+	})
+	require.Equal(t, causeHostnameMismatch, d.Cause)
+	assert.Equal(t, "wrong.example", d.ServerName)
+	assert.True(t, d.ServerNameConfigured)
+
+	action := suggestAction(d, connectMeta{Address: addr})
+	require.NotNil(t, action)
+	assert.Contains(t, action.Label, `"wrong.example"`)
+	assert.Contains(t, action.Label, "Correct that value")
+	host, _, _ := net.SplitHostPort(addr)
+	assert.NotContains(t, action.Label, host,
+		"the address host was never the name that was verified")
+}
+
+// Without an override the derived name is reported, and the remedy is still to
+// add the flag rather than to correct one.
+func TestHostnameMismatchWithoutOverrideStillSuggestsSettingTheFlag(t *testing.T) {
+	d := &connectDiagnosis{Cause: causeHostnameMismatch}
+	action := suggestAction(d, connectMeta{Address: "myhost:7233"})
+	require.NotNil(t, action)
+	assert.Contains(t, action.Label, `"myhost"`)
+	assert.Contains(t, action.Label, "Set --tls-server-name")
+	assert.NotContains(t, action.Label, "Correct that value")
+}
+
+// A custom gRPC dialer can replace the transport, so the configured address is
+// not what was dialed. Probing it would blame DNS or TCP for an address the
+// client never used.
+func TestCustomDialerSkipsTransportProbes(t *testing.T) {
+	// A deadline reaches the transport stages; an auth status would return
+	// before them and so would not exercise the skip.
+	origErr := fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded"))
+	d := diagnoseConnection(
+		t.Context(),
+		connectTarget{Address: "does-not-exist.invalid:7233", CustomDialer: true},
+		origErr,
+	)
+
+	// The gRPC-level error is still classified.
+	assert.Equal(t, causeTimeout, d.Cause)
+	requireStage(t, d, diagSkipped, "custom gRPC dialer")
+	for _, stage := range d.Stages {
+		assert.NotContains(t, stage.Label, "DNS lookup for")
+		assert.NotContains(t, stage.Label, "TCP connection")
+	}
+}
+
+// The SDK passes WithAuthority only on its insecure path. With TLS configured
+// gRPC therefore derives the handshake name from the TLS ServerName, or the
+// endpoint when that is unset, and --client-authority never reaches it. A
+// probe that used the authority would report a mismatch the client never hit.
+func TestConfiguredTLSProbeIgnoresAuthority(t *testing.T) {
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{Certificates: []tls.Certificate{cert}})
+	host, _, err := net.SplitHostPort(addr)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	d := diagnoseConnection(ctx, connectTarget{
+		Address:   addr,
+		Authority: "authority.example",
+		TLS:       &tls.Config{RootCAs: certPool(t, cert)},
+	}, fmt.Errorf("failed reaching server: %w", serviceerror.NewDeadlineExceeded("context deadline exceeded")))
+
+	assert.Equal(t, host, d.ServerName, "the endpoint host, not the authority")
+	assert.False(t, d.ServerNameConfigured)
+	assert.NotEqual(t, causeHostnameMismatch, d.Cause)
+}
+
+// InsecureSkipVerify disables certificate verification, not SNI, and grpc-go
+// sets ServerName from the authority regardless. Omitting SNI can route an
+// SNI-based endpoint to a default virtual host.
+func TestProbeSendsSNIEvenWhenVerificationIsDisabled(t *testing.T) {
+	var mu sync.Mutex
+	var names []string
+	cert := newTestCert(t)
+	addr := serveTLS(t, &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+			mu.Lock()
+			names = append(names, hello.ServerName)
+			mu.Unlock()
+			return nil, nil
+		},
+	})
+
+	// SNI is never sent for an IP literal, so the probe is driven with a
+	// hostname to observe it on the wire.
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = conn.Close() })
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	d := &connectDiagnosis{}
+	d.probeTLS(ctx, conn, "localhost", &tls.Config{InsecureSkipVerify: true})
+
+	assert.Equal(t, "localhost", d.ServerName)
+	mu.Lock()
+	defer mu.Unlock()
+	require.NotEmpty(t, names)
+	assert.Equal(t, "localhost", names[0], "SNI must be sent with verification disabled")
+}
+
+// Alert 42 is "bad certificate", which a server may send both for a rejected
+// certificate and for a missing one. Only a client that presented one can have
+// had it rejected, so the client configuration disambiguates. (A Go TLS 1.2
+// server sends alert 40 for the missing case, which stays causeUnknown; other
+// implementations do send 42, and telling a user with no certificate that
+// theirs was rejected sends them to check a pair that does not exist.)
+func TestAlert42MeaningDependsOnWhetherACertWasSent(t *testing.T) {
+	d := &connectDiagnosis{}
+	d.classifyTLSError(errors.New("remote error: tls: bad certificate"), true)
+	assert.Equal(t, causeClientCertRejected, d.Cause)
+
+	d = &connectDiagnosis{}
+	d.classifyTLSError(errors.New("remote error: tls: bad certificate"), false)
+	assert.Equal(t, causeClientCertRequired, d.Cause)
+}

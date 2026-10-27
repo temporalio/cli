@@ -7,9 +7,12 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/serviceerror"
@@ -188,6 +191,39 @@ func (s *SharedServerSuite) TestActivityOptionsUpdate_Partial() {
 	s.ContainsOnSameLine(out, "BackoffCoefficient", "2")
 }
 
+func (s *SharedServerSuite) TestActivityOptionsUpdate_BatchMatchAll() {
+	run1 := s.waitActivityStarted()
+	run2 := s.waitActivityStarted()
+	query := fmt.Sprintf("WorkflowId = '%s' OR WorkflowId = '%s'", run1.GetID(), run2.GetID())
+
+	// Wait for both Workflow Executions to be visible to the batch query.
+	s.Eventually(func() bool {
+		resp, err := s.Client.ListWorkflow(s.Context, &workflowservice.ListWorkflowExecutionsRequest{
+			Query: query,
+		})
+		s.NoError(err)
+		return len(resp.Executions) == 2
+	}, 3*time.Second, 100*time.Millisecond)
+
+	res := s.Execute(
+		"activity", "update-options",
+		"--query", query,
+		"--task-queue", "batch-updated-task-queue",
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+
+	for _, run := range []client.WorkflowRun{run1, run2} {
+		s.Eventually(func() bool {
+			resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+			s.NoError(err)
+			return len(resp.GetPendingActivities()) == 1 &&
+				resp.GetPendingActivities()[0].GetActivityOptions().GetTaskQueue().GetName() == "batch-updated-task-queue"
+		}, 5*time.Second, 100*time.Millisecond)
+	}
+}
+
 func sendActivityCommand(command string, run client.WorkflowRun, s *SharedServerSuite, extraArgs ...string) *CommandResult {
 	args := []string{
 		"activity", command,
@@ -218,7 +254,7 @@ func (s *SharedServerSuite) TestActivityPauseUnpause() {
 		return len(resp.PendingActivities) > 0 && resp.PendingActivities[0].Paused
 	}, 5*time.Second, 100*time.Millisecond)
 
-	res = sendActivityCommand("unpause", run, s, "--activity-id", activityId, "--reset-attempts")
+	res = sendActivityCommand("unpause", run, s, "--activity-id", activityId)
 	s.NoError(res.Err)
 
 	s.Eventually(func() bool {
@@ -260,7 +296,6 @@ func (s *SharedServerSuite) TestActivityCommandFailed_BothWorkflowIdAndQuery() {
 			"activity", command,
 			"--workflow-id", run.GetID(),
 			"--query", "WorkflowType='DevWorkflow'",
-			"--activity-id", activityId,
 			"--address", s.Address(),
 		)
 		s.ErrorContains(res.Err, "cannot set query when workflow ID is set")
@@ -330,7 +365,6 @@ func (s *SharedServerSuite) TestActivityStandalone_Unpause() {
 		"activity", "unpause",
 		"--activity-id", handle.GetID(),
 		"--run-id", handle.GetRunID(),
-		"--reset-attempts",
 		"--address", s.Address(),
 	)
 	s.NoError(res.Err)
@@ -439,6 +473,28 @@ func (s *SharedServerSuite) TestActivityStandalone_UpdateOptions_StartDelay() {
 	s.Eventually(started.Load, 2*time.Second, 100*time.Millisecond)
 }
 
+func (s *SharedServerSuite) TestActivityUpdateOptions_StartDelayRejectedForWorkflowActivity() {
+	res := s.Execute(
+		"activity", "update-options",
+		"--activity-id", activityId,
+		"--workflow-id", "anything",
+		"--start-delay", "30s",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "--start-delay")
+	s.ErrorContains(res.Err, "--workflow-id")
+
+	res = s.Execute(
+		"activity", "update-options",
+		"--query", "anything",
+		"--start-delay", "30s",
+		"--yes",
+		"--address", s.Address(),
+	)
+	s.ErrorContains(res.Err, "--start-delay")
+	s.ErrorContains(res.Err, "--query")
+}
+
 func (s *SharedServerSuite) TestActivityStandalone_PauseByActivityIdOnly() {
 	handle, stopFailing := s.startStandaloneActivity(newStandaloneActivityID())
 	defer stopFailing()
@@ -545,6 +601,7 @@ func (s *SharedServerSuite) TestActivityInvalidTargeting() {
 		{name: "workflow-id and query", workflowID: "w-id", query: q},
 		{name: "workflow-id and run-id, no activity-id", workflowID: "w-id", runID: "r-id"},
 		{name: "workflow-id, run-id, and query", workflowID: "w-id", runID: "r-id", query: q},
+		{name: "activity-id and query", activityID: "a-id", query: q},
 		{name: "activity-id, run-id, and query", activityID: "a-id", runID: "r-id", query: q},
 		{name: "activity-id, workflow-id, and query", activityID: "a-id", workflowID: "w-id", query: q},
 		{name: "all flags set", activityID: "a-id", workflowID: "w-id", runID: "r-id", query: q},
@@ -586,10 +643,13 @@ func (s *SharedServerSuite) TestActivityReset_WorkflowActivityLatestRun() {
 	s.ContainsOnSameLine(res.Stdout.String(), "ServerResponse", "true")
 }
 
-// TestActivityReset_ActivityIdWithQueryStartsBatch covers --activity-id +
-// --query: the activity ID is ignored and a batch over the matching workflows
-// is started instead.
-func (s *SharedServerSuite) TestActivityReset_ActivityIdWithQueryStartsBatch() {
+// TestActivityIdWithQueryRejected covers --activity-id + --query for every
+// batch-capable operation: the flags are mutually exclusive (single-Activity
+// vs. batch targeting), so the command is rejected before any RPC and no batch
+// is started. --yes is passed so that, absent the up-front validation, the
+// batch confirmation prompt would be auto-accepted and a batch would fire —
+// which is exactly the footgun being guarded against.
+func (s *SharedServerSuite) TestActivityIdWithQueryRejected() {
 	run := s.waitActivityStarted()
 
 	var startedBatch atomic.Bool
@@ -607,18 +667,187 @@ func (s *SharedServerSuite) TestActivityReset_ActivityIdWithQueryStartsBatch() {
 		}),
 	)
 
-	res := s.Execute(
-		"activity", "reset",
-		"--activity-id", "ignored-activity-id",
-		"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
-		"--yes",
-		"--address", s.Address(),
+	for _, command := range []string{"unpause", "reset", "update-options"} {
+		startedBatch.Store(false)
+		res := s.Execute(
+			"activity", command,
+			"--activity-id", "some-activity-id",
+			"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+			"--yes",
+			"--address", s.Address(),
+		)
+		s.Error(res.Err, "command %q should reject --activity-id with --query", command)
+		s.ErrorContains(res.Err, "--query")
+		s.False(startedBatch.Load(), "command %q should not start a batch", command)
+	}
+}
+
+// TestActivityReset_ClearHeartbeatDetailsFlag asserts --clear-heartbeat-details
+// maps onto the request's ResetHeartbeat field for a single activity, and that
+// heartbeat details are left alone when the flag is absent.
+func (s *SharedServerSuite) TestActivityReset_ClearHeartbeatDetailsFlag() {
+	run := s.waitActivityStarted()
+
+	var lastRequestLock sync.Mutex
+	var resetRequest *workflowservice.ResetActivityExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.ResetActivityExecutionRequest); ok {
+				resetRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
 	)
+
+	tests := []struct {
+		name     string
+		extra    []string
+		expected bool
+	}{
+		{name: "flag omitted", expected: false},
+		{name: "flag set", extra: []string{"--clear-heartbeat-details"}, expected: true},
+	}
+	for _, tc := range tests {
+		lastRequestLock.Lock()
+		resetRequest = nil
+		lastRequestLock.Unlock()
+
+		args := append([]string{"--activity-id", activityId}, tc.extra...)
+		res := sendActivityCommand("reset", run, s, args...)
+		s.NoError(res.Err, tc.name)
+
+		lastRequestLock.Lock()
+		req := resetRequest
+		lastRequestLock.Unlock()
+		s.NotNil(req, tc.name)
+		s.Equal(tc.expected, req.GetResetHeartbeat(), tc.name)
+	}
+}
+
+// TestActivityReset_ClearHeartbeatDetailsFlagBatch is the batch (--query)
+// counterpart: the flag drives ResetHeartbeat on the batch operation, which is
+// false unless asked for.
+func (s *SharedServerSuite) TestActivityReset_ClearHeartbeatDetailsFlagBatch() {
+	run := s.waitActivityStarted()
+
+	var lastRequestLock sync.Mutex
+	var startBatchRequest *workflowservice.StartBatchOperationRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			lastRequestLock.Lock()
+			if r, ok := req.(*workflowservice.StartBatchOperationRequest); ok {
+				startBatchRequest = r
+			}
+			lastRequestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
+
+	tests := []struct {
+		name     string
+		extra    []string
+		expected bool
+	}{
+		{name: "flag omitted", expected: false},
+		{name: "flag set", extra: []string{"--clear-heartbeat-details"}, expected: true},
+	}
+	for _, tc := range tests {
+		lastRequestLock.Lock()
+		startBatchRequest = nil
+		lastRequestLock.Unlock()
+
+		args := []string{
+			"activity", "reset",
+			"--query", fmt.Sprintf("WorkflowId = '%s'", run.GetID()),
+			"--yes",
+			"--address", s.Address(),
+		}
+		res := s.Execute(append(args, tc.extra...)...)
+		s.NoError(res.Err, tc.name)
+
+		lastRequestLock.Lock()
+		req := startBatchRequest
+		lastRequestLock.Unlock()
+		s.NotNil(req, tc.name)
+		s.Equal(tc.expected, req.GetResetActivitiesOperation().GetResetHeartbeat(), tc.name)
+	}
+}
+
+// TestActivityReset_ClearHeartbeatDetailsEffect checks the end-to-end effect on
+// the server: the recorded heartbeat details survive a plain reset and are gone
+// after a reset with --clear-heartbeat-details.
+func (s *SharedServerSuite) TestActivityReset_ClearHeartbeatDetailsEffect() {
+	var recordHeartbeat atomic.Bool
+	recordHeartbeat.Store(true)
+	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		// Only the first attempt records heartbeat details; later attempts fail
+		// without heartbeating, so nothing re-populates what a reset clears.
+		if recordHeartbeat.Load() {
+			activity.RecordHeartbeat(ctx, "heartbeat-details")
+		}
+		return nil, fmt.Errorf("intentional failure to keep the activity retrying")
+	})
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		// A long retry interval parks the activity in retry backoff, where a
+		// reset applies immediately.
+		ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			ActivityID:          activityId,
+			StartToCloseTimeout: 1 * time.Minute,
+			RetryPolicy: &temporal.RetryPolicy{
+				InitialInterval: 30 * time.Second,
+				MaximumAttempts: 0,
+			},
+		})
+		var res any
+		err := workflow.ExecuteActivity(ctx, DevActivity).Get(ctx, &res)
+		return res, err
+	})
+
+	run := waitWorkflowStarted(s)
+	s.Eventually(func() bool {
+		return len(s.pendingActivityHeartbeatDetails(run)) > 0
+	}, 10*time.Second, 200*time.Millisecond, "activity should have recorded heartbeat details")
+	recordHeartbeat.Store(false)
+
+	// Without the flag, the reset leaves the heartbeat details in place.
+	res := sendActivityCommand("reset", run, s, "--activity-id", activityId)
 	s.NoError(res.Err)
-	s.True(startedBatch.Load(), "a batch operation should have been started")
+	s.Never(func() bool {
+		return len(s.pendingActivityHeartbeatDetails(run)) == 0
+	}, 2*time.Second, 200*time.Millisecond, "heartbeat details should survive a plain reset")
+
+	// With the flag, they are cleared.
+	res = sendActivityCommand("reset", run, s, "--activity-id", activityId, "--clear-heartbeat-details")
+	s.NoError(res.Err)
+	s.Eventually(func() bool {
+		return len(s.pendingActivityHeartbeatDetails(run)) == 0
+	}, 10*time.Second, 200*time.Millisecond, "--clear-heartbeat-details should clear the heartbeat details")
 }
 
 // Test helpers
+
+func (s *SharedServerSuite) pendingActivityHeartbeatDetails(run client.WorkflowRun) []*common.Payload {
+	resp, err := s.Client.DescribeWorkflowExecution(s.Context, run.GetID(), run.GetRunID())
+	s.NoError(err)
+	for _, act := range resp.GetPendingActivities() {
+		if act.GetActivityId() == activityId {
+			return act.GetHeartbeatDetails().GetPayloads()
+		}
+	}
+	return nil
+}
 
 func (s *SharedServerSuite) waitActivityStarted() client.WorkflowRun {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
@@ -1210,71 +1439,137 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 		"--retry-initial-interval", "2s",
 		"--retry-backoff-coefficient", "3",
 		"--retry-maximum-interval", "120s",
+		"--search-attribute", `CustomKeywordField="describe"`,
+		"--priority-key", "2",
+		"--fairness-key", "tenant-a",
+		"--fairness-weight", "4.5",
 	)
 	runID := started["runId"].(string)
 	<-activityStarted
 
-	// Text
-	res := s.Execute(
-		"activity", "describe",
-		"--activity-id", "describe-test",
-		"--run-id", runID,
-		"--address", s.Address(),
+	var requestLock sync.Mutex
+	var describeRequest *workflowservice.DescribeActivityExecutionRequest
+	s.CommandHarness.Options.AdditionalClientGRPCDialOptions = append(
+		s.CommandHarness.Options.AdditionalClientGRPCDialOptions,
+		grpc.WithChainUnaryInterceptor(func(
+			ctx context.Context,
+			method string, req, reply any,
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption,
+		) error {
+			requestLock.Lock()
+			if r, ok := req.(*workflowservice.DescribeActivityExecutionRequest); ok {
+				describeRequest = r
+			}
+			requestLock.Unlock()
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
 	)
-	s.NoError(res.Err)
-	out := res.Stdout.String()
-	s.ContainsOnSameLine(out, "ActivityId", "describe-test")
-	s.ContainsOnSameLine(out, "Type", "DevActivity")
-	s.ContainsOnSameLine(out, "Status", "Running")
-	s.ContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue)
-	s.ContainsOnSameLine(out, "StartToCloseTimeout", "30s")
-	s.ContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s")
-	s.ContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s")
-	s.ContainsOnSameLine(out, "HeartbeatTimeout", "15s")
-	s.ContainsOnSameLine(out, "Attempt", "1")
-	s.Contains(out, "LastWorkerIdentity")
-	s.NotContains(out, `{"name":`)
+	assertDescribeRequest := func(t *testing.T, includeInspectionPayloads bool) {
+		requestLock.Lock()
+		req := describeRequest
+		describeRequest = nil
+		requestLock.Unlock()
+		require.NotNil(t, req)
+		require.Equal(t, includeInspectionPayloads, req.GetIncludeInput())
+		require.Equal(t, includeInspectionPayloads, req.GetIncludeOutcome())
+		require.Equal(t, includeInspectionPayloads, req.GetIncludeHeartbeatDetails())
+		require.True(t, req.GetIncludeLastFailure())
+	}
 
-	// JSON
-	res = s.Execute(
-		"activity", "describe",
-		"-o", "json",
-		"--activity-id", "describe-test",
-		"--run-id", runID,
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
-	var jsonOut map[string]any
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	s.NotEmpty(jsonOut["longPollToken"])
-	info, ok := jsonOut["info"].(map[string]any)
-	s.True(ok, "info should be present in JSON describe")
-	s.Equal("describe-test", info["activityId"])
-	s.NotNil(info["activityType"])
-	s.NotNil(info["taskQueue"])
-	s.Equal("300s", info["scheduleToCloseTimeout"])
-	s.Equal("60s", info["scheduleToStartTimeout"])
-	s.Equal("30s", info["startToCloseTimeout"])
-	s.Equal("15s", info["heartbeatTimeout"])
-	retryPolicy, ok := info["retryPolicy"].(map[string]any)
-	s.True(ok, "retryPolicy should be present in JSON describe")
-	s.Equal(float64(5), retryPolicy["maximumAttempts"])
-	s.Equal("2s", retryPolicy["initialInterval"])
-	s.Equal(float64(3), retryPolicy["backoffCoefficient"])
-	s.Equal("120s", retryPolicy["maximumInterval"])
+	s.T().Run("text", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		out := res.Stdout.String()
+		require.NoError(t, AssertContainsOnSameLine(out, "ActivityId", "describe-test"))
+		require.NoError(t, AssertContainsOnSameLine(out, "Type", "DevActivity"))
+		require.NoError(t, AssertContainsOnSameLine(out, "Status", "Running"))
+		require.NoError(t, AssertContainsOnSameLine(out, "Namespace", "default"))
+		require.NoError(t, AssertContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue))
+		require.NoError(t, AssertContainsOnSameLine(out, "PriorityKey", "2"))
+		require.NoError(t, AssertContainsOnSameLine(out, "FairnessKey", "tenant-a"))
+		require.NoError(t, AssertContainsOnSameLine(out, "FairnessWeight", "4.5"))
+		require.NoError(t, AssertContainsOnSameLine(out, "StartToCloseTimeout", "30s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "HeartbeatTimeout", "15s"))
+		require.NoError(t, AssertContainsOnSameLine(out, "ExecutionTime"))
+		require.NoError(t, AssertContainsOnSameLine(out,
+			"SearchAttributes", "CustomKeywordField", `data:"\"describe\""`))
+		require.NoError(t, AssertContainsOnSameLine(out, "Attempt", "1"))
+		require.Contains(t, out, "LastWorkerIdentity")
+		require.NotContains(t, out, `{"name":`)
+		assertDescribeRequest(t, false)
+	})
 
-	// Raw: should contain proto JSON format
-	res = s.Execute(
-		"activity", "describe",
-		"--raw",
-		"--activity-id", "describe-test",
-		"--run-id", runID,
-		"--address", s.Address(),
-	)
-	s.NoError(res.Err)
-	rawOut := res.Stdout.String()
-	s.Contains(rawOut, "describe-test")
-	s.Contains(rawOut, `{"name":"DevActivity"}`)
+	s.T().Run("json", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"-o", "json",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		var jsonOut map[string]any
+		require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		require.NotEmpty(t, jsonOut["longPollToken"])
+		info, ok := jsonOut["info"].(map[string]any)
+		require.True(t, ok, "info should be present in JSON describe")
+		require.Equal(t, "describe-test", info["activityId"])
+		require.NotNil(t, info["activityType"])
+		require.NotNil(t, info["taskQueue"])
+		priority, ok := info["priority"].(map[string]any)
+		require.True(t, ok, "priority should be present in JSON describe")
+		require.Equal(t, float64(2), priority["priorityKey"])
+		require.Equal(t, "tenant-a", priority["fairnessKey"])
+		require.Equal(t, float64(4.5), priority["fairnessWeight"])
+		require.Equal(t, "300s", info["scheduleToCloseTimeout"])
+		require.Equal(t, "60s", info["scheduleToStartTimeout"])
+		require.Equal(t, "30s", info["startToCloseTimeout"])
+		require.Equal(t, "15s", info["heartbeatTimeout"])
+		retryPolicy, ok := info["retryPolicy"].(map[string]any)
+		require.True(t, ok, "retryPolicy should be present in JSON describe")
+		require.Equal(t, float64(5), retryPolicy["maximumAttempts"])
+		require.Equal(t, "2s", retryPolicy["initialInterval"])
+		require.Equal(t, float64(3), retryPolicy["backoffCoefficient"])
+		require.Equal(t, "120s", retryPolicy["maximumInterval"])
+		assertDescribeRequest(t, true)
+	})
+
+	s.T().Run("jsonl", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"-o", "jsonl",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		var jsonlOut map[string]any
+		require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &jsonlOut))
+		require.Equal(t, runID, jsonlOut["runId"])
+		assertDescribeRequest(t, true)
+	})
+
+	s.T().Run("raw", func(t *testing.T) {
+		res := s.Execute(
+			"activity", "describe",
+			"--raw",
+			"--activity-id", "describe-test",
+			"--run-id", runID,
+			"--address", s.Address(),
+		)
+		require.NoError(t, res.Err)
+		rawOut := res.Stdout.String()
+		require.Contains(t, rawOut, "describe-test")
+		require.Contains(t, rawOut, `{"name":"DevActivity"}`)
+		assertDescribeRequest(t, false)
+	})
 }
 
 func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
@@ -1321,7 +1616,48 @@ func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
 	s.ContainsOnSameLine(rawOut, "startDelay", `"2s"`)
 }
 
-// Text-only: verifies LastFailure is rendered as text not JSON.
+func (s *SharedServerSuite) TestActivity_Describe_StructuredOutputIncludesPayloads() {
+	s.Worker().OnDevActivity(func(ctx context.Context, input any) (any, error) {
+		activity.RecordHeartbeat(ctx, "describe-heartbeat")
+		return "describe-result:" + input.(string), nil
+	})
+
+	started := s.startActivity("describe-payloads-test", "--input", `"describe-input"`)
+	handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+		ActivityID: "describe-payloads-test",
+		RunID:      started["runId"].(string),
+	})
+	var result string
+	s.NoError(handle.Get(s.Context, &result))
+	s.Equal("describe-result:describe-input", result)
+
+	for _, output := range []string{"json", "jsonl"} {
+		s.T().Run(output, func(t *testing.T) {
+			res := s.Execute(
+				"activity", "describe",
+				"--output", output,
+				"--activity-id", "describe-payloads-test",
+				"--run-id", started["runId"].(string),
+				"--address", s.Address(),
+			)
+			require.NoError(t, res.Err)
+
+			var describe map[string]any
+			require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &describe))
+			require.Equal(t, []any{"describe-input"}, describe["input"])
+
+			info, ok := describe["info"].(map[string]any)
+			require.True(t, ok, "info should be present in structured describe output")
+			require.Equal(t, []any{"describe-heartbeat"}, info["heartbeatDetails"])
+
+			outcome, ok := describe["outcome"].(map[string]any)
+			require.True(t, ok, "outcome should be present in structured describe output")
+			require.Equal(t, []any{"describe-result:describe-input"}, outcome["result"])
+		})
+	}
+}
+
+// Verifies LastFailure is rendered as text, and structured output includes the failure outcome.
 func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
 		return nil, fmt.Errorf("describe-failure-msg")
@@ -1347,6 +1683,40 @@ func (s *SharedServerSuite) TestActivity_Describe_FailedLastFailure() {
 	// LastFailure should be human-readable, not raw JSON
 	s.Contains(out, "describe-failure-msg")
 	s.NotContains(out, `"message":"describe-failure-msg"`)
+
+	// JSON includes the terminal failure outcome.
+	res = s.Execute(
+		"activity", "describe",
+		"-o", "json",
+		"--activity-id", "describe-fail-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	outcome, ok := jsonOut["outcome"].(map[string]any)
+	s.True(ok, "outcome should be present in JSON describe")
+	failure, ok := outcome["failure"].(map[string]any)
+	s.True(ok, "failure should be present in JSON outcome")
+	s.Equal("describe-failure-msg", failure["message"])
+
+	// JSONL includes the same terminal failure outcome.
+	res = s.Execute(
+		"activity", "describe",
+		"-o", "jsonl",
+		"--activity-id", "describe-fail-test",
+		"--run-id", started["runId"].(string),
+		"--address", s.Address(),
+	)
+	s.NoError(res.Err)
+	var jsonlOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonlOut))
+	outcome, ok = jsonlOut["outcome"].(map[string]any)
+	s.True(ok, "outcome should be present in JSONL describe")
+	failure, ok = outcome["failure"].(map[string]any)
+	s.True(ok, "failure should be present in JSONL outcome")
+	s.Equal("describe-failure-msg", failure["message"])
 }
 
 func (s *SharedServerSuite) TestActivity_List() {
@@ -1744,36 +2114,116 @@ func (s *SharedServerSuite) TestActivity_SearchAttributes_InvalidKeywordList() {
 }
 
 func (s *SharedServerSuite) TestActivity_List_Pagination() {
+	runningActivityStarted := make(chan struct{}, 2)
+	releaseRunningActivities := make(chan struct{})
+	var releaseRunningActivitiesOnce sync.Once
+	releaseRunning := func() {
+		releaseRunningActivitiesOnce.Do(func() { close(releaseRunningActivities) })
+	}
+	defer releaseRunning()
+
 	s.Worker().OnDevActivity(func(ctx context.Context, a any) (any, error) {
+		if strings.Contains(activity.GetInfo(ctx).ActivityID, "-running-") {
+			runningActivityStarted <- struct{}{}
+			select {
+			case <-releaseRunningActivities:
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
 		return "paginated", nil
 	})
 
 	uniqueKW := "page-" + uuid.NewString()[:8]
-	for i := 0; i < 5; i++ {
-		s.startActivity(fmt.Sprintf("page-test-%d", i),
+	query := fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW)
+	completedActivityIDs := []string{
+		"page-test-completed-0",
+		"page-test-completed-1",
+		"page-test-completed-2",
+	}
+	for _, activityID := range completedActivityIDs {
+		started := s.startActivity(activityID,
 			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
 		)
+		handle := s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			ActivityID: activityID,
+			RunID:      started["runId"].(string),
+		})
+		s.NoError(handle.Get(s.Context, nil))
 	}
 
-	// Wait for all 5 to be visible
+	runningActivityIDs := []string{
+		"page-test-running-0",
+		"page-test-running-1",
+	}
+	runningActivityHandles := make([]client.ActivityHandle, 0, len(runningActivityIDs))
+	for _, activityID := range runningActivityIDs {
+		started := s.startActivity(activityID,
+			"--search-attribute", fmt.Sprintf(`CustomKeywordField="%s"`, uniqueKW),
+		)
+		runningActivityHandles = append(runningActivityHandles, s.Client.GetActivityHandle(client.GetActivityHandleOptions{
+			ActivityID: activityID,
+			RunID:      started["runId"].(string),
+		}))
+	}
+	runningActivityStartTimeout := time.After(5 * time.Second)
+	for range runningActivityIDs {
+		select {
+		case <-runningActivityStarted:
+		case <-runningActivityStartTimeout:
+			s.Fail("running activities did not start within timeout")
+			return
+		}
+	}
+
+	// Wait for visibility to contain the stable mix that pagination will traverse.
+	visibilityReady := false
 	s.Eventually(func() bool {
 		res := s.Execute(
 			"activity", "list",
+			"-o", "json",
 			"--address", s.Address(),
-			"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+			"--query", query,
 		)
-		return res.Err == nil && strings.Count(res.Stdout.String(), "page-test-") >= 5
-	}, 5*time.Second, 200*time.Millisecond)
+		if res.Err != nil {
+			return false
+		}
+		var activities []struct {
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal(res.Stdout.Bytes(), &activities); err != nil {
+			return false
+		}
+		statusCounts := make(map[string]int)
+		for _, activity := range activities {
+			statusCounts[activity.Status]++
+		}
+		visibilityReady = len(activities) == 5 &&
+			statusCounts["ACTIVITY_EXECUTION_STATUS_COMPLETED"] == len(completedActivityIDs) &&
+			statusCounts["ACTIVITY_EXECUTION_STATUS_RUNNING"] == len(runningActivityIDs)
+		return visibilityReady
+	}, 10*time.Second, 200*time.Millisecond)
+	if !visibilityReady {
+		return
+	}
 
-	// Small page size forces multi-page fetching; verify all 5 appear
+	// Small page size forces multi-page fetching across both running and completed activities.
 	res := s.Execute(
 		"activity", "list",
 		"--page-size", "2",
 		"--address", s.Address(),
-		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+		"--query", query,
 	)
 	s.NoError(res.Err)
-	s.Equal(5, strings.Count(res.Stdout.String(), "page-test-"))
+	out := res.Stdout.String()
+	for _, activityID := range completedActivityIDs {
+		s.ContainsOnSameLine(out, "Completed", activityID)
+		s.Equal(1, strings.Count(out, activityID))
+	}
+	for _, activityID := range runningActivityIDs {
+		s.ContainsOnSameLine(out, "Running", activityID)
+		s.Equal(1, strings.Count(out, activityID))
+	}
 
 	// --limit 3 with page-size 2 should return exactly 3
 	res = s.Execute(
@@ -1781,10 +2231,15 @@ func (s *SharedServerSuite) TestActivity_List_Pagination() {
 		"--page-size", "2",
 		"--limit", "3",
 		"--address", s.Address(),
-		"--query", fmt.Sprintf(`CustomKeywordField = "%s"`, uniqueKW),
+		"--query", query,
 	)
 	s.NoError(res.Err)
 	s.Equal(3, strings.Count(res.Stdout.String(), "page-test-"))
+
+	releaseRunning()
+	for _, handle := range runningActivityHandles {
+		s.NoError(handle.Get(s.Context, nil))
+	}
 }
 
 func (s *SharedServerSuite) TestActivity_Terminate_DefaultReason_NoUnknownUser() {

@@ -23,3 +23,7 @@ gen-docs: internal/temporalcli/commands.yaml cliext/option-sets.yaml
 
 build:
 	go build ./cmd/temporal
+
+test:
+	(cd cliext && go test ./...)
+	go test ./...

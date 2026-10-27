@@ -151,11 +151,23 @@ type CommandResult struct {
 }
 
 func (h *CommandHarness) Execute(args ...string) *CommandResult {
+	ctx, cancel := context.WithCancel(h.Context)
+	h.t.Cleanup(cancel)
+	defer cancel()
+	return h.execute(ctx, &h.Stdin, args...)
+}
+
+func (h *CommandHarness) ExecuteWithContext(ctx context.Context, args ...string) *CommandResult {
+	var stdin bytes.Buffer
+	return h.execute(ctx, &stdin, args...)
+}
+
+func (h *CommandHarness) execute(ctx context.Context, stdin io.Reader, args ...string) *CommandResult {
 	// Copy options, update as needed
 	res := &CommandResult{}
 	options := h.Options
 	// Set stdio
-	options.Stdin = &h.Stdin
+	options.Stdin = stdin
 	options.Stdout = &res.Stdout
 	options.Stderr = &res.Stderr
 	// Set args
@@ -175,10 +187,6 @@ func (h *CommandHarness) Execute(args ...string) *CommandResult {
 		res.Err = err
 	}
 
-	// Run
-	ctx, cancel := context.WithCancel(h.Context)
-	h.t.Cleanup(cancel)
-	defer cancel()
 	h.t.Logf("Calling: %v", strings.Join(args, " "))
 	temporalcli.Execute(ctx, options)
 	if res.Stdout.Len() > 0 {
@@ -233,12 +241,10 @@ func (s *SharedServerSuite) SetupSuite() {
 				"frontend.namespaceRPS.visibility": 10000,
 				// Disable DescribeTaskQueue cache.
 				"frontend.activityAPIsEnabled": true,
-				"history.enableChasm":          true,
 				// Required by TestWorkflow_Show_SystemNexusOperationTransformsTypeNames
 				// to schedule a SignalWithStartWorkflowExecution Nexus operation against
 				// the __temporal_system endpoint from inside a workflow.
 				"history.enableSignalWithStartFromWorkflow":        true,
-				"activity.enableStandalone":                        true,
 				"activity.startDelayEnabled":                       true,
 				"history.enableStandaloneActivityOperatorCommands": true,
 				"activity.longPollTimeout":                         2 * time.Second,
@@ -398,11 +404,14 @@ func StartDevServer(t *testing.T, options DevServerOptions) *DevServer {
 		d.Options.DynamicConfigValues = map[string]any{}
 	}
 	d.Options.DynamicConfigValues["system.forceSearchAttributesCacheRefreshOnRead"] = true
+	d.Options.DynamicConfigValues["system.forceNexusEndpointRefreshOnRead"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningRuleAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningDataAPIs"] = true
 	d.Options.DynamicConfigValues["frontend.workerVersioningWorkflowAPIs"] = true
 	d.Options.DynamicConfigValues["system.enableDeployments"] = true
 	d.Options.DynamicConfigValues["system.enableDeploymentVersions"] = true
+	d.Options.DynamicConfigValues["workercontroller.enabled"] = true
+	d.Options.DynamicConfigValues["workercontroller.compute_providers.enabled"] = []string{"aws-lambda", "gcp-cloud-run", "aws-agentcore"}
 	d.Options.DynamicConfigValues["worker.buildIdScavengerEnabled"] = true
 	d.Options.DynamicConfigValues["frontend.enableUpdateWorkflowExecution"] = true
 	d.Options.DynamicConfigValues["frontend.MaxConcurrentBatchOperationPerNamespace"] = 1000

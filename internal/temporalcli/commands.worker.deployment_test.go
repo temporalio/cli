@@ -213,6 +213,134 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.ErrorContains(res.Err, "specify either --build-id or --unversioned")
 }
 
+func (s *SharedServerSuite) TestDeployment_Describe_Version_Omits_Unset_Times() {
+	deploymentName := uuid.NewString()
+	currentBuildId := uuid.NewString()
+	rampingBuildId := uuid.NewString()
+
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// A version that has only ever been current has no ramping since time, so
+	// it must not be rendered (previously it showed as "a long while ago").
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "current")
+	s.Contains(res.Stdout.String(), "CurrentSinceTime")
+	s.NotContains(res.Stdout.String(), "RampingSinceTime")
+	s.NotContains(res.Stdout.String(), "a long while ago")
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var rawOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("current", rawOut["status"])
+	s.NotContains(rawOut, "drainageInfo")
+	s.Contains(rawOut, "currentSinceTime")
+	s.NotContains(rawOut, "rampingSinceTime")
+
+	// The SDK metadata helper does not send an identity, so use the API
+	// request to verify when the server returns the version modifier.
+	payload, err := converter.GetDefaultDataConverter().ToPayload(1)
+	s.NoError(err)
+	_, err = s.DevServer.Client.WorkflowService().UpdateWorkerDeploymentVersionMetadata(
+		context.Background(),
+		&workflowservice.UpdateWorkerDeploymentVersionMetadataRequest{
+			Namespace:         "default",
+			DeploymentVersion: &deploymentpb.WorkerDeploymentVersion{DeploymentName: deploymentName, BuildId: currentBuildId},
+			UpsertEntries:     map[string]*common.Payload{"key": payload},
+			Identity:          "test-version-modifier",
+		},
+	)
+	s.NoError(err)
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	rawOut = nil
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("test-version-modifier", rawOut["lastModifierIdentity"])
+
+	// Once a version is ramping, its ramping since time is shown and the
+	// never-current version omits its current since time.
+	res = s.Execute(
+		"worker", "deployment", "set-ramping-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--percentage", "5",
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "ramping")
+	s.Contains(res.Stdout.String(), "RampingSinceTime")
+	s.NotContains(res.Stdout.String(), "CurrentSinceTime")
+	s.NotContains(res.Stdout.String(), "a long while ago")
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	rawOut = nil
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("ramping", rawOut["status"])
+	s.Contains(rawOut, "rampingSinceTime")
+	s.NotContains(rawOut, "currentSinceTime")
+
+	// Deactivating the old current version produces drainage info.
+	res = s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	rawOut = nil
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Contains([]any{"draining", "drained"}, rawOut["status"])
+	s.Equal("test-version-modifier", rawOut["lastModifierIdentity"])
+	drainage, ok := rawOut["drainageInfo"].(map[string]any)
+	s.True(ok)
+	s.NotEmpty(drainage["lastChangedTime"])
+	s.NotEmpty(drainage["lastCheckedTime"])
+}
+
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version_AllowNoPollers() {
 	deploymentName := uuid.NewString()
 	buildId := uuid.NewString()
@@ -1315,6 +1443,108 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "missing required AWS Lambda provider detail: role")
 
+	// --aws-lambda-skip-role-and-external-id bypasses the client-side check, so
+	// the request reaches the server, which enforces its own
+	// require_role_and_external_id policy (enabled by default here).
+	skipRoleAndIDBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", skipRoleAndIDBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-skip-role-and-external-id",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, `AWS Lambda compute provider requires "role" to be configured`)
+
+	// --aws-lambda-skip-role-and-external-id and the role/external-id flags are
+	// mutually exclusive: passing both is rejected client-side.
+	skipWithRoleBuildID := uuid.NewString()
+
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", skipWithRoleBuildID,
+		"--aws-lambda-function-arn", invokeARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-skip-role-and-external-id",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--aws-lambda-skip-role-and-external-id")
+
+	// AWS Agentcore: a single endpoint ARN drives the provider; role and external
+	// id are required (unless skipped)
+	agentcoreEndpointARN := "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/my-runtime-abc123/runtime-endpoint/DEFAULT"
+
+	agentcoreMissingExternalIDBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMissingExternalIDBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Agentcore provider detail: role_external_id")
+
+	agentcoreMissingRoleBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMissingRoleBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "missing required AWS Agentcore provider detail: role")
+
+	// --aws-agentcore-skip-role-and-external-id and the role/external-id flags are
+	// mutually exclusive: passing both is rejected client-side.
+	agentcoreSkipWithRoleBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreSkipWithRoleBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
+		"--aws-agentcore-skip-role-and-external-id",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--aws-agentcore-skip-role-and-external-id")
+
+	// AWS Agentcore and GCP Cloud Run providers are mutually exclusive on create.
+	agentcoreMixedProvidersBuildID := uuid.NewString()
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMixedProvidersBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+
+	// AWS Agentcore and Lambda providers are mutually exclusive on create.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", agentcoreMixedProvidersBuildID,
+		"--aws-agentcore-endpoint-arn", agentcoreEndpointARN,
+		"--aws-lambda-assume-role-arn", assumeRoleARN,
+		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
+
 	// --gcp-cloud-run-worker-pool requires project, region, and
 	// service-account; the first missing detail key is reported.
 	missingGCPProjectBuildID := uuid.NewString()
@@ -1356,7 +1586,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
 
 	// Attempting to update the compute config for a non-existent WDV
 	// should fail.
@@ -1396,7 +1626,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-worker-pool", "my-worker-pool",
 	)
 	s.Error(res.Err)
-	s.ErrorContains(res.Err, "cannot combine --aws-lambda-* and --gcp-cloud-run-* flags")
+	s.ErrorContains(res.Err, "cannot combine --aws-lambda-*, --aws-agentcore-*, and --gcp-cloud-run-* flags")
 
 	// --remove cannot be combined with GCP Cloud Run flags.
 	res = s.Execute(
@@ -1438,7 +1668,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "only valid with --gcp-cloud-run-worker-pool")
 
-	// A lone flag is rejected: all four scaling settings must be set together.
+	// A lone flag is rejected: all five scaling settings must be set together.
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1471,7 +1701,86 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be set together")
 
-	// min cannot exceed max (all four set so the group check passes first).
+	// The instance counts and utilization-target without scale-down-stabilization-duration are
+	// also rejected: scale-down-stabilization-duration is part of the same all-or-none group.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "1",
+		"--gcp-cloud-run-max-instances", "3",
+		"--gcp-cloud-run-initial-instances", "2",
+		"--gcp-cloud-run-utilization-target", "0.5",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "must be set together")
+
+	// scale-down-stabilization-duration cannot be negative (all five set so the group check
+	// passes first).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration=-1s",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--gcp-cloud-run-scale-down-stabilization-duration cannot be negative")
+
+	// A negative sub-millisecond value is also rejected: it must be caught before
+	// the duration is truncated to whole milliseconds (which would send 0 and
+	// silently disable the wait instead).
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration=-1us",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--gcp-cloud-run-scale-down-stabilization-duration cannot be negative")
+
+	// A positive sub-millisecond value is rejected rather than silently rounded.
+	res = s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", uuid.NewString(),
+		"--gcp-cloud-run-project", "my-gcp-project",
+		"--gcp-cloud-run-region", "us-central1",
+		"--gcp-cloud-run-worker-pool", "my-worker-pool",
+		"--gcp-cloud-run-service-account", "customer-sa@my-gcp-project.iam.gserviceaccount.com",
+		"--gcp-cloud-run-min-instances", "0",
+		"--gcp-cloud-run-max-instances", "10",
+		"--gcp-cloud-run-initial-instances", "5",
+		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "500us",
+	)
+	s.Error(res.Err)
+	s.ErrorContains(res.Err, "--gcp-cloud-run-scale-down-stabilization-duration must be a whole number of milliseconds")
+
+	// min cannot exceed max (all five set so the group check passes first).
 	res = s.Execute(
 		"worker", "deployment", "create-version",
 		"--address", s.Address(),
@@ -1485,6 +1794,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "3",
 		"--gcp-cloud-run-initial-instances", "4",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "cannot exceed")
@@ -1503,6 +1813,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "0",
 		"--gcp-cloud-run-initial-instances", "0",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "--gcp-cloud-run-max-instances must be at least 1")
@@ -1521,6 +1832,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "10",
 		"--gcp-cloud-run-initial-instances", "15",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be between")
@@ -1540,6 +1852,7 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_Errors() {
 		"--gcp-cloud-run-max-instances", "10",
 		"--gcp-cloud-run-initial-instances", "5",
 		"--gcp-cloud-run-utilization-target", "1.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "90s",
 	)
 	s.Error(res.Err)
 	s.ErrorContains(res.Err, "must be greater than 0 and at most 1")
@@ -1608,7 +1921,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 	serviceAccount := "customer-sa@my-gcp-project.iam.gserviceaccount.com"
 
 	// Scaler-only update (no provider flags): the mask is just scaler.details,
-	// no provider is sent, and all four settings are carried.
+	// no provider is sent, and all five settings are carried.
 	res := s.Execute(
 		"worker", "deployment", "update-version-compute-config",
 		"--address", s.Address(),
@@ -1617,6 +1930,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 		"--gcp-cloud-run-max-instances", "10",
 		"--gcp-cloud-run-initial-instances", "5",
 		"--gcp-cloud-run-utilization-target", "0.5",
+		"--gcp-cloud-run-scale-down-stabilization-duration", "2m",
 	)
 	s.NoError(res.Err)
 	req := takeCaptured()
@@ -1631,6 +1945,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 	s.Equal(float64(10), details["max_count"])
 	s.Equal(float64(5), details["initial_count"])
 	s.Equal(float64(0.5), details["utilization_target"])
+	s.Equal(float64(120000), details["no_sync_quiet_ms"])
 
 	// Switching to AWS Lambda clears the (rate-based) scaler.details so they
 	// don't linger under the no-sync scaler.
@@ -1668,7 +1983,7 @@ func (s *SharedServerSuite) TestUpdateWorkerDeploymentVersionComputeConfig_Updat
 	s.NotContains(sg.GetUpdateMask().GetPaths(), "scaler.details")
 	s.Equal("gcp-cloud-run", sg.GetScalingGroup().GetProvider().GetType())
 
-	// A scaler-only update still requires all four flags together.
+	// A scaler-only update still requires all five flags together.
 	res = s.Execute(
 		"worker", "deployment", "update-version-compute-config",
 		"--address", s.Address(),
@@ -1790,6 +2105,124 @@ func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_LambdaComputeConfi
 		"--aws-lambda-function-arn", invokeARN2,
 		"--aws-lambda-assume-role-arn", assumeRoleARN2,
 		"--aws-lambda-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")
+
+	// As well as remove the compute config.
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--remove",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully removed worker deployment version compute config")
+}
+
+// TODO(jaypipes): Enable this test when we have a way of ensuring AWS resource
+// fixtures since the CLI test harness uses a real Temporal Server and a real
+// Temporal Server validates any supplied AWS Lambda Function and Assume Role
+// ARNs are good...
+func (s *SharedServerSuite) TestCreateWorkerDeploymentVersion_AgentCoreComputeConfig() {
+	s.T().Skip("AWS AgentCore Runtime, Endpoint and Assume Role fixtures needed.")
+	deploymentName := uuid.NewString()
+	taskQueue := uuid.NewString()
+
+	lazyCreatedBuildID := uuid.NewString()
+	lazyCreatedVer := worker.WorkerDeploymentVersion{
+		DeploymentName: deploymentName,
+		BuildID:        lazyCreatedBuildID,
+	}
+
+	// Create worker with explicit versioning. This will end up creating a
+	// WorkerDeployment with the specified name. We will then manually create a
+	// worker deployment version using the `temporal worker deployment
+	// create-version` command.
+	w1 := worker.New(s.Client, taskQueue, worker.Options{
+		DeploymentOptions: worker.DeploymentOptions{
+			UseVersioning: true,
+			Version:       lazyCreatedVer,
+		},
+	})
+
+	// Register a workflow with explicit Pinned versioning behavior to trigger
+	// creation of the worker deployment.
+	w1.RegisterWorkflowWithOptions(
+		func(ctx workflow.Context, input any) (any, error) {
+			workflow.GetSignalChannel(ctx, "complete-signal").Receive(ctx, nil)
+			return nil, nil
+		},
+		workflow.RegisterOptions{
+			Name:               "TestCreateWorkerDeploymentVersion_AgentCoreComputeConfig",
+			VersioningBehavior: workflow.VersioningBehaviorPinned,
+		},
+	)
+
+	s.NoError(w1.Start())
+
+	// Now that we know the worker deployment exists (because the above
+	// lazily-created worker deployment version ended up creating it), we will
+	// manually create a new worker deployment version using the `temporal
+	// worker deployment create-version` CLI command.
+	//
+	// Create a WDV with a valid Compute Config specified and verify that the
+	// compute config provider is displayed in the output of `temporal worker
+	// deployment describe-version`
+	computeConfigBuildID := uuid.NewString()
+
+	endpointARN := "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/my-runtime-abc123/runtime-endpoint/myEndpoint"
+	assumeRoleARN := "arn:aws:iam::123456789012:role/MyServiceRole"
+	assumeRoleExternalID := "external-id"
+
+	res := s.Execute(
+		"worker", "deployment", "create-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-agentcore-endpoint-arn", endpointARN,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Successfully created worker deployment version")
+
+	// Wait for the deployment version to appear
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "describe-version",
+			"--address", s.Address(),
+			"--deployment-name", deploymentName,
+			"--build-id", computeConfigBuildID,
+		)
+		assert.NoError(t, res.Err)
+	}, 30*time.Second, 100*time.Millisecond)
+
+	// Check that there is a compute config returned for this WDV
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	jsonOut := jsonDeploymentVersionInfoType{}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+	s.NotNil(jsonOut.ComputeConfig, "ComputeConfig should not be nil.")
+
+	// We should be able to update the compute config.
+	endpointARN2 := "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/my-runtime-abc123/runtime-endpoint/myEndpoint2"
+	assumeRoleARN2 := "arn:aws:iam::123456789012:role/MyServiceRole2"
+	res = s.Execute(
+		"worker", "deployment", "update-version-compute-config",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName,
+		"--build-id", computeConfigBuildID,
+		"--aws-agentcore-endpoint-arn", endpointARN2,
+		"--aws-agentcore-assume-role-arn", assumeRoleARN2,
+		"--aws-agentcore-assume-role-external-id", assumeRoleExternalID,
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Successfully updated worker deployment version compute config")

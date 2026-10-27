@@ -388,10 +388,13 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 	defer cl.Close()
 
 	resp, err := cl.WorkflowService().DescribeActivityExecution(cctx, &workflowservice.DescribeActivityExecutionRequest{
-		Namespace:          c.Parent.Namespace,
-		ActivityId:         c.ActivityId,
-		RunId:              c.RunId,
-		IncludeLastFailure: true,
+		Namespace:               c.Parent.Namespace,
+		ActivityId:              c.ActivityId,
+		RunId:                   c.RunId,
+		IncludeInput:            cctx.JSONOutput,
+		IncludeOutcome:          cctx.JSONOutput,
+		IncludeHeartbeatDetails: cctx.JSONOutput,
+		IncludeLastFailure:      true,
 	})
 	if err != nil {
 		return fmt.Errorf("failed describing activity: %w", err)
@@ -399,10 +402,14 @@ func (c *TemporalActivityDescribeCommand) run(cctx *CommandContext, args []strin
 	if c.Raw || cctx.JSONOutput {
 		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
 	}
-	return printActivityDescription(cctx, resp)
+	return printActivityDescription(cctx, resp, c.Parent.Namespace)
 }
 
-func printActivityDescription(cctx *CommandContext, resp *workflowservice.DescribeActivityExecutionResponse) error {
+func printActivityDescription(
+	cctx *CommandContext,
+	resp *workflowservice.DescribeActivityExecutionResponse,
+	namespace string,
+) error {
 	info := resp.GetInfo()
 	statusShorthand := func(s enumspb.ActivityExecutionStatus) string {
 		for name, val := range enumspb.ActivityExecutionStatus_shorthandValue {
@@ -425,40 +432,52 @@ func printActivityDescription(cctx *CommandContext, resp *workflowservice.Descri
 		ActivityId              string
 		RunId                   string
 		Type                    string
+		Namespace               string
 		Status                  string
 		RunState                string `cli:",cardOmitEmpty"`
 		TaskQueue               string
+		PriorityKey             int32         `cli:",cardOmitEmpty"`
+		FairnessKey             string        `cli:",cardOmitEmpty"`
+		FairnessWeight          float32       `cli:",cardOmitEmpty"`
 		ScheduleToCloseTimeout  time.Duration `cli:",cardOmitEmpty"`
 		ScheduleToStartTimeout  time.Duration `cli:",cardOmitEmpty"`
 		StartToCloseTimeout     time.Duration `cli:",cardOmitEmpty"`
 		HeartbeatTimeout        time.Duration `cli:",cardOmitEmpty"`
 		StartDelay              time.Duration `cli:",cardOmitEmpty"`
 		LastStartedTime         time.Time     `cli:",cardOmitEmpty"`
+		ExecutionTime           time.Time     `cli:",cardOmitEmpty"`
 		Attempt                 int32
-		ExecutionDuration       time.Duration `cli:",cardOmitEmpty"`
-		ScheduleTime            time.Time     `cli:",cardOmitEmpty"`
-		CloseTime               time.Time     `cli:",cardOmitEmpty"`
-		LastFailure             string        `cli:",cardOmitEmpty"`
-		LastWorkerIdentity      string        `cli:",cardOmitEmpty"`
-		LastAttemptCompleteTime time.Time     `cli:",cardOmitEmpty"`
+		ExecutionDuration       time.Duration              `cli:",cardOmitEmpty"`
+		ScheduleTime            time.Time                  `cli:",cardOmitEmpty"`
+		CloseTime               time.Time                  `cli:",cardOmitEmpty"`
+		SearchAttributes        map[string]*common.Payload `cli:",cardOmitEmpty"`
+		LastFailure             string                     `cli:",cardOmitEmpty"`
+		LastWorkerIdentity      string                     `cli:",cardOmitEmpty"`
+		LastAttemptCompleteTime time.Time                  `cli:",cardOmitEmpty"`
 		StateTransitionCount    int64
 	}{
 		ActivityId:              info.GetActivityId(),
 		RunId:                   info.GetRunId(),
 		Type:                    info.GetActivityType().GetName(),
+		Namespace:               namespace,
 		Status:                  statusShorthand(info.GetStatus()),
 		RunState:                runStateShorthand(info.GetRunState()),
 		TaskQueue:               info.GetTaskQueue(),
+		PriorityKey:             info.GetPriority().GetPriorityKey(),
+		FairnessKey:             info.GetPriority().GetFairnessKey(),
+		FairnessWeight:          info.GetPriority().GetFairnessWeight(),
 		ScheduleToCloseTimeout:  info.GetScheduleToCloseTimeout().AsDuration(),
 		ScheduleToStartTimeout:  info.GetScheduleToStartTimeout().AsDuration(),
 		StartToCloseTimeout:     info.GetStartToCloseTimeout().AsDuration(),
 		HeartbeatTimeout:        info.GetHeartbeatTimeout().AsDuration(),
 		StartDelay:              info.GetStartDelay().AsDuration(),
 		LastStartedTime:         timestampToTime(info.GetLastStartedTime()),
+		ExecutionTime:           timestampToTime(info.GetExecutionTime()),
 		Attempt:                 info.GetAttempt(),
 		ExecutionDuration:       info.GetExecutionDuration().AsDuration(),
 		ScheduleTime:            timestampToTime(info.GetScheduleTime()),
 		CloseTime:               timestampToTime(info.GetCloseTime()),
+		SearchAttributes:        info.GetSearchAttributes().GetIndexedFields(),
 		LastWorkerIdentity:      info.GetLastWorkerIdentity(),
 		LastAttemptCompleteTime: timestampToTime(info.GetLastAttemptCompleteTime()),
 		StateTransitionCount:    info.GetStateTransitionCount(),
@@ -470,35 +489,10 @@ func printActivityDescription(cctx *CommandContext, resp *workflowservice.Descri
 	if err := cctx.Printer.PrintStructured(d, printer.StructuredOptions{}); err != nil {
 		return err
 	}
-	return printActivityCallbacks(cctx, resp.GetCallbacks())
-}
-
-func printActivityCallbacks(cctx *CommandContext, callbacks []*activitypb.CallbackInfo) error {
-	if len(callbacks) == 0 {
-		return nil
+	if err := printLinks(cctx, info.GetLinks()); err != nil {
+		return err
 	}
-	rows := make([]struct {
-		State                   string
-		Attempt                 int32
-		RegistrationTime        time.Time `cli:",cardOmitEmpty"`
-		NextAttemptScheduleTime time.Time `cli:",cardOmitEmpty"`
-		BlockedReason           string    `cli:",cardOmitEmpty"`
-		LastAttemptFailure      string    `cli:",cardOmitEmpty"`
-	}, len(callbacks))
-	for i, cb := range callbacks {
-		info := cb.GetInfo()
-		rows[i].State = info.GetState().String()
-		rows[i].Attempt = info.GetAttempt()
-		rows[i].RegistrationTime = timestampToTime(info.GetRegistrationTime())
-		rows[i].NextAttemptScheduleTime = timestampToTime(info.GetNextAttemptScheduleTime())
-		rows[i].BlockedReason = info.GetBlockedReason()
-		if f := info.GetLastAttemptFailure(); f != nil {
-			rows[i].LastAttemptFailure = cctx.MarshalFriendlyFailureBodyText(f, "    ")
-		}
-	}
-	cctx.Printer.Println()
-	cctx.Printer.Println(color.MagentaString("Callbacks:"))
-	return cctx.Printer.PrintStructured(rows, printer.StructuredOptions{Table: &printer.TableOptions{}})
+	return printCallbacks(cctx, resp.GetCallbacks())
 }
 
 func (c *TemporalActivityListCommand) run(cctx *CommandContext, args []string) error {
@@ -869,6 +863,14 @@ func (c *TemporalActivityFailCommand) run(cctx *CommandContext, args []string) e
 	return nil
 }
 
+func validateActivityBatchTarget(activityId, query string) error {
+	if activityId != "" && query != "" {
+		return errors.New("--activity-id targets a single Activity and cannot be " +
+			"combined with --query, which targets a batch of Activities")
+	}
+	return nil
+}
+
 func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.ClientOptions)
 	if err != nil {
@@ -905,6 +907,10 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	}
 
 	if c.Command.Flags().Changed("start-delay") {
+		if c.WorkflowId != "" || c.Query != "" {
+			return errors.New("--start-delay is only supported for Standalone Activities, " +
+				"so it cannot be used with --workflow-id or --query")
+		}
 		activityOptions.StartDelay = durationpb.New(c.StartDelay.Duration())
 		updatePath = append(updatePath, "start_delay")
 	}
@@ -934,6 +940,10 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 	if c.Command.Flags().Changed("retry-maximum-attempts") {
 		activityOptions.RetryPolicy.MaximumAttempts = int32(c.RetryMaximumAttempts)
 		updatePath = append(updatePath, "retry_policy.maximum_attempts")
+	}
+
+	if err := validateActivityBatchTarget(c.ActivityId, c.Query); err != nil {
+		return err
 	}
 
 	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
@@ -1011,8 +1021,9 @@ func (c *TemporalActivityUpdateOptionsCommand) run(cctx *CommandContext, args []
 		_ = cctx.Printer.PrintStructured(updatedOptions, printer.StructuredOptions{})
 	} else {
 		updateActivitiesOperation := &batch.BatchOperationUpdateActivityOptions{
-			Identity: c.Parent.Identity,
-			Activity: &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true},
+			Identity:        c.Parent.Identity,
+			Activity:        &batch.BatchOperationUpdateActivityOptions_MatchAll{MatchAll: true},
+			ActivityOptions: activityOptions,
 			UpdateMask: &fieldmaskpb.FieldMask{
 				Paths: updatePath,
 			},
@@ -1078,6 +1089,10 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 	}
 	defer cl.Close()
 
+	if err := validateActivityBatchTarget(c.ActivityId, c.Query); err != nil {
+		return err
+	}
+
 	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
 	// manual copy from the embedded SingleActivityOrBatchOptions fields.
 	opts := SingleWorkflowOrBatchOptions{
@@ -1118,16 +1133,14 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		}
 
 		request := &workflowservice.UnpauseActivityExecutionRequest{
-			Namespace:      c.Parent.Namespace,
-			WorkflowId:     c.WorkflowId,
-			ActivityId:     c.ActivityId,
-			RunId:          c.RunId,
-			Identity:       c.Parent.Identity,
-			ResetAttempts:  c.ResetAttempts,
-			ResetHeartbeat: c.ResetHeartbeats,
-			Reason:         c.Reason,
-			Jitter:         durationpb.New(c.Jitter.Duration()),
-			ResourceId:     resourceID,
+			Namespace:  c.Parent.Namespace,
+			WorkflowId: c.WorkflowId,
+			ActivityId: c.ActivityId,
+			RunId:      c.RunId,
+			Identity:   c.Parent.Identity,
+			Reason:     c.Reason,
+			Jitter:     durationpb.New(c.Jitter.Duration()),
+			ResourceId: resourceID,
 		}
 
 		_, err = cl.WorkflowService().UnpauseActivityExecution(cctx, request)
@@ -1136,11 +1149,9 @@ func (c *TemporalActivityUnpauseCommand) run(cctx *CommandContext, args []string
 		}
 	} else { // batch operation
 		unpauseActivitiesOperation := &batch.BatchOperationUnpauseActivities{
-			Identity:       c.Parent.Identity,
-			ResetAttempts:  c.ResetAttempts,
-			ResetHeartbeat: c.ResetHeartbeats,
-			Jitter:         durationpb.New(c.Jitter.Duration()),
-			Activity:       &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true},
+			Identity: c.Parent.Identity,
+			Jitter:   durationpb.New(c.Jitter.Duration()),
+			Activity: &batch.BatchOperationUnpauseActivities_MatchAll{MatchAll: true},
 		}
 
 		batchReq.Operation = &workflowservice.StartBatchOperationRequest_UnpauseActivitiesOperation{
@@ -1161,6 +1172,10 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 		return err
 	}
 	defer cl.Close()
+
+	if err := validateActivityBatchTarget(c.ActivityId, c.Query); err != nil {
+		return err
+	}
 
 	// workflowExecOrBatch is defined on SingleWorkflowOrBatchOptions; bridge via
 	// manual copy from the embedded SingleActivityOrBatchOptions fields.
@@ -1208,6 +1223,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 			RunId:                  c.RunId,
 			Identity:               c.Parent.Identity,
 			KeepPaused:             c.KeepPaused,
+			ResetHeartbeat:         c.ClearHeartbeatDetails,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),
 			RestoreOriginalOptions: c.RestoreOriginalOptions,
 			ResourceId:             resourceID,
@@ -1230,8 +1246,7 @@ func (c *TemporalActivityResetCommand) run(cctx *CommandContext, args []string) 
 	} else { // batch operation
 		resetActivitiesOperation := &batch.BatchOperationResetActivities{
 			Identity:               c.Parent.Identity,
-			ResetAttempts:          c.ResetAttempts,
-			ResetHeartbeat:         true,
+			ResetHeartbeat:         c.ClearHeartbeatDetails,
 			KeepPaused:             c.KeepPaused,
 			Jitter:                 durationpb.New(c.Jitter.Duration()),
 			RestoreOriginalOptions: c.RestoreOriginalOptions,

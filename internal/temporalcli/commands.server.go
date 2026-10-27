@@ -53,7 +53,7 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	// Set the log level value of the server to the overall log level given to the
 	// CLI. But if it is "never" we have to do a special value, and if it was
 	// never changed, we have to use the default of "warn" instead of the CLI
-	// default of "info" since server is noisier.
+	// default of "never" since server is noisier.
 	logLevel := t.Parent.Parent.LogLevel.Value
 	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
 		logLevel = "warn"

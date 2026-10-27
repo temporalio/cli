@@ -2,6 +2,7 @@ package temporalcli
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/fatih/color"
@@ -84,6 +85,18 @@ func printTaskQueueConfig(cctx *CommandContext, config *taskqueue.TaskQueueConfi
 	// Fairness Key Rate Limit Default
 	if config.FairnessKeysRateLimitDefault != nil {
 		configRows = append(configRows, buildRateLimitConfigRow("Fairness Key Rate Limit Default", config.FairnessKeysRateLimitDefault, "%.2f rps"))
+	}
+
+	keys := make([]string, 0, len(config.FairnessWeightOverrides))
+	for key := range config.FairnessWeightOverrides {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		configRows = append(configRows, configRow{
+			Setting: "Fairness Key Weight: " + key,
+			Value:   fmt.Sprintf("%g", config.FairnessWeightOverrides[key]),
+		})
 	}
 
 	// Print the config table

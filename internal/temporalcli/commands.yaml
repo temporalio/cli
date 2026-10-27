@@ -141,6 +141,10 @@ commands:
             `temporal server start-dev`
       * View help: pass `--help` to any command:
             `temporal activity complete --help`
+      * Return structured output with `-o`:
+            `temporal workflow list -o json`
+      * View global and connection options:
+            `temporal options`
     has-init: true
     option-sets:
       - common
@@ -187,7 +191,7 @@ commands:
         - Temporal CLI
 
   - name: temporal activity cancel
-    summary: Request cancellation of a Standalone Activity (Experimental)
+    summary: Request cancellation of a Standalone Activity
     description: |
       Request cancellation of a Standalone Activity.
 
@@ -271,7 +275,7 @@ commands:
         required: true
 
   - name: temporal activity count
-    summary: Count Standalone Activities matching a query (Experimental)
+    summary: Count Standalone Activities matching a query
     description: |
       Return a count of Standalone Activities. Use `--query` to filter
       the activities to be counted.
@@ -291,7 +295,7 @@ commands:
           Query to filter Activity Executions to count.
 
   - name: temporal activity describe
-    summary: Show detailed info for a Standalone Activity (Experimental)
+    summary: Show detailed info for a Standalone Activity
     description: |
       Display information about a Standalone Activity.
 
@@ -309,7 +313,7 @@ commands:
         description: Print properties without changing their format.
 
   - name: temporal activity execute
-    summary: Start a new Standalone Activity and wait for its result (Experimental)
+    summary: Start a new Standalone Activity and wait for its result
     description: |
       Start a new Standalone Activity and block until it completes.
       The result is output to stdout.
@@ -373,7 +377,7 @@ commands:
           Failure reason. Attached as the failure message.
 
   - name: temporal activity list
-    summary: List Standalone Activities matching a query (Experimental)
+    summary: List Standalone Activities matching a query
     description: |
       List Standalone Activities. Use `--query` to filter results.
 
@@ -401,10 +405,12 @@ commands:
           at a time from the server.
 
   - name: temporal activity update-options
-    summary: Change the values of options affecting an Activity
+    summary: Change the values of options affecting an Activity (Experimental)
     description: |
       Update an Activity's options. Updates are incremental, only changing the
       specified options.
+
+      Note: This is an experimental feature and may change in the future.
 
       For example:
 
@@ -435,13 +441,15 @@ commands:
 
       Either `--activity-id` or `--query` must be specified.
 
-      Activity options can be updated in bulk with a visibility query list filter:
+      Workflow Activity options can be updated in bulk with a visibility query list filter:
 
       ```
       temporal activity update-options \
           --query 'WorkflowType="YourWorkflow"' \
           --task-queue NewTaskQueueName
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -450,9 +458,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to update options. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to update options. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: task-queue
         type: string
         description: Name of the task queue for the Activity.
@@ -511,7 +519,7 @@ commands:
           Maximum number of attempts. When exceeded the retries stop even if not
           expired yet.
           Setting this value to 1 disables retries. Setting this value to 0
-          means unlimited attempts(up to the timeouts).
+          means unlimited attempts (up to the timeouts).
       - name: restore-original-options
         type: bool
         description: Restore the original options of the activity.
@@ -519,9 +527,11 @@ commands:
       - single-activity-or-batch
 
   - name: temporal activity pause
-    summary: Pause an Activity
+    summary: Pause an Activity (Experimental)
     description: |
       Pause an Activity.
+
+      Note: This is an experimental feature and may change in the future.
 
       If the Activity is not currently running (e.g. because it previously
       failed), it will not be run again until it is unpaused.
@@ -580,20 +590,15 @@ commands:
         description: Reason for pausing the Activity.
 
   - name: temporal activity unpause
-    summary: Unpause an Activity
+    summary: Unpause an Activity (Experimental)
     description: |
       Re-schedule a previously-paused Activity for execution.
+
+      Note: This is an experimental feature and may change in the future.
 
       If the Activity is not running and is past its retry timeout, it will be
       scheduled immediately. Otherwise, it will be scheduled after its retry
       timeout expires.
-
-      Use `--reset-attempts` to reset the number of previous run attempts to
-      zero. For example, if an Activity is near the maximum number of attempts
-      N specified in its retry policy, `--reset-attempts` will allow the
-      Activity to be retried another N times after unpausing.
-
-      Use `--reset-heartbeats` to reset the Activity's heartbeats.
 
       Either `--activity-id` (with `--workflow-id` for a workflow Activity, or
       alone for a standalone Activity) or `--query` must be specified.
@@ -603,17 +608,17 @@ commands:
       ```
       temporal activity unpause \
           --activity-id YourActivityId \
-          --workflow-id YourWorkflowId \
-          --reset-attempts \
-          --reset-heartbeats
+          --workflow-id YourWorkflowId
       ```
 
-      Activities can be unpaused in bulk via a visibility Query list filter:
+      Workflow Activities can be unpaused in bulk via a visibility Query list filter:
 
       ```
       temporal activity unpause \
           --query 'TemporalPauseInfo IS NOT NULL'
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -622,15 +627,9 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to unpause. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
-      - name: reset-attempts
-        type: bool
-        description: Reset the activity attempts.
-      - name: reset-heartbeats
-        type: bool
-        description: Reset the Activity's heartbeats.
+          The Activity ID to unpause. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: jitter
         type: duration
         description: |
@@ -640,29 +639,29 @@ commands:
       - single-activity-or-batch
 
   - name: temporal activity reset
-    summary: Reset an Activity
+    summary: Reset an Activity (Experimental)
     description: |
-      Reset an activity.
-      This restarts the activity as if it were first being
-      scheduled. That is, it will reset both the number of attempts and the
-      activity timeout, as well as the [heartbeat details](#reset-heartbeats).
+      Reset an Activity.
 
-      If the activity may be executing (i.e. it has not yet timed out), the
+      Note: This is an experimental feature and may change in the future.
+
+      This restarts the Activity as if it were first being scheduled: the
+      attempt count returns to one, its per-attempt timeouts are re-armed.
+      Use `--clear-heartbeat-details` to also clear its
+      [heartbeat details](#clear-heartbeat-details).
+
+      If the Activity may be executing (i.e. it has not yet timed out), the
       reset will take effect the next time it fails, heartbeats, or times out.
-      If is waiting for a retry (i.e. has failed or timed out), the reset
+      If the Activity is waiting for a retry (i.e. has failed or timed out), the reset
       will apply immediately.
 
-      If the activity is already paused, it will be unpaused by default.
+      If the Activity is already paused, it will be unpaused by default.
       You can specify `--keep-paused` to prevent this.
-
-      If the activity is paused and the `--keep-paused` flag is not provided,
-      it will be unpaused. If the activity is paused and the `--keep-paused`
-      flag is provided, it will stay paused.
 
       Either `--activity-id` (with `--workflow-id` for a workflow Activity, or
       alone for a standalone Activity) or `--query` must be specified.
 
-      ### Resetting activities that heartbeat {#reset-heartbeats}
+      ### Resetting activities that heartbeat {#clear-heartbeat-details}
 
       Activities that heartbeat will receive a
       [Canceled failure](/references/failures#cancelled-failure) the next time
@@ -671,7 +670,8 @@ commands:
       If, in your Activity, you need to do any cleanup when an Activity is
       reset, handle this error and then re-throw it when you've cleaned up.
 
-      Reset always clears the heartbeat details.
+      Use `--clear-heartbeat-details` to clear the heartbeat details as part of
+      the reset.
 
       Specify the Activity and Workflow IDs:
 
@@ -682,12 +682,14 @@ commands:
           --keep-paused
       ```
 
-      Activities can be reset in bulk with a visibility query list filter:
+      Workflow Activities can be reset in bulk with a visibility query list filter:
 
       ```
       temporal activity reset \
           --query 'WorkflowType="YourWorkflow"'
       ```
+
+      The `--query` flag currently applies only to Workflow Activities.
 
       Omit `--workflow-id` to target a Standalone Activity by Activity ID
       and optional Run ID.
@@ -696,15 +698,15 @@ commands:
         short: a
         type: string
         description: |
-          The Activity ID to reset. Mutually exclusive with `--query`.
-          Set `--workflow-id` to target a workflow Activity, or omit it to target
-          a standalone Activity (the latest run unless `--run-id` is set).
+          The Activity ID to reset. Mutually exclusive with --query.
+          Set --workflow-id to target a workflow Activity, or omit it to target
+          a standalone Activity (the latest run unless --run-id is set).
       - name: keep-paused
         type: bool
         description: If the activity was paused, it will stay paused.
-      - name: reset-attempts
+      - name: clear-heartbeat-details
         type: bool
-        description: Reset the activity attempts.
+        description: Clear the Activity's heartbeat details.
       - name: jitter
         type: duration
         description: |
@@ -718,7 +720,7 @@ commands:
       - single-activity-or-batch
 
   - name: temporal activity result
-    summary: Wait for and output the result of a Standalone Activity (Experimental)
+    summary: Wait for and output the result of a Standalone Activity
     description: |
       Wait for a Standalone Activity to complete and output the
       result.
@@ -733,7 +735,7 @@ commands:
       - activity-reference
 
   - name: temporal activity start
-    summary: Start a new Standalone Activity (Experimental)
+    summary: Start a new Standalone Activity
     description: |
       Start a new Standalone Activity. Outputs the Activity ID and
       Run ID.
@@ -753,7 +755,7 @@ commands:
       - payload-input
 
   - name: temporal activity terminate
-    summary: Forcefully end a Standalone Activity (Experimental)
+    summary: Forcefully end a Standalone Activity
     description: |
       Terminate a Standalone Activity.
 
@@ -793,7 +795,7 @@ commands:
           Only allowed when --query is present.
 
   - name: temporal activity delete
-    summary: Delete a Standalone Activity Execution (Experimental)
+    summary: Delete a Standalone Activity Execution
     description: |
       Delete a Standalone Activity Execution and its Event History.
 
@@ -835,13 +837,22 @@ commands:
     description: |
       List or terminate running batch jobs.
 
-      A batch job executes a command on multiple Workflow Executions at once. Create
-      batch jobs by passing `--query` to commands that support it. For example, to
-      create a batch job to cancel a set of Workflow Executions:
+      A batch job executes a command on multiple Workflow or Standalone Activity
+      Executions at once. Create batch jobs by passing `--query` to commands that
+      support it. For example, to create a batch job to cancel a set of Workflow
+      Executions:
 
       ```
       temporal workflow cancel \
         --query 'ExecutionStatus = "Running" AND WorkflowType="YourWorkflow"' \
+        --reason "Testing"
+      ```
+
+      To cancel a set of Standalone Activity Executions:
+
+      ```
+      temporal activity cancel \
+        --query 'ExecutionStatus = "Running" AND ActivityType="YourActivity"' \
         --reason "Testing"
       ```
 
@@ -871,9 +882,8 @@ commands:
       - client
     docs:
       description-header: >-
-        Use Temporal CLI to manage multiple Workflow Executions with Batch
-        Jobs that can Cancel, Signal, or Terminate Workflows. Filter and monitor
-        Batch Jobs effectively.
+        Use Temporal CLI to manage multiple Workflow or Standalone Activity
+        Executions with Batch Jobs. Filter and monitor Batch Jobs effectively.
       keywords:
         - batch
         - batch describe
@@ -882,6 +892,7 @@ commands:
         - cli reference
         - cli-feature
         - command-line-interface-cli
+        - standalone activity
         - temporal cli
       tags:
         - Temporal CLI
@@ -1243,6 +1254,19 @@ commands:
           --aws-lambda-assume-role-external-id LambdaAssumeRoleExternalID
       ```
 
+      Or pass compute provider information for an AWS Bedrock Agentcore Runtime
+      that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment create-version \
+          --namespace YourNamespaceName \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --aws-agentcore-endpoint-arn AgentcoreRuntimeEndpointARN \
+          --aws-agentcore-assume-role-arn AgentcoreAssumeRoleARN \
+          --aws-agentcore-assume-role-external-id AgentcoreAssumeRoleExternalID
+      ```
+
       Or pass compute provider information for a GCP Cloud Run worker pool
       that spawns a Worker in the Worker Deployment:
 
@@ -1258,7 +1282,8 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       If a Worker Deployment Version with the supplied BuildID already exists,
@@ -1282,14 +1307,51 @@ commands:
           AWS IAM role ARN that the Temporal server will assume when invoking
           the Lambda function that spawns a new Worker in this Worker
           Deployment Version. Required when --aws-lambda-function-arn is
-          specified.
+          specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
       - name: aws-lambda-assume-role-external-id
         type: string
         description: |
           Temporal server will enforce that the AWS IAM trust policy associated
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
-          when --aws-lambda-function-arn is specified.
+          when --aws-lambda-function-arn is specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
+      - name: aws-lambda-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-lambda-function-arn is specified,
+          --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id
+          are required unless this flag is passed, in which case both must be
+          omitted.
+      - name: aws-agentcore-endpoint-arn
+        type: string
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+      - name: aws-agentcore-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Agentcore Runtime that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-agentcore-endpoint-arn is
+          specified, and must be omitted when
+          --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-agentcore-assume-role-arn has an
+          aws:ExternalId condition that matches the supplied value. Required
+          when --aws-agentcore-endpoint-arn is specified, and must be omitted
+          when --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
+          and --aws-agentcore-assume-role-external-id are required unless this
+          flag is passed, in which case both must be omitted.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1316,24 +1378,27 @@ commands:
         description: |
           Minimum number of Cloud Run worker pool instances the scaler will
           maintain. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Defaults
           to 0 when unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-max-instances
         type: int
         description: |
           Maximum number of Cloud Run worker pool instances the scaler may
           scale up to. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Defaults
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Defaults
           to 30 when unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-initial-instances
         type: int
         description: |
           Number of Cloud Run worker pool instances the scaler starts with.
           Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together, and this
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together, and this
           value must be between the min and max (inclusive). Defaults to 0 when
           unset. Only valid with --gcp-cloud-run-worker-pool.
       - name: gcp-cloud-run-utilization-target
@@ -1341,10 +1406,23 @@ commands:
         description: |
           Target average worker utilization the scaler aims for, as a fraction
           in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Lower
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Lower
           values keep more spare capacity per worker. Defaults to 0.8 when
           unset. Only valid with --gcp-cloud-run-worker-pool.
+      - name: gcp-cloud-run-scale-down-stabilization-duration
+        type: duration
+        description: |
+          Duration the scaler waits after it last saw unmet task demand
+          before it may scale the Cloud Run worker pool down. Raise this to
+          keep the pool from scaling down before long-running or bursty
+          activities finish. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. A
+          value of 0s disables the wait. Defaults to 90s when unset. Only
+          valid with --gcp-cloud-run-worker-pool.
 
   - name: temporal worker deployment describe-version
     summary: Show properties of a Worker Deployment Version
@@ -1573,6 +1651,17 @@ commands:
           --aws-lambda-assume-role-arn UpdatedRoleARN
       ```
 
+      To update the AWS Bedrock Agentcore Runtime endpoint associated with an
+      existing Worker Deployment Version:
+
+      ```
+       temporal worker deployment update-version-compute-config \
+          --deployment-name YourDeploymentName --build-id YourBuildID \
+          --aws-agentcore-endpoint-arn UpdatedAgentcoreRuntimeEndpointARN \
+          --aws-agentcore-assume-role-arn UpdatedRoleARN \
+          --aws-agentcore-assume-role-external-id UpdatedExternalID
+      ```
+
       To update the GCP Cloud Run worker pool associated with an existing
       Worker Deployment Version:
 
@@ -1586,12 +1675,13 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       To update only the scaling settings on an existing GCP Cloud Run Worker
-      Deployment Version, supply the four scaler flags without the provider
-      fields (all four must be set together):
+      Deployment Version, supply the five scaler flags without the provider
+      fields (all five must be set together):
 
       ```
        temporal worker deployment update-version-compute-config \
@@ -1599,7 +1689,8 @@ commands:
           --gcp-cloud-run-min-instances 1 \
           --gcp-cloud-run-max-instances 3 \
           --gcp-cloud-run-initial-instances 1 \
-          --gcp-cloud-run-utilization-target 0.75
+          --gcp-cloud-run-utilization-target 0.75 \
+          --gcp-cloud-run-scale-down-stabilization-duration 5m
       ```
 
       Provider fields are only required when changing the compute provider.
@@ -1633,14 +1724,51 @@ commands:
           AWS IAM role ARN that the Temporal server will assume when invoking
           the Lambda function that spawns a new Worker in this Worker
           Deployment Version. Required when --aws-lambda-function-arn is
-          specified.
+          specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
       - name: aws-lambda-assume-role-external-id
         type: string
         description: |
           Temporal server will enforce that the AWS IAM trust policy associated
           with the AWS IAM role specified in --aws-lambda-assume-role-arn has
           an aws:ExternalId condition that matches the supplied value. Required
-          when --aws-lambda-function-arn is specified.
+          when --aws-lambda-function-arn is specified, and must be omitted when
+          --aws-lambda-skip-role-and-external-id is passed.
+      - name: aws-lambda-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-lambda-function-arn is specified,
+          --aws-lambda-assume-role-arn and --aws-lambda-assume-role-external-id
+          are required unless this flag is passed, in which case both must be
+          omitted.
+      - name: aws-agentcore-endpoint-arn
+        type: string
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+      - name: aws-agentcore-assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when invoking
+          the Agentcore Runtime that spawns a new Worker in this Worker
+          Deployment Version. Required when --aws-agentcore-endpoint-arn is
+          specified, and must be omitted when
+          --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --aws-agentcore-assume-role-arn has an
+          aws:ExternalId condition that matches the supplied value. Required
+          when --aws-agentcore-endpoint-arn is specified, and must be omitted
+          when --aws-agentcore-skip-role-and-external-id is passed.
+      - name: aws-agentcore-skip-role-and-external-id
+        type: bool
+        description: |
+          When --aws-agentcore-endpoint-arn is specified, --aws-agentcore-assume-role-arn
+          and --aws-agentcore-assume-role-external-id are required unless this
+          flag is passed, in which case both must be omitted.
       - name: gcp-cloud-run-project
         type: string
         description: |
@@ -1667,39 +1795,56 @@ commands:
         description: |
           Minimum number of Cloud Run worker pool instances the scaler will
           maintain. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. If
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. If
           omitted, the version's existing scaling settings are left unchanged.
-          Only valid with --gcp-cloud-run-worker-pool.
+          Only applies to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-max-instances
         type: int
         description: |
           Maximum number of Cloud Run worker pool instances the scaler may
           scale up to. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. If
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. If
           omitted, the version's existing scaling settings are left unchanged.
-          Only valid with --gcp-cloud-run-worker-pool.
+          Only applies to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-initial-instances
         type: int
         description: |
           Number of Cloud Run worker pool instances the scaler starts with.
           Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together, and this
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together, and this
           value must be between the min and max (inclusive). If omitted, the
-          version's existing scaling settings are left unchanged. Only valid
-          with --gcp-cloud-run-worker-pool.
+          version's existing scaling settings are left unchanged. Only applies
+          to a GCP Cloud Run worker pool.
       - name: gcp-cloud-run-utilization-target
         type: float
         description: |
           Target average worker utilization the scaler aims for, as a fraction
           in the range (0, 1]. Optional, but --gcp-cloud-run-min-instances,
-          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances, and
-          --gcp-cloud-run-utilization-target must all be set together. Lower
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. Lower
           values keep more spare capacity per worker. If omitted, the version's
-          existing scaling settings are left unchanged. Only valid with
-          --gcp-cloud-run-worker-pool.
+          existing scaling settings are left unchanged. Only applies to a
+          GCP Cloud Run worker pool.
+      - name: gcp-cloud-run-scale-down-stabilization-duration
+        type: duration
+        description: |
+          Duration the scaler waits after it last saw unmet task demand
+          before it may scale the Cloud Run worker pool down. Raise this to
+          keep the pool from scaling down before long-running or bursty
+          activities finish. Optional, but --gcp-cloud-run-min-instances,
+          --gcp-cloud-run-max-instances, --gcp-cloud-run-initial-instances,
+          --gcp-cloud-run-utilization-target, and
+          --gcp-cloud-run-scale-down-stabilization-duration must all be set together. A
+          value of 0s disables the wait. If omitted, the version's existing
+          scaling settings are left unchanged. Only applies to a
+          GCP Cloud Run worker pool.
       - name: remove
         type: bool
         description: |
@@ -2055,6 +2200,7 @@ commands:
         - nexus operation describe
         - nexus operation cancel
         - nexus operation terminate
+        - nexus operation delete
         - nexus operation list
         - nexus operation count
         - cli reference
@@ -2168,6 +2314,29 @@ commands:
         description: |
           Reason for termination.
           Defaults to a message with the current user's name.
+
+  - name: temporal nexus operation delete
+    summary: Remove a Nexus Operation Execution (Experimental)
+    description: |
+      Delete a Nexus Operation Execution and its history. The request runs
+      asynchronously. If the Operation is running, the Service terminates it
+      before deletion. Without a Run ID, the latest run is deleted.
+
+      ```
+      temporal nexus operation delete \
+          --operation-id YourOperationId \
+          --yes
+      ```
+
+      Use "--run-id" to delete a specific run. Confirmation is required unless
+      "--yes" is passed.
+    option-sets:
+      - nexus-operation-reference
+    options:
+      - name: yes
+        type: bool
+        short: y
+        description: Don't prompt to confirm deletion.
 
   - name: temporal nexus operation list
     summary: List Nexus Operations matching a query (Experimental)
@@ -2568,6 +2737,10 @@ commands:
           --active-cluster NewActiveCluster
       ```
 
+      Active Cluster changes cannot be combined with other Namespace updates.
+      Update Namespace configuration, including the replication Cluster list,
+      before changing the active Cluster in a separate command.
+
       Promote a Namespace for multi-region data replication:
 
       ```
@@ -2589,7 +2762,9 @@ commands:
     options:
       - name: active-cluster
         type: string
-        description: Active Cluster (Service) name.
+        description: |
+          Active Cluster (Service) name.
+          Cannot be combined with options that modify Namespace configuration.
       - name: cluster
         type: string[]
         description: Cluster (Service) names.
@@ -3395,6 +3570,12 @@ commands:
       these two metrics, the derived metric of `BacklogIncreaseRate` is accurate
       for backlogs older than a few seconds.
 
+      Use `--report-priority-stats` to show the same statistics by priority key
+      for Workflow and Activity Task Queues. These figures include all build IDs,
+      even when a build ID selection flag is used. Nexus tasks have no priority
+      keys, so they are not included. The Server may return zero-count rows for
+      its default priority key.
+
       Safely retire Workers assigned a Build ID by checking reachability across
       all task types. Use the flag `--report-reachability`:
 
@@ -3438,7 +3619,9 @@ commands:
         required: true
       - name: task-queue-type
         type: string-enum[]
-        description: Task Queue type. If not specified, all types are reported.
+        description: |
+          Task Queue type. If not specified, all types are described.
+          Priority statistics apply only to Workflow and Activity Task Queues.
         enum-values:
           - workflow
           - activity
@@ -3480,6 +3663,11 @@ commands:
       - name: disable-stats
         type: bool
         description: Disable task queue statistics.
+      - name: report-priority-stats
+        type: bool
+        description: |
+          Show Workflow and Activity statistics by priority key across all build IDs.
+          This makes an extra server request for each applicable task queue type.
       - name: report-config
         type: bool
         description: |
@@ -4043,6 +4231,8 @@ commands:
       - Fairness key rate limit defaults: Default rate limits for fairness keys.
         If set, each individual fairness key will be limited to this rate,
         scaled by the weight of the fairness key.
+      - Fairness key weight overrides: Custom weights for specific fairness keys.
+        These control the relative share of dispatches each key receives.
 
     options:
       - name: task-queue
@@ -5135,6 +5325,7 @@ option-sets:
     external-package: github.com/temporalio/cli/cliext
   - name: client
     external-package: github.com/temporalio/cli/cliext
+    hide-from-help: true
 
   - name: overlap-policy
     options:
@@ -5309,9 +5500,9 @@ option-sets:
         type: string
         short: q
         description: |
-          Content for an SQL-like `QUERY` List Filter.
+          EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter.
+          This behavior may change in the future.
           You must set either --activity-id or --query.
-          Note: Using --query for batch activity operations is an experimental feature and may change in the future.
       - name: rps
         type: float
         description: |
@@ -5327,16 +5518,17 @@ option-sets:
         type: string
         short: w
         description: |
-          Workflow ID. Set to target a workflow Activity. Omit to target a
-          standalone Activity. For a Workflow Activity you must set either
-          --workflow-id or --query.
+          Workflow ID. Set to target a Workflow Activity. Omit to target a
+          standalone Activity (by --activity-id). Only for Workflow Activities;
+          cannot be combined with --query.
       - name: query
         type: string
         short: q
         description: |
-          Content for an SQL-like `QUERY` List Filter.
-          You must set either --workflow-id or --query.
-          Note: Using --query for batch activity operations is an experimental feature and may change in the future.
+          EXPERIMENTAL: Starts a batch Activity operation using an SQL-like `QUERY` List Filter.
+          This behavior may change in the future.
+          Set either --activity-id (single Activity) or --query (batch). --query
+          cannot be combined with --workflow-id or --run-id.
       - name: run-id
         type: string
         short: r
@@ -5354,13 +5546,13 @@ option-sets:
         type: bool
         short: y
         description: |
-          Don't prompt to confirm signaling.
+          Don't prompt to confirm the batch operation.
           Only allowed when --query is present.
       - name: rps
         type: float
         description: |
           Limit batch's requests per second.
-          Only allowed if query is present.
+          Only allowed when --query is present.
       - name: headers
         type: string[]
         description: |
