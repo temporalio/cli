@@ -3,10 +3,12 @@ package temporalcli
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/server/common/dynamicconfig"
 
 	"github.com/temporalio/cli/internal/devserver"
 )
@@ -98,8 +100,23 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	var err error
 	if opts.SqlitePragmas, err = stringKeysValues(t.SqlitePragma); err != nil {
 		return fmt.Errorf("invalid pragma: %w", err)
-	} else if opts.DynamicConfigValues, err = stringKeysJSONValues(t.DynamicConfigValue, true); err != nil {
+	}
+	flagDynamicConfigValues, err := stringKeysJSONValues(t.DynamicConfigValue, true)
+	if err != nil {
 		return fmt.Errorf("invalid dynamic config values: %w", err)
+	}
+	if t.DynamicConfigFile != "" {
+		opts.DynamicConfigValues, err = loadDynamicConfigFile(t.DynamicConfigFile)
+		if err != nil {
+			return err
+		}
+	}
+	if opts.DynamicConfigValues == nil {
+		opts.DynamicConfigValues = make(map[string]any)
+	}
+	// Explicit command-line values take precedence over values from the file.
+	for key, value := range flagDynamicConfigValues {
+		opts.DynamicConfigValues[dynamicconfig.MakeKey(key).String()] = value
 	}
 	// We have to convert all dynamic config values that JSON number to int if we
 	// can because server dynamic config expecting int won't work with the default
@@ -119,11 +136,12 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 
 	// Apply set of default dynamic config values if not already present
 	for k, v := range defaultDynamicConfigValues {
-		if _, ok := opts.DynamicConfigValues[k]; !ok {
+		key := dynamicconfig.MakeKey(k).String()
+		if _, ok := opts.DynamicConfigValues[key]; !ok {
 			if opts.DynamicConfigValues == nil {
 				opts.DynamicConfigValues = map[string]any{}
 			}
-			opts.DynamicConfigValues[k] = v
+			opts.DynamicConfigValues[key] = v
 		}
 	}
 
@@ -181,6 +199,22 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		s.SuppressWarnings()
 	}
 	return nil
+}
+
+func loadDynamicConfigFile(filename string) (map[string]any, error) {
+	contents, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("read dynamic config file: %w", err)
+	}
+	loader := dynamicconfig.LoadYamlFile(contents)
+	if err := loader.Err(); err != nil {
+		return nil, fmt.Errorf("parse dynamic config file: %w", err)
+	}
+	values := make(map[string]any, len(loader.Map))
+	for key, constrainedValues := range loader.Map {
+		values[key.String()] = constrainedValues
+	}
+	return values, nil
 }
 
 func toFriendlyIp(host string) string {

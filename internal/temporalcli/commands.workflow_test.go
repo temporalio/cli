@@ -57,6 +57,71 @@ func (s *SharedServerSuite) TestWorkflow_Signal_SingleWorkflowSuccess() {
 	s.Equal(map[string]any{"foo": "bar"}, actual)
 }
 
+func (s *SharedServerSuite) TestWorkflow_TimeSkippingEnablePollDisable() {
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, a any) (any, error) {
+		if err := workflow.Sleep(ctx, 10*time.Hour); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	})
+	run, err := s.Client.ExecuteWorkflow(
+		s.Context,
+		client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue},
+		DevWorkflow,
+		"ignored",
+	)
+	s.NoError(err)
+
+	res := s.Execute(
+		"workflow", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--workflow-id", run.GetID(),
+		"--run-id", run.GetRunID(),
+		"--fast-forward-duration", "5h",
+		"--fast-forward-id", "WorkflowPollId",
+		"--disable-propagation",
+		"--max-skip-per-session", "17",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Fast-forward ID: WorkflowPollId")
+	statusCommand := fmt.Sprintf("temporal workflow describe --namespace %s --workflow-id %s --run-id %s", s.Namespace(), run.GetID(), run.GetRunID())
+	pollCommand := fmt.Sprintf("temporal workflow time-skipping poll --namespace %s --workflow-id %s --run-id %s --fast-forward-id WorkflowPollId", s.Namespace(), run.GetID(), run.GetRunID())
+	s.Contains(res.Stdout.String(), statusCommand)
+	s.Contains(res.Stdout.String(), pollCommand)
+	s.Less(strings.Index(res.Stdout.String(), "Check status:"), strings.Index(res.Stdout.String(), "Fast-forward ID:"))
+
+	res = s.Execute(
+		"workflow", "time-skipping", "poll",
+		"--address", s.Address(),
+		"--workflow-id", run.GetID(),
+		"--run-id", run.GetRunID(),
+		"--fast-forward-id", "WorkflowPollId",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "completed")
+
+	res = s.Execute(
+		"workflow", "describe",
+		"--address", s.Address(),
+		"--workflow-id", run.GetID(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time Skipping:")
+	s.ContainsOnSameLine(res.Stdout.String(), "DisablePropagation", "true")
+
+	res = s.Execute(
+		"workflow", "time-skipping", "disable",
+		"--address", s.Address(),
+		"--workflow-id", run.GetID(),
+		"--run-id", run.GetRunID(),
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: disabled")
+	s.Contains(res.Stdout.String(), statusCommand)
+	s.NotContains(res.Stdout.String(), "Poll fast-forward:")
+	s.NoError(s.Client.CancelWorkflow(s.Context, run.GetID(), run.GetRunID()))
+}
+
 func (s *SharedServerSuite) TestWorkflow_Signal_MultipleInputsWithComplexMetadata() {
 	// Start a random workflow
 	run, err := s.Client.ExecuteWorkflow(
