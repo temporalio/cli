@@ -3520,6 +3520,12 @@ commands:
       - name: headless
         type: bool
         description: Disable the Web UI.
+      - name: enable-time-skipping
+        type: bool
+        description: |
+          Enable Workflow and CHASM Schedule time skipping in all Namespaces for
+          this dev server run. Also enable CHASM Schedule creation and routing.
+          Explicit dynamic config values take precedence.
       - name: ip
         type: string
         description: IP address bound to the front-end Service.
@@ -3555,6 +3561,11 @@ commands:
           Keys must be identifiers, and values must be JSON values.
           For example: `YourKey="YourString"`
           Can be passed multiple times.
+      - name: dynamic-config-file
+        type: string
+        description: |
+          Path to a dynamic configuration YAML file. Values passed with
+          `--dynamic-config-value` take precedence over values from this file.
       - name: log-config
         type: bool
         description: Print the server config to stderr.

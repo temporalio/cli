@@ -85,6 +85,7 @@ type StartOptions struct {
 	SqlitePragmas         map[string]string
 	FrontendHTTPPort      int
 	EnableGlobalNamespace bool
+	EnableTimeSkipping    bool
 	DynamicConfigValues   map[string]any
 	SearchAttributes      map[string]enums.IndexedValueType
 	LogConfig             func([]byte)
@@ -238,7 +239,27 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 		temporal.WithClaimMapper(func(*config.Config) authorization.ClaimMapper { return claimMapper }),
 	}
 
-	dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues)+1)
+	dynConf := devServerDynamicConfig(s.DynamicConfigValues, s.EnableTimeSkipping)
+	opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
+
+	// gRPC interceptors if set
+	if len(s.GRPCInterceptors) > 0 {
+		opts = append(opts, temporal.WithChainedFrontendGrpcInterceptors(s.GRPCInterceptors...))
+	}
+
+	return opts, logLevel, nil
+}
+
+var timeSkippingDynamicConfigDefaults = map[dynamicconfig.Key]any{
+	dynamicconfig.WorkflowTimeSkippingEnabled.Key():          true,
+	dynamicconfig.CHASMSchedulerTimeSkippingEnabled.Key():    true,
+	dynamicconfig.EnableCHASMSchedulerCreation.Key():         true,
+	dynamicconfig.CHASMSchedulerCreationRolloutPercent.Key(): 100,
+	dynamicconfig.EnableCHASMSchedulerRouting.Key():          true,
+}
+
+func devServerDynamicConfig(values map[string]any, enableTimeSkipping bool) dynamicconfig.StaticClient {
+	dynConf := make(dynamicconfig.StaticClient, len(values)+len(timeSkippingDynamicConfigDefaults)+5)
 	// Setting host level mutable state cache size to 8k.
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
@@ -250,18 +271,34 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// Enable SANO; this can be removed when SANO is on by default.
 	dynConf[nexusoperation.Enabled.Key()] = true
 
-	// Dynamic config if set
-	for k, v := range s.DynamicConfigValues {
-		dynConf[dynamicconfig.MakeKey(k)] = v
-	}
-	opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
-
-	// gRPC interceptors if set
-	if len(s.GRPCInterceptors) > 0 {
-		opts = append(opts, temporal.WithChainedFrontendGrpcInterceptors(s.GRPCInterceptors...))
+	if enableTimeSkipping {
+		// Enable Workflow and CHASM Schedule time skipping in every namespace.
+		for key, value := range timeSkippingDynamicConfigDefaults {
+			dynConf[key] = value
+		}
 	}
 
-	return opts, logLevel, nil
+	// Explicit config overrides defaults. A namespace-specific YAML value also
+	// needs the global default as a fallback for other namespaces.
+	for name, value := range values {
+		key := dynamicconfig.MakeKey(name)
+		if fallback, ok := timeSkippingDynamicConfigDefaults[key]; ok && enableTimeSkipping {
+			if constrained, ok := value.([]dynamicconfig.ConstrainedValue); ok {
+				hasGlobal := false
+				for _, entry := range constrained {
+					if entry.Constraints == (dynamicconfig.Constraints{}) {
+						hasGlobal = true
+						break
+					}
+				}
+				if !hasGlobal {
+					value = append(append([]dynamicconfig.ConstrainedValue(nil), constrained...), dynamicconfig.ConstrainedValue{Value: fallback})
+				}
+			}
+		}
+		dynConf[key] = value
+	}
+	return dynConf
 }
 
 func (s *StartOptions) buildServerConfig() (*config.Config, error) {
