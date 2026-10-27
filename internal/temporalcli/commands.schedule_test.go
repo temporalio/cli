@@ -59,6 +59,65 @@ func (s *SharedServerSuite) TestSchedule_Create() {
 	s.NoError(res.Err)
 }
 
+func (s *SharedServerSuite) TestSchedule_TimeSkippingEnable() {
+	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+	s.NoError(res.Err)
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-duration", "5h",
+		"--fast-forward-id", "YourFastForwardId",
+		"--disable-propagation",
+		"--max-skip-per-session", "17",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: enabled")
+	s.Contains(res.Stdout.String(), "Fast-forward duration: 5h 0m 0s")
+	s.Contains(res.Stdout.String(), "Fast-forward ID: YourFastForwardId")
+	s.Contains(res.Stdout.String(), "Maximum skips per session: 17")
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), `"DisablePropagation":true`)
+
+	res = s.Execute(
+		"schedule", "time-skipping", "poll",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-id", "YourFastForwardId",
+		"--timeout", "200ms",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "poll timed out")
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingPollCompleted() {
+	schedID, _, res := s.createSchedule("--interval", "10d")
+	s.NoError(res.Err)
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-duration", "5h",
+		"--fast-forward-id", "PollCompletedId",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "time-skipping", "poll",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-id", "PollCompletedId",
+		"--timeout", "10s",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "completed")
+}
+
 func (s *SharedServerSuite) TestSchedule_Delete() {
 	schedId, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
@@ -509,6 +568,68 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 			j.Schedule.Action.StartWorkflow.TaskQueue.Name == "SomeOtherTq" &&
 			j.Schedule.Spec.Interval[0].Interval == "3600s"
 	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingDisable() {
+	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-duration", "6h",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: enabled")
+	s.Contains(res.Stdout.String(), "Fast-forward ID:")
+
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "TimeSkipping")
+	s.Contains(res.Stdout.String(), `"EffectiveEnabled":true`)
+	s.Contains(res.Stdout.String(), `"FastForward":`)
+
+	res = s.Execute(
+		"schedule", "time-skipping", "disable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: disabled")
+
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var description struct {
+		Schedule struct {
+			Action struct {
+				StartWorkflow struct {
+					WorkflowType struct {
+						Name string `json:"name"`
+					} `json:"workflowType"`
+				} `json:"startWorkflow"`
+			} `json:"action"`
+		} `json:"schedule"`
+		Info struct {
+			TimeSkippingInfo struct {
+				EffectiveConfig struct {
+					Enabled bool `json:"enabled"`
+				} `json:"effectiveConfig"`
+			} `json:"timeSkippingInfo"`
+		} `json:"info"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &description))
+	s.Equal("DevWorkflow", description.Schedule.Action.StartWorkflow.WorkflowType.Name)
+	s.False(description.Info.TimeSkippingInfo.EffectiveConfig.Enabled)
 }
 
 func (s *SharedServerSuite) TestSchedule_Memo_Update() {

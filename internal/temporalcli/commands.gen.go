@@ -3061,6 +3061,7 @@ type TemporalServerStartDevCommand struct {
 	MetricsPort        int
 	UiPort             int
 	Headless           bool
+	EnableTimeSkipping bool
 	Ip                 string
 	UiIp               string
 	UiPublicPath       string
@@ -3069,6 +3070,7 @@ type TemporalServerStartDevCommand struct {
 	UiDisableNewsFetch bool
 	SqlitePragma       []string
 	DynamicConfigValue []string
+	DynamicConfigFile  string
 	LogConfig          bool
 	SearchAttribute    []string
 }
@@ -3092,6 +3094,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().IntVar(&s.MetricsPort, "metrics-port", 0, "Port for the '/metrics' HTTP endpoint. Defaults to a random free port.")
 	s.Command.Flags().IntVar(&s.UiPort, "ui-port", 0, "Port for the Web UI. Defaults to '--port' value + 1000.")
 	s.Command.Flags().BoolVar(&s.Headless, "headless", false, "Disable the Web UI.")
+	s.Command.Flags().BoolVar(&s.EnableTimeSkipping, "enable-time-skipping", false, "Enable Workflow and CHASM Schedule time skipping in all Namespaces for this dev server run. Also enable CHASM Schedule creation and routing. Explicit dynamic config values take precedence.")
 	s.Command.Flags().StringVar(&s.Ip, "ip", "localhost", "IP address bound to the front-end Service.")
 	s.Command.Flags().StringVar(&s.UiIp, "ui-ip", "", "IP address bound to the Web UI. Defaults to same as '--ip' value.")
 	s.Command.Flags().StringVar(&s.UiPublicPath, "ui-public-path", "", "The public base path for the Web UI. Defaults to `/`.")
@@ -3100,6 +3103,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().BoolVar(&s.UiDisableNewsFetch, "ui-disable-news-fetch", false, "Disable the Web UI newsfeed. When set, the UI will not request the newsfeed and the button to open the newsfeed panel is hidden.")
 	s.Command.Flags().StringArrayVar(&s.SqlitePragma, "sqlite-pragma", nil, "SQLite pragma statements in \"PRAGMA=VALUE\" format.")
 	s.Command.Flags().StringArrayVar(&s.DynamicConfigValue, "dynamic-config-value", nil, "Dynamic configuration value using `KEY=VALUE` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey=\"YourString\"` Can be passed multiple times.")
+	s.Command.Flags().StringVar(&s.DynamicConfigFile, "dynamic-config-file", "", "Path to a dynamic configuration YAML file. Values passed with `--dynamic-config-value` take precedence over values from this file.")
 	s.Command.Flags().BoolVar(&s.LogConfig, "log-config", false, "Print the server config to stderr.")
 	s.Command.Flags().StringArrayVar(&s.SearchAttribute, "search-attribute", nil, "Search attributes to register using `KEY=VALUE` pairs. Keys must be identifiers, and values must be the search attribute type, which is one of the following: Text, Keyword, Int, Double, Bool, Datetime, KeywordList.")
 	s.Command.Run = func(c *cobra.Command, args []string) {

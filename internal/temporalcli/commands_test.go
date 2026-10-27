@@ -234,6 +234,7 @@ func (s *SharedServerSuite) SetupSuite() {
 		StartOptions: devserver.StartOptions{
 			// Enable for operator cluster commands
 			EnableGlobalNamespace: true,
+			EnableTimeSkipping:    true,
 			DynamicConfigValues: map[string]any{
 				"frontend.enableUpdateWorkflowExecutionAsyncAccepted": true,
 				// Allow a high rate of change to namespaces, particularly
