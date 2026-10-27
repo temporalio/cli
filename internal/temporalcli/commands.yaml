@@ -3570,6 +3570,12 @@ commands:
       these two metrics, the derived metric of `BacklogIncreaseRate` is accurate
       for backlogs older than a few seconds.
 
+      Use `--report-priority-stats` to show the same statistics by priority key
+      for Workflow and Activity Task Queues. These figures include all build IDs,
+      even when a build ID selection flag is used. Nexus tasks have no priority
+      keys, so they are not included. The Server may return zero-count rows for
+      its default priority key.
+
       Safely retire Workers assigned a Build ID by checking reachability across
       all task types. Use the flag `--report-reachability`:
 
@@ -3613,7 +3619,9 @@ commands:
         required: true
       - name: task-queue-type
         type: string-enum[]
-        description: Task Queue type. If not specified, all types are reported.
+        description: |
+          Task Queue type. If not specified, all types are described.
+          Priority statistics apply only to Workflow and Activity Task Queues.
         enum-values:
           - workflow
           - activity
@@ -3655,6 +3663,11 @@ commands:
       - name: disable-stats
         type: bool
         description: Disable task queue statistics.
+      - name: report-priority-stats
+        type: bool
+        description: |
+          Show Workflow and Activity statistics by priority key across all build IDs.
+          This makes an extra server request for each applicable task queue type.
       - name: report-config
         type: bool
         description: |
@@ -4218,6 +4231,8 @@ commands:
       - Fairness key rate limit defaults: Default rate limits for fairness keys.
         If set, each individual fairness key will be limited to this rate,
         scaled by the weight of the fairness key.
+      - Fairness key weight overrides: Custom weights for specific fairness keys.
+        These control the relative share of dispatches each key receives.
 
     options:
       - name: task-queue
