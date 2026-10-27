@@ -10,13 +10,19 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func (s *SharedServerSuite) createSchedule(args ...string) (schedId, schedWfId string, res *CommandResult) {
@@ -60,6 +66,7 @@ func (s *SharedServerSuite) TestSchedule_Create() {
 }
 
 func (s *SharedServerSuite) TestSchedule_TimeSkippingEnable() {
+	s.useTimeSkippingServer()
 	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
 	s.NoError(res.Err)
 	res = s.Execute(
@@ -83,19 +90,91 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingEnable() {
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), `"DisablePropagation":true`)
+}
 
+func (s *SharedServerSuite) TestSchedule_TimeSkippingEnableRequiresDuration() {
+	s.useTimeSkippingServer()
+	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+	require.NoError(s.T(), res.Err)
+
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+	)
+	s.EqualError(res.Err, `required flag(s) "fast-forward-duration" not set`)
+	s.Contains(res.Stderr.String(), `Error: required flag(s) "fast-forward-duration" not set`)
+	s.NotContains(res.Stdout.String(), "Schedule updated:")
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingEnableGeneratesFastForwardID() {
+	s.useTimeSkippingServer()
+	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+	require.NoError(s.T(), res.Err)
+
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-duration", "5h",
+	)
+	require.NoError(s.T(), res.Err)
+	match := regexp.MustCompile(`(?m)^Fast-forward ID: (\S+)$`).FindStringSubmatch(res.Stdout.String())
+	require.Len(s.T(), match, 2)
+	fastForwardID := match[1]
+	_, err := uuid.Parse(fastForwardID)
+	require.NoError(s.T(), err)
+	s.Contains(res.Stdout.String(), "temporal schedule time-skipping poll --namespace default --schedule-id "+schedID+" --fast-forward-id "+fastForwardID)
+
+	res = s.Execute(
+		"schedule", "describe",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+	)
+	require.NoError(s.T(), res.Err)
+	s.Contains(res.Stdout.String(), `"Id":"`+fastForwardID+`"`)
+
+	// The generated ID is usable in the suggested poll command.
 	res = s.Execute(
 		"schedule", "time-skipping", "poll",
 		"--address", s.Address(),
 		"--schedule-id", schedID,
-		"--fast-forward-id", "YourFastForwardId",
+		"--fast-forward-id", fastForwardID,
 		"--timeout", "200ms",
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "poll timed out")
+	s.Equal("poll timed out", strings.TrimSpace(res.Stdout.String()))
 }
 
-func (s *SharedServerSuite) TestSchedule_TimeSkippingPollCompleted() {
+func (s *SharedServerSuite) TestSchedule_TimeSkippingPollTimeout() {
+	s.useTimeSkippingServer()
+	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+	s.NoError(res.Err)
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-duration", "5h",
+		"--fast-forward-id", "YourFastForwardId",
+	)
+	s.NoError(res.Err)
+
+	// A timeout leaves the fast-forward available to poll again.
+	for range 2 {
+		res = s.Execute(
+			"schedule", "time-skipping", "poll",
+			"--address", s.Address(),
+			"--schedule-id", schedID,
+			"--fast-forward-id", "YourFastForwardId",
+			"--timeout", "200ms",
+		)
+		s.NoError(res.Err)
+		s.Equal("poll timed out", strings.TrimSpace(res.Stdout.String()))
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingMinimalLifecycle() {
+	s.useTimeSkippingServer()
 	schedID, _, res := s.createSchedule("--interval", "10d")
 	s.NoError(res.Err)
 	res = s.Execute(
@@ -103,19 +182,126 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPollCompleted() {
 		"--address", s.Address(),
 		"--schedule-id", schedID,
 		"--fast-forward-duration", "5h",
-		"--fast-forward-id", "PollCompletedId",
 	)
 	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: enabled")
+	match := regexp.MustCompile(`(?m)^Fast-forward ID: (\S+)$`).FindStringSubmatch(res.Stdout.String())
+	s.Len(match, 2)
+	fastForwardID := match[1]
+	_, err := uuid.Parse(fastForwardID)
+	s.NoError(err)
 
 	res = s.Execute(
 		"schedule", "time-skipping", "poll",
 		"--address", s.Address(),
 		"--schedule-id", schedID,
-		"--fast-forward-id", "PollCompletedId",
+		"--fast-forward-id", fastForwardID,
 		"--timeout", "10s",
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "completed")
+	s.Equal("completed", strings.TrimSpace(res.Stdout.String()))
+
+	res = s.Execute("schedule", "describe", "--address", s.Address(), "--schedule-id", schedID)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "TimeSkippingInfo")
+	s.Contains(res.Stdout.String(), `"Id":"`+fastForwardID+`"`)
+	s.Contains(res.Stdout.String(), `"HasCompleted":true`)
+	s.Contains(res.Stdout.String(), `"DisablePropagation":false`)
+
+	for _, output := range []string{"json", "jsonl"} {
+		res = s.Execute("schedule", "describe", "--address", s.Address(), "--schedule-id", schedID, "--output", output)
+		s.NoError(res.Err)
+		var description workflowservice.DescribeScheduleResponse
+		s.NoError(protojson.Unmarshal(res.Stdout.Bytes(), &description))
+		s.Equal("DevWorkflow", description.GetSchedule().GetAction().GetStartWorkflow().GetWorkflowType().GetName())
+		info := description.GetInfo().GetTimeSkippingInfo()
+		s.NotNil(info)
+		s.Equal(fastForwardID, info.GetFastForwardInfo().GetFastForwardId())
+		s.True(info.GetFastForwardInfo().GetHasCompleted())
+		s.False(info.GetEffectiveConfig().GetDisablePropagation())
+		if output == "jsonl" {
+			s.Len(strings.Split(strings.TrimSpace(res.Stdout.String()), "\n"), 1)
+		}
+	}
+
+	res = s.Execute("schedule", "time-skipping", "disable", "--address", s.Address(), "--schedule-id", schedID)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "Time skipping: disabled")
+	res = s.Execute("schedule", "describe", "--address", s.Address(), "--schedule-id", schedID)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), `"EffectiveEnabled":false`)
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingPollFailed() {
+	s.useTimeSkippingServer()
+	for _, change := range []string{"not enabled", "disabled", "replaced"} {
+		s.T().Run(change, func(t *testing.T) {
+			schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+			require.NoError(t, res.Err)
+			if change != "not enabled" {
+				res = s.Execute(
+					"schedule", "time-skipping", "enable",
+					"--address", s.Address(),
+					"--schedule-id", schedID,
+					"--fast-forward-duration", "5h",
+					"--fast-forward-id", "OriginalFastForwardId",
+				)
+				require.NoError(t, res.Err)
+			}
+			switch change {
+			case "disabled":
+				res = s.Execute(
+					"schedule", "time-skipping", "disable",
+					"--address", s.Address(),
+					"--schedule-id", schedID,
+				)
+				require.NoError(t, res.Err)
+			case "replaced":
+				res = s.Execute(
+					"schedule", "time-skipping", "enable",
+					"--address", s.Address(),
+					"--schedule-id", schedID,
+					"--fast-forward-duration", "5h",
+					"--fast-forward-id", "ReplacementFastForwardId",
+				)
+				require.NoError(t, res.Err)
+			}
+			res = s.Execute(
+				"schedule", "time-skipping", "poll",
+				"--address", s.Address(),
+				"--schedule-id", schedID,
+				"--fast-forward-id", "OriginalFastForwardId",
+				"--timeout", "5s",
+			)
+			require.NoError(t, res.Err)
+			require.Regexp(t, `^failed: \S`, strings.TrimSpace(res.Stdout.String()))
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingPollCanceled() {
+	s.useTimeSkippingServer()
+	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+	s.NoError(res.Err)
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-duration", "5h",
+		"--fast-forward-id", "YourFastForwardId",
+	)
+	s.NoError(res.Err)
+
+	ctx, cancel := context.WithCancel(s.Context)
+	cancel()
+	res = s.ExecuteWithContext(ctx,
+		"schedule", "time-skipping", "poll",
+		"--address", s.Address(),
+		"--schedule-id", schedID,
+		"--fast-forward-id", "YourFastForwardId",
+	)
+	s.ErrorContains(res.Err, "canceled")
+	s.Empty(res.Stdout.String())
 }
 
 func (s *SharedServerSuite) TestSchedule_Delete() {
@@ -571,6 +757,7 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 }
 
 func (s *SharedServerSuite) TestSchedule_TimeSkippingDisable() {
+	s.useTimeSkippingServer()
 	schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
 	s.NoError(res.Err)
 
@@ -590,9 +777,9 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingDisable() {
 		"--schedule-id", schedID,
 	)
 	s.NoError(res.Err)
-	s.Contains(res.Stdout.String(), "TimeSkipping")
+	s.Contains(res.Stdout.String(), "TimeSkippingInfo")
 	s.Contains(res.Stdout.String(), `"EffectiveEnabled":true`)
-	s.Contains(res.Stdout.String(), `"FastForward":`)
+	s.Contains(res.Stdout.String(), `"FastForwardInfo":`)
 
 	res = s.Execute(
 		"schedule", "time-skipping", "disable",
@@ -726,4 +913,74 @@ func (s *SharedServerSuite) TestSchedule_ListMatchingTimes_NotFound() {
 		"--end-time", "2025-01-01T23:59:59Z",
 	)
 	s.Error(res.Err)
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingPropagatesWithSkipOverlap() {
+	s.useTimeSkippingServer()
+
+	// The first action is at the next future UTC hour; the fast-forward target
+	// falls between its third and fourth actions.
+	firstAction := time.Now().UTC().Truncate(time.Hour).Add(2 * time.Hour)
+	scheduleID, _, res := s.createSchedule(
+		"--interval", "1h",
+		"--start-time", firstAction.Add(-time.Second).Format(time.RFC3339Nano),
+		"--overlap-policy", "Skip",
+	)
+	s.NoError(res.Err)
+
+	duration := time.Until(firstAction.Add(2*time.Hour + time.Minute))
+	res = s.Execute(
+		"schedule", "time-skipping", "enable",
+		"--address", s.Address(),
+		"--schedule-id", scheduleID,
+		"--fast-forward-duration", duration.String(),
+		"--fast-forward-id", "ThreeActionsWithPropagation",
+		"--disable-propagation=false",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"schedule", "time-skipping", "poll",
+		"--address", s.Address(),
+		"--schedule-id", scheduleID,
+		"--fast-forward-id", "ThreeActionsWithPropagation",
+		"--timeout", "30s",
+	)
+	s.NoError(res.Err)
+	s.Contains(res.Stdout.String(), "completed")
+
+	var description *client.ScheduleDescription
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		var err error
+		description, err = s.Client.ScheduleClient().GetHandle(s.Context, scheduleID).Describe(s.Context)
+		assert.NoError(t, err)
+		if err != nil {
+			return
+		}
+		assert.Equal(t, 3, description.Info.NumActions)
+		assert.Len(t, description.Info.RecentActions, 3)
+		assert.Equal(t, 0, description.Info.NumActionsSkippedOverlap)
+	}, 10*time.Second, 100*time.Millisecond)
+	s.NotNil(description.Schedule.Policy)
+	s.Equal(enums.SCHEDULE_OVERLAP_POLICY_SKIP, description.Schedule.Policy.Overlap)
+	s.NotNil(description.Info.TimeSkippingInfo)
+	s.False(description.Info.TimeSkippingInfo.GetEffectiveConfig().GetDisablePropagation())
+
+	workflowIDs := make(map[string]struct{}, 3)
+	for i, action := range description.Info.RecentActions {
+		scheduledTime := firstAction.Add(time.Duration(i) * time.Hour)
+		s.WithinDuration(scheduledTime, action.ScheduleTime, time.Second)
+		s.NotNil(action.StartWorkflowResult)
+		workflowID := action.StartWorkflowResult.WorkflowID
+		_, seen := workflowIDs[workflowID]
+		s.False(seen, "schedule action reused Workflow ID %q", workflowID)
+		workflowIDs[workflowID] = struct{}{}
+		runID := action.StartWorkflowResult.FirstExecutionRunID
+		workflowDescription, err := s.Client.DescribeWorkflowExecution(s.Context, workflowID, runID)
+		s.NoError(err)
+		s.NotNil(workflowDescription.GetWorkflowExecutionInfo().GetStartTime())
+		s.WithinDuration(scheduledTime, workflowDescription.GetWorkflowExecutionInfo().GetStartTime().AsTime(), 5*time.Second)
+		s.NotNil(workflowDescription.GetWorkflowExtendedInfo().GetTimeSkippingInfo())
+		s.True(workflowDescription.GetWorkflowExtendedInfo().GetTimeSkippingInfo().GetEffectiveConfig().GetEnabled())
+	}
 }
