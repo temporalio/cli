@@ -122,6 +122,54 @@ func (v *DeploymentVersionOptions) BuildFlags(f *pflag.FlagSet) {
 	_ = cobra.MarkFlagRequired(f, "build-id")
 }
 
+type ScalingGroupOptions struct {
+	ScalingGroup string
+	FlagSet      *pflag.FlagSet
+}
+
+func (v *ScalingGroupOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.ScalingGroup, "scaling-group", "default", "Key of the scaling group.")
+}
+
+type AwsAssumeRoleOptions struct {
+	AssumeRoleArn         string
+	AssumeRoleExternalId  string
+	SkipRoleAndExternalId bool
+	FlagSet               *pflag.FlagSet
+}
+
+func (v *AwsAssumeRoleOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.StringVar(&v.AssumeRoleArn, "assume-role-arn", "", "AWS IAM role ARN that the Temporal server will assume when calling the compute provider that spawns a new Worker in this Worker Deployment Version. Required when setting the compute provider, and must be omitted when --skip-role-and-external-id is passed.")
+	f.StringVar(&v.AssumeRoleExternalId, "assume-role-external-id", "", "Temporal server will enforce that the AWS IAM trust policy associated with the AWS IAM role specified in --assume-role-arn has an aws:ExternalId condition that matches the supplied value. Required when setting the compute provider, and must be omitted when --skip-role-and-external-id is passed.")
+	f.BoolVar(&v.SkipRoleAndExternalId, "skip-role-and-external-id", false, "When setting the compute provider, --assume-role-arn and --assume-role-external-id are required unless this flag is passed, in which case both must be omitted.")
+}
+
+type NoSyncScalerOptions struct {
+	ScaleUpBacklogThreshold             int
+	ScaleUpCooloffMs                    int
+	MaxWorkerLifetimeMs                 int
+	MetricsPollIntervalMs               int
+	ScaleUpDispatchRateEpsilon          float32
+	ScaleUpDispatchRateEpsilonConfirmMs int
+	SuppressScaleUpMs                   int
+	SuppressPollIntervalMs              int
+	FlagSet                             *pflag.FlagSet
+}
+
+func (v *NoSyncScalerOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.IntVar(&v.ScaleUpBacklogThreshold, "scale-up-backlog-threshold", 0, "At each Task Queue metrics check (see --metrics-poll-interval-ms), start a new Worker if the backlog is larger than this number of tasks. Defaults to 0 when unset. A task that arrives while no Worker is waiting for it still starts a Worker, subject to --scale-up-cooloff-ms.")
+	f.IntVar(&v.ScaleUpCooloffMs, "scale-up-cooloff-ms", 0, "Minimum time between two Worker starts, in milliseconds. A value of 0 disables the wait. Defaults to 100 when unset.")
+	f.IntVar(&v.MaxWorkerLifetimeMs, "max-worker-lifetime-ms", 0, "While there is a backlog, start a new Worker at least this often, in milliseconds, even within --scale-up-cooloff-ms. A value of 0 disables this. Defaults to 600000 (10 minutes) when unset.")
+	f.IntVar(&v.MetricsPollIntervalMs, "metrics-poll-interval-ms", 0, "How often Task Queue metrics are checked to decide whether to start a Worker, in milliseconds. Must be at least 10000, and at least --scale-up-cooloff-ms. Defaults to 60000 (1 minute) when unset.")
+	f.Float32Var(&v.ScaleUpDispatchRateEpsilon, "scale-up-dispatch-rate-epsilon", 0, "Band around the dispatch rate, as a fraction of it, of at most 0.1. While a Task Queue type has a backlog and its dispatch rate stays within this band, Worker starts for it are paused. Starts from --max-worker-lifetime-ms are not paused. Defaults to 0 when unset, which disables pausing.")
+	f.IntVar(&v.ScaleUpDispatchRateEpsilonConfirmMs, "scale-up-dispatch-rate-epsilon-confirm-ms", 0, "How long the dispatch rate must stay within --scale-up-dispatch-rate-epsilon before Worker starts are paused, in milliseconds. Must be longer than --metrics-poll-interval-ms. Only valid with --scale-up-dispatch-rate-epsilon. Defaults to 90000 when unset.")
+	f.IntVar(&v.SuppressScaleUpMs, "suppress-scale-up-ms", 0, "How long Worker starts stay paused each time the dispatch rate is found within --scale-up-dispatch-rate-epsilon, in milliseconds. Must be longer than --suppress-poll-interval-ms. Only valid with --scale-up-dispatch-rate-epsilon. Defaults to 120000 when unset.")
+	f.IntVar(&v.SuppressPollIntervalMs, "suppress-poll-interval-ms", 0, "How often Task Queue metrics are checked while Worker starts are paused, in milliseconds. Only valid with --scale-up-dispatch-rate-epsilon. Defaults to 90000 when unset.")
+}
+
 type DeploymentVersionOrUnversionedOptions struct {
 	DeploymentName string
 	BuildId        string
@@ -3729,6 +3777,7 @@ func NewTemporalWorkerDeploymentCommand(cctx *CommandContext, parent *TemporalWo
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentSetRampingVersionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionComputeConfigCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionCommand(cctx, &s).Command)
 	return &s
 }
 
@@ -4197,6 +4246,286 @@ func NewTemporalWorkerDeploymentUpdateVersionMetadataCommand(cctx *CommandContex
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringArrayVar(&s.Metadata, "metadata", nil, "Set deployment metadata using `KEY=\"VALUE\"` pairs. Keys must be identifiers, and values must be JSON values. For example: `YourKey={\"your\": \"value\"}` Can be passed multiple times.")
 	s.Command.Flags().StringArrayVar(&s.RemoveEntries, "remove-entries", nil, "Keys of entries to be deleted from metadata. Can be passed multiple times.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionCommand struct {
+	Parent  *TemporalWorkerDeploymentCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentVersionCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentCommand) *TemporalWorkerDeploymentVersionCommand {
+	var s TemporalWorkerDeploymentVersionCommand
+	s.Parent = parent
+	s.Command.Use = "version"
+	s.Command.Short = "Create, describe, or delete a Worker Deployment Version, and manage its compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Version commands create, describe, and delete a single Worker\nDeployment Version, and manage its compute configuration:\n\n\x1b[1mtemporal worker deployment version [command] [options]\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Version commands create, describe, and delete a single Worker\nDeployment Version, and manage its compute configuration:\n\n```\ntemporal worker deployment version [command] [options]\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionDeleteCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionDescribeCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionComputeConfigCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigCommand
+	s.Parent = parent
+	s.Command.Use = "compute-config"
+	s.Command.Short = "Set, update, or remove compute configuration for a Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "A Worker Deployment Version's compute configuration is made of one\nor more scaling groups. Each scaling group is identified by a key\nand is made of a compute provider that starts Workers and a scaler\nthat decides when to start them. Each compute provider has its own\ncommand, such as \x1b[1maws-lambda\x1b[0m, to create and update scaling groups:\n\n\x1b[1mtemporal worker deployment version compute-config [command] [options]\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "A Worker Deployment Version's compute configuration is made of one\nor more scaling groups. Each scaling group is identified by a key\nand is made of a compute provider that starts Workers and a scaler\nthat decides when to start them. Each compute provider has its own\ncommand, such as `aws-lambda`, to create and update scaling groups:\n\n```\ntemporal worker deployment version compute-config [command] [options]\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigRemoveCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigCommand) *TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand
+	s.Parent = parent
+	s.Command.Use = "aws-lambda"
+	s.Command.Short = "Create or update AWS Lambda compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "AWS Lambda commands set the compute configuration of a Worker Deployment\nVersion for an AWS Lambda function that spawns a Worker in the Worker\nDeployment:\n\n\x1b[1mtemporal worker deployment version compute-config aws-lambda [command] [options]\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "AWS Lambda commands set the compute configuration of a Worker Deployment\nVersion for an AWS Lambda function that spawns a Worker in the Worker\nDeployment:\n\n```\ntemporal worker deployment version compute-config aws-lambda [command] [options]\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCreateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	AwsAssumeRoleOptions
+	NoSyncScalerOptions
+	FunctionArn string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaCreateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand) *TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCreateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a Version with AWS Lambda compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for an\nAWS Lambda function that spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment version compute-config aws-lambda create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --function-arn YourLambdaFunctionARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\x1b[0m\n\nTo tune when Workers are started, pass any of the scaler flags (the\n--scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and\n--metrics-poll-interval-ms). Each one that is not set keeps the\nserver default:\n\n\x1b[1mtemporal worker deployment version compute-config aws-lambda create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --function-arn YourLambdaFunctionARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID \\\n    --scale-up-backlog-threshold 5 \\\n    --scale-up-cooloff-ms 500 \\\n    --max-worker-lifetime-ms 300000\x1b[0m\n\nThe Worker Deployment must already exist; create it with\n\x1b[1mtemporal worker deployment create\x1b[0m.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse \x1b[1mtemporal worker deployment version compute-config aws-lambda update\x1b[0m.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for an\nAWS Lambda function that spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment version compute-config aws-lambda create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --function-arn YourLambdaFunctionARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\n```\n\nTo tune when Workers are started, pass any of the scaler flags (the\n--scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and\n--metrics-poll-interval-ms). Each one that is not set keeps the\nserver default:\n\n```\ntemporal worker deployment version compute-config aws-lambda create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --function-arn YourLambdaFunctionARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID \\\n    --scale-up-backlog-threshold 5 \\\n    --scale-up-cooloff-ms 500 \\\n    --max-worker-lifetime-ms 300000\n```\n\nThe Worker Deployment must already exist; create it with\n`temporal worker deployment create`.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse `temporal worker deployment version compute-config aws-lambda update`.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.FunctionArn, "function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "function-arn")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.AwsAssumeRoleOptions.BuildFlags(s.Command.Flags())
+	s.NoSyncScalerOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigAwsLambdaUpdateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	AwsAssumeRoleOptions
+	NoSyncScalerOptions
+	FunctionArn string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaUpdateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand) *TemporalWorkerDeploymentVersionComputeConfigAwsLambdaUpdateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigAwsLambdaUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update AWS Lambda compute configuration for a Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version, for an AWS Lambda function that spawns a Worker in\nthe Worker Deployment. Only the scaling group named by --scaling-group\n(\"default\" when unset) changes; other scaling groups are not affected.\n\nTo update the AWS Lambda function and the AWS IAM role associated with\nan existing Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment version compute-config aws-lambda update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --function-arn YourLambdaFunctionARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\x1b[0m\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags. The scaler is replaced as a\nwhole, so scaler flags that are not passed go back to their\ndefaults:\n\n\x1b[1mtemporal worker deployment version compute-config aws-lambda update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scale-up-backlog-threshold 5 \\\n    --max-worker-lifetime-ms 300000\x1b[0m\n\nThe provider flags are --function-arn, --assume-role-arn,\n--assume-role-external-id, and --skip-role-and-external-id. The\nscaler flags are the --scale-up-* and --suppress-* flags,\n--max-worker-lifetime-ms, and --metrics-poll-interval-ms. The\nprovider flags are only needed when changing the compute provider,\nand they must be passed together: --function-arn with either both\nrole flags or --skip-role-and-external-id. Changing the provider\nalso resets the scaler: scaler flags passed with it are applied, and\nthe rest, or all of them if none are passed, go back to their\ndefaults.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n\x1b[1mtemporal worker deployment version compute-config aws-lambda create\x1b[0m.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version, for an AWS Lambda function that spawns a Worker in\nthe Worker Deployment. Only the scaling group named by --scaling-group\n(\"default\" when unset) changes; other scaling groups are not affected.\n\nTo update the AWS Lambda function and the AWS IAM role associated with\nan existing Worker Deployment Version:\n\n```\ntemporal worker deployment version compute-config aws-lambda update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --function-arn YourLambdaFunctionARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\n```\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags. The scaler is replaced as a\nwhole, so scaler flags that are not passed go back to their\ndefaults:\n\n```\ntemporal worker deployment version compute-config aws-lambda update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scale-up-backlog-threshold 5 \\\n    --max-worker-lifetime-ms 300000\n```\n\nThe provider flags are --function-arn, --assume-role-arn,\n--assume-role-external-id, and --skip-role-and-external-id. The\nscaler flags are the --scale-up-* and --suppress-* flags,\n--max-worker-lifetime-ms, and --metrics-poll-interval-ms. The\nprovider flags are only needed when changing the compute provider,\nand they must be passed together: --function-arn with either both\nrole flags or --skip-role-and-external-id. Changing the provider\nalso resets the scaler: scaler flags passed with it are applied, and\nthe rest, or all of them if none are passed, go back to their\ndefaults.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n`temporal worker deployment version compute-config aws-lambda create`.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.FunctionArn, "function-arn", "", "Qualified (contains version suffix) or unqualified AWS Lambda function ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment. Required when changing the compute provider.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.AwsAssumeRoleOptions.BuildFlags(s.Command.Flags())
+	s.NoSyncScalerOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigDescribeCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigDescribeCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigCommand) *TemporalWorkerDeploymentVersionComputeConfigDescribeCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show the compute configuration of a Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Show the scaling groups in the compute configuration of a Worker\nDeployment Version, with their compute provider and scaler settings:\n\n\x1b[1mtemporal worker deployment version compute-config describe \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\x1b[0m\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Show the scaling groups in the compute configuration of a Worker\nDeployment Version, with their compute provider and scaler settings:\n\n```\ntemporal worker deployment version compute-config describe \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\n```\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigRemoveCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroup string
+	Yes          bool
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigRemoveCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigCommand) *TemporalWorkerDeploymentVersionComputeConfigRemoveCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigRemoveCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "remove [flags]"
+	s.Command.Short = "Remove compute configuration from a Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Remove the compute configuration of a Worker Deployment Version. The\ncommand lists its scaling groups and asks for confirmation first:\n\n\x1b[1mtemporal worker deployment version compute-config remove \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\x1b[0m\n\nRemove one scaling group from the compute configuration, such as the one\nnamed \"default\":\n\n\x1b[1mtemporal worker deployment version compute-config remove \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scaling-group default\x1b[0m\n\nIf the Worker Deployment Version or the scaling group does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Remove the compute configuration of a Worker Deployment Version. The\ncommand lists its scaling groups and asks for confirmation first:\n\n```\ntemporal worker deployment version compute-config remove \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\n```\n\nRemove one scaling group from the compute configuration, such as the one\nnamed \"default\":\n\n```\ntemporal worker deployment version compute-config remove \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scaling-group default\n```\n\nIf the Worker Deployment Version or the scaling group does not exist,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.ScalingGroup, "scaling-group", "", "Key of the scaling group to remove. If unset, all scaling groups are removed.")
+	s.Command.Flags().BoolVarP(&s.Yes, "yes", "y", false, "Don't prompt to confirm removing all scaling groups. Only allowed when --scaling-group is not set.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionCreateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+}
+
+func NewTemporalWorkerDeploymentVersionCreateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionCreateCommand {
+	var s TemporalWorkerDeploymentVersionCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a new Worker Deployment Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment version create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\x1b[0m\n\nThe Worker Deployment must already exist; create it with\n\x1b[1mtemporal worker deployment create\x1b[0m.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Create a new Worker Deployment Version:\n\n```\ntemporal worker deployment version create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\n```\n\nThe Worker Deployment must already exist; create it with\n`temporal worker deployment create`.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionDeleteCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	SkipDrainage bool
+}
+
+func NewTemporalWorkerDeploymentVersionDeleteCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionDeleteCommand {
+	var s TemporalWorkerDeploymentVersionDeleteCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "delete [flags]"
+	s.Command.Short = "Delete a Worker Deployment Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Remove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n\x1b[1m--skip-drainage\x1b[0m.\n\x1b[1mtemporal worker deployment version delete [options]\x1b[0m\n\nFor example, skipping the drainage restriction:\n\n\x1b[1mtemporal worker deployment version delete \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --skip-drainage\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Remove a Worker Deployment Version given its fully-qualified identifier.\nThis is rarely needed during normal operation\nsince unused Versions are eventually garbage collected.\nThe client can delete a Version only when all of the following conditions\nare met:\n  - It is not the Current or Ramping Version for this Deployment.\n  - It has no active pollers, i.e., none of the task queues in the\n  Version have pollers.\n  - It is not draining. This requirement can be ignored with the option\n`--skip-drainage`.\n```\ntemporal worker deployment version delete [options]\n```\n\nFor example, skipping the drainage restriction:\n\n```\ntemporal worker deployment version delete \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --skip-drainage\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.SkipDrainage, "skip-drainage", false, "Ignore the deletion requirement of not draining.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionDescribeCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ReportTaskQueueStats bool
+}
+
+func NewTemporalWorkerDeploymentVersionDescribeCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionCommand) *TemporalWorkerDeploymentVersionDescribeCommand {
+	var s TemporalWorkerDeploymentVersionDescribeCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "describe [flags]"
+	s.Command.Short = "Show properties of a Worker Deployment Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Describe properties of a Worker Deployment Version, such as the task\nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n\x1b[1mtemporal worker deployment version describe [options]\x1b[0m\n\nFor example, to describe a deployment version in a deployment\n\x1b[1mYourDeploymentName\x1b[0m, with Build ID \x1b[1mYourBuildID\x1b[0m, and in the default\nnamespace:\n\n\x1b[1mtemporal worker deployment version describe \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Describe properties of a Worker Deployment Version, such as the task\nqueues polled by workers in this Deployment Version, or drainage\ninformation required to safely decommission workers, or user-provided\nmetadata, or its creation/modification time.\n\n```\ntemporal worker deployment version describe [options]\n```\n\nFor example, to describe a deployment version in a deployment\n`YourDeploymentName`, with Build ID `YourBuildID`, and in the default\nnamespace:\n\n```\ntemporal worker deployment version describe \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().BoolVar(&s.ReportTaskQueueStats, "report-task-queue-stats", false, "Report stats for task queues that are present in this version.")
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {

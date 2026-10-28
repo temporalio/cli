@@ -1145,6 +1145,8 @@ commands:
         - worker deployment delete-version
         - worker deployment update-version-metadata
         - worker deployment update-version-compute-config
+        - worker deployment version
+        - worker deployment version compute-config
         - worker deployment manager-identity
 
   - name: temporal worker deployment create
@@ -1850,6 +1852,310 @@ commands:
         description: |
           Removes any compute configuration associated with this Worker
           Deployment Version.
+
+  - name: temporal worker deployment version
+    summary: Create, describe, or delete a Worker Deployment Version, and manage its compute configuration (Experimental)
+    description: |
+      Version commands create, describe, and delete a single Worker
+      Deployment Version, and manage its compute configuration:
+
+      ```
+      temporal worker deployment version [command] [options]
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal worker deployment version create
+    summary: Create a new Worker Deployment Version (Experimental)
+    description: |
+      Create a new Worker Deployment Version:
+
+      ```
+      temporal worker deployment version create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID
+      ```
+
+      The Worker Deployment must already exist; create it with
+      `temporal worker deployment create`.
+
+      If a Worker Deployment Version with the supplied BuildID already exists,
+      this command will return an error.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+
+  - name: temporal worker deployment version describe
+    summary: Show properties of a Worker Deployment Version (Experimental)
+    description: |
+      Describe properties of a Worker Deployment Version, such as the task
+      queues polled by workers in this Deployment Version, or drainage
+      information required to safely decommission workers, or user-provided
+      metadata, or its creation/modification time.
+
+      ```
+      temporal worker deployment version describe [options]
+      ```
+
+      For example, to describe a deployment version in a deployment
+      `YourDeploymentName`, with Build ID `YourBuildID`, and in the default
+      namespace:
+
+      ```
+      temporal worker deployment version describe \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+    options:
+      - name: report-task-queue-stats
+        type: bool
+        description: Report stats for task queues that are present in this version.
+
+  - name: temporal worker deployment version delete
+    summary: Delete a Worker Deployment Version (Experimental)
+    description: |
+      Remove a Worker Deployment Version given its fully-qualified identifier.
+      This is rarely needed during normal operation
+      since unused Versions are eventually garbage collected.
+      The client can delete a Version only when all of the following conditions
+      are met:
+        - It is not the Current or Ramping Version for this Deployment.
+        - It has no active pollers, i.e., none of the task queues in the
+        Version have pollers.
+        - It is not draining. This requirement can be ignored with the option
+      `--skip-drainage`.
+      ```
+      temporal worker deployment version delete [options]
+      ```
+
+      For example, skipping the drainage restriction:
+
+      ```
+      temporal worker deployment version delete \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --skip-drainage
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+    options:
+      - name: skip-drainage
+        type: bool
+        description: Ignore the deletion requirement of not draining.
+
+  - name: temporal worker deployment version compute-config
+    summary: Set, update, or remove compute configuration for a Version (Experimental)
+    description: |
+      A Worker Deployment Version's compute configuration is made of one
+      or more scaling groups. Each scaling group is identified by a key
+      and is made of a compute provider that starts Workers and a scaler
+      that decides when to start them. Each compute provider has its own
+      command, such as `aws-lambda`, to create and update scaling groups:
+
+      ```
+      temporal worker deployment version compute-config [command] [options]
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal worker deployment version compute-config describe
+    summary: Show the compute configuration of a Version (Experimental)
+    description: |
+      Show the scaling groups in the compute configuration of a Worker
+      Deployment Version, with their compute provider and scaler settings:
+
+      ```
+      temporal worker deployment version compute-config describe \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID
+      ```
+
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+
+  - name: temporal worker deployment version compute-config aws-lambda
+    summary: Create or update AWS Lambda compute configuration (Experimental)
+    description: |
+      AWS Lambda commands set the compute configuration of a Worker Deployment
+      Version for an AWS Lambda function that spawns a Worker in the Worker
+      Deployment:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda [command] [options]
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal worker deployment version compute-config aws-lambda create
+    summary: Create a Version with AWS Lambda compute configuration (Experimental)
+    description: |
+      Create a new Worker Deployment Version with compute configuration for an
+      AWS Lambda function that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --function-arn YourLambdaFunctionARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID
+      ```
+
+      To tune when Workers are started, pass any of the scaler flags (the
+      --scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and
+      --metrics-poll-interval-ms). Each one that is not set keeps the
+      server default:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --function-arn YourLambdaFunctionARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID \
+          --scale-up-backlog-threshold 5 \
+          --scale-up-cooloff-ms 500 \
+          --max-worker-lifetime-ms 300000
+      ```
+
+      The Worker Deployment must already exist; create it with
+      `temporal worker deployment create`.
+
+      If a Worker Deployment Version with the supplied BuildID already exists,
+      this command will return an error. To update its compute configuration,
+      use `temporal worker deployment version compute-config aws-lambda update`.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - aws-assume-role
+      - no-sync-scaler
+    options:
+      - name: function-arn
+        type: string
+        required: true
+        description: |
+          Qualified (contains version suffix) or unqualified AWS Lambda
+          function ARN to invoke when there are no active pollers for task
+          queue targets in the Worker Deployment.
+
+  - name: temporal worker deployment version compute-config aws-lambda update
+    summary: Update AWS Lambda compute configuration for a Version (Experimental)
+    description: |
+      Update a scaling group in the compute configuration of a Worker
+      Deployment Version, for an AWS Lambda function that spawns a Worker in
+      the Worker Deployment. Only the scaling group named by --scaling-group
+      ("default" when unset) changes; other scaling groups are not affected.
+
+      To update the AWS Lambda function and the AWS IAM role associated with
+      an existing Worker Deployment Version:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --function-arn YourLambdaFunctionARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID
+      ```
+
+      To update only the scaler of an existing scaling group, supply the
+      scaler flags without the provider flags. The scaler is replaced as a
+      whole, so scaler flags that are not passed go back to their
+      defaults:
+
+      ```
+      temporal worker deployment version compute-config aws-lambda update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --scale-up-backlog-threshold 5 \
+          --max-worker-lifetime-ms 300000
+      ```
+
+      The provider flags are --function-arn, --assume-role-arn,
+      --assume-role-external-id, and --skip-role-and-external-id. The
+      scaler flags are the --scale-up-* and --suppress-* flags,
+      --max-worker-lifetime-ms, and --metrics-poll-interval-ms. The
+      provider flags are only needed when changing the compute provider,
+      and they must be passed together: --function-arn with either both
+      role flags or --skip-role-and-external-id. Changing the provider
+      also resets the scaler: scaler flags passed with it are applied, and
+      the rest, or all of them if none are passed, go back to their
+      defaults.
+
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error. To create it, use
+      `temporal worker deployment version compute-config aws-lambda create`.
+
+      Returns an error if all compute configuration fields are empty.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - aws-assume-role
+      - no-sync-scaler
+    options:
+      - name: function-arn
+        type: string
+        description: |
+          Qualified (contains version suffix) or unqualified AWS Lambda
+          function ARN to invoke when there are no active pollers for task
+          queue targets in the Worker Deployment. Required when changing the
+          compute provider.
+
+  - name: temporal worker deployment version compute-config remove
+    summary: Remove compute configuration from a Version (Experimental)
+    description: |
+      Remove the compute configuration of a Worker Deployment Version. The
+      command lists its scaling groups and asks for confirmation first:
+
+      ```
+      temporal worker deployment version compute-config remove \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID
+      ```
+
+      Remove one scaling group from the compute configuration, such as the one
+      named "default":
+
+      ```
+      temporal worker deployment version compute-config remove \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --scaling-group default
+      ```
+
+      If the Worker Deployment Version or the scaling group does not exist,
+      this command will return an error.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+    options:
+      - name: scaling-group
+        type: string
+        description: |
+          Key of the scaling group to remove. If unset, all scaling groups are
+          removed.
+      - name: yes
+        short: y
+        type: bool
+        description: |
+          Don't prompt to confirm removing all scaling groups. Only allowed
+          when --scaling-group is not set.
 
   - name: temporal worker deployment manager-identity
     summary: Manager Identity commands change the `ManagerIdentity` of a Worker Deployment
@@ -5451,6 +5757,95 @@ option-sets:
         description: |
           Build ID of the Worker Deployment Version.
         required: true
+
+  - name: scaling-group
+    options:
+      - name: scaling-group
+        type: string
+        default: default
+        description: |
+          Key of the scaling group.
+
+  - name: aws-assume-role
+    options:
+      - name: assume-role-arn
+        type: string
+        description: |
+          AWS IAM role ARN that the Temporal server will assume when calling
+          the compute provider that spawns a new Worker in this Worker
+          Deployment Version. Required when setting the compute provider, and
+          must be omitted when --skip-role-and-external-id is passed.
+      - name: assume-role-external-id
+        type: string
+        description: |
+          Temporal server will enforce that the AWS IAM trust policy associated
+          with the AWS IAM role specified in --assume-role-arn has an
+          aws:ExternalId condition that matches the supplied value. Required
+          when setting the compute provider, and must be omitted when
+          --skip-role-and-external-id is passed.
+      - name: skip-role-and-external-id
+        type: bool
+        description: |
+          When setting the compute provider, --assume-role-arn and
+          --assume-role-external-id are required unless this flag is passed,
+          in which case both must be omitted.
+
+  - name: no-sync-scaler
+    options:
+      - name: scale-up-backlog-threshold
+        type: int
+        description: |
+          At each Task Queue metrics check (see --metrics-poll-interval-ms),
+          start a new Worker if the backlog is larger than this number of
+          tasks. Defaults to 0 when unset. A task that arrives while no Worker
+          is waiting for it still starts a Worker, subject to
+          --scale-up-cooloff-ms.
+      - name: scale-up-cooloff-ms
+        type: int
+        description: |
+          Minimum time between two Worker starts, in milliseconds. A value of
+          0 disables the wait. Defaults to 100 when unset.
+      - name: max-worker-lifetime-ms
+        type: int
+        description: |
+          While there is a backlog, start a new Worker at least this often, in
+          milliseconds, even within --scale-up-cooloff-ms. A value of 0
+          disables this. Defaults to 600000 (10 minutes) when unset.
+      - name: metrics-poll-interval-ms
+        type: int
+        description: |
+          How often Task Queue metrics are checked to decide whether to start
+          a Worker, in milliseconds. Must be at least 10000, and at least
+          --scale-up-cooloff-ms. Defaults to 60000 (1 minute) when unset.
+      - name: scale-up-dispatch-rate-epsilon
+        type: float
+        description: |
+          Band around the dispatch rate, as a fraction of it, of at most 0.1.
+          While a Task Queue type has a backlog and its dispatch rate stays
+          within this band, Worker starts for it are paused. Starts from
+          --max-worker-lifetime-ms are not paused. Defaults to 0 when unset,
+          which disables pausing.
+      - name: scale-up-dispatch-rate-epsilon-confirm-ms
+        type: int
+        description: |
+          How long the dispatch rate must stay within
+          --scale-up-dispatch-rate-epsilon before Worker starts are paused, in
+          milliseconds. Must be longer than --metrics-poll-interval-ms. Only
+          valid with --scale-up-dispatch-rate-epsilon. Defaults to 90000 when
+          unset.
+      - name: suppress-scale-up-ms
+        type: int
+        description: |
+          How long Worker starts stay paused each time the dispatch rate is
+          found within --scale-up-dispatch-rate-epsilon, in milliseconds. Must
+          be longer than --suppress-poll-interval-ms. Only valid with
+          --scale-up-dispatch-rate-epsilon. Defaults to 120000 when unset.
+      - name: suppress-poll-interval-ms
+        type: int
+        description: |
+          How often Task Queue metrics are checked while Worker starts are
+          paused, in milliseconds. Only valid with
+          --scale-up-dispatch-rate-epsilon. Defaults to 90000 when unset.
 
   - name: deployment-version-or-unversioned
     options:
