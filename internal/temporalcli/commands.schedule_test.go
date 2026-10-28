@@ -959,7 +959,8 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPropagatesWithSkipOverlap()
 	s.NotNil(description.Schedule.Policy)
 	s.Equal(enums.SCHEDULE_OVERLAP_POLICY_SKIP, description.Schedule.Policy.Overlap)
 	s.NotNil(description.Info.TimeSkippingInfo)
-	s.False(description.Info.TimeSkippingInfo.GetEffectiveConfig().GetDisablePropagation())
+	s.NotNil(description.Info.TimeSkippingInfo.EffectiveConfig)
+	s.False(description.Info.TimeSkippingInfo.EffectiveConfig.DisablePropagation)
 
 	workflowIDs := make(map[string]struct{}, 3)
 	for i, action := range description.Info.RecentActions {

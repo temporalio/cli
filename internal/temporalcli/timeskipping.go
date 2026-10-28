@@ -52,6 +52,8 @@ type printableTimeSkippingFastForwardInfo struct {
 	HasCompleted bool
 }
 
+// timeSkippingToPrintable renders the raw proto form, which is what
+// DescribeWorkflowExecution still returns.
 func timeSkippingToPrintable(info *commonpb.TimeSkippingInfo) *printableTimeSkippingInfo {
 	if info == nil {
 		return nil
@@ -74,6 +76,34 @@ func timeSkippingToPrintable(info *commonpb.TimeSkippingInfo) *printableTimeSkip
 		}
 		if targetTime := ff.GetTargetTime(); targetTime != nil {
 			out.FastForwardInfo.TargetTime = targetTime.AsTime()
+		}
+	}
+	return out
+}
+
+// clientTimeSkippingToPrintable renders the SDK's typed form, which is what
+// ScheduleHandle.Describe returns. The SDK has already done the proto decoding,
+// so there are no timestamp nil checks to repeat here.
+func clientTimeSkippingToPrintable(info *client.TimeSkippingInfo) *printableTimeSkippingInfo {
+	if info == nil {
+		return nil
+	}
+
+	out := &printableTimeSkippingInfo{
+		CurrentTime:             info.CurrentTime,
+		CurrentSessionSkipCount: info.CurrentSessionSkipCount,
+	}
+	if cfg := info.EffectiveConfig; cfg != nil {
+		out.EffectiveEnabled = cfg.Enabled
+		out.DisablePropagation = cfg.DisablePropagation
+		out.MaxSessionSkipCount = cfg.MaxSessionSkipCount
+	}
+	if ff := info.FastForwardInfo; ff != nil {
+		out.FastForwardInfo = &printableTimeSkippingFastForwardInfo{
+			Id:           ff.ID,
+			Duration:     formatDuration(ff.Duration),
+			TargetTime:   ff.TargetTime,
+			HasCompleted: ff.HasCompleted,
 		}
 	}
 	return out

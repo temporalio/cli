@@ -19,6 +19,7 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/timeskipping"
 )
 
 type printableSchedule struct {
@@ -106,7 +107,7 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 		MissedCatchupWindow: desc.Info.NumActionsMissedCatchupWindow,
 		SkippedOverlap:      desc.Info.NumActionsSkippedOverlap,
 	}
-	out.TimeSkippingInfo = timeSkippingToPrintable(desc.Info.TimeSkippingInfo)
+	out.TimeSkippingInfo = clientTimeSkippingToPrintable(desc.Info.TimeSkippingInfo)
 	return out
 }
 
@@ -593,28 +594,7 @@ func (c *TemporalScheduleTimeSkippingEnableCommand) run(cctx *CommandContext, ar
 	return patchScheduleTimeSkipping(cctx, c.Parent.Parent, c.ScheduleId, config)
 }
 
-// TODO: need to change to SDK polling.
-const (
-	scheduleTimeSkippingPollInterval = 500 * time.Millisecond
-	scheduleTimeSkippingPollTimeout  = 10 * time.Second
-)
-
-func scheduleTimeSkippingPollStatus(info *commonpb.TimeSkippingInfo, fastForwardID string) (string, string) {
-	ff := info.GetFastForwardInfo()
-	if ff == nil || ff.GetFastForwardId() == "" {
-		return "failed", "fast-forward was removed or was not found in Schedule status"
-	}
-	if ff.GetFastForwardId() != fastForwardID {
-		return "failed", fmt.Sprintf("fast-forward was replaced by %q", ff.GetFastForwardId())
-	}
-	if ff.GetHasCompleted() {
-		return "completed", ""
-	}
-	if !info.GetEffectiveConfig().GetEnabled() {
-		return "failed", "time skipping was disabled before fast-forward completed"
-	}
-	return "pending", ""
-}
+const scheduleTimeSkippingPollTimeout = 10 * time.Second
 
 func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args []string) error {
 	ctx, cancel := context.WithTimeout(cctx, scheduleTimeSkippingPollTimeout)
@@ -625,36 +605,25 @@ func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args
 	}
 	defer cl.Close()
 	handle := cl.ScheduleClient().GetHandle(ctx, c.ScheduleId)
-	ticker := time.NewTicker(scheduleTimeSkippingPollInterval)
-	defer ticker.Stop()
-	for {
-		desc, err := handle.Describe(ctx)
-		if err != nil {
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				cctx.Printer.Println("poll timed out; try again")
-				return nil
-			}
-			return err
-		}
-		status, reason := scheduleTimeSkippingPollStatus(desc.Info.TimeSkippingInfo, c.FastForwardId)
-		if status != "pending" {
-			if reason == "" {
-				cctx.Printer.Println(status)
-			} else {
-				cctx.Printer.Printlnf("%s: %s", status, reason)
-			}
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				cctx.Printer.Println("poll timed out; try again")
-				return nil
-			}
-			return ctx.Err()
-		case <-ticker.C:
-		}
+
+	res, err := timeskipping.PollScheduleFastForward(ctx, handle,
+		timeskipping.PollScheduleFastForwardOptions{FastForwardID: c.FastForwardId})
+	if err != nil && !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return err
 	}
+	switch {
+	case res.Completed:
+		cctx.Printer.Println("completed")
+	case res.FailedReason != "":
+		// The SDK names the ways a fast-forward stops being completable:
+		// superseded, time skipping switched off, never enabled.
+		cctx.Printer.Printlnf("failed: %s", res.FailedReason)
+	default:
+		// The SDK bounds the wait by our context, so reaching here is this
+		// command's own timeout rather than anything wrong with the fast-forward.
+		cctx.Printer.Println("poll timed out; try again")
+	}
+	return nil
 }
 
 func printScheduleTimeSkippingResult(
