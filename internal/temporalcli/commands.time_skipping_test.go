@@ -69,7 +69,7 @@ func TestTimeSkippingInvalidFlags(t *testing.T) {
 					"ID without duration", "enable", []string{"--fast-forward-id", "YourFastForwardId"}, "--fast-forward-id requires --fast-forward-duration"})
 			} else {
 				cases = append(cases, invalidFlagsCase{
-					"malformed poll timeout", "poll", []string{"--fast-forward-id", "YourFastForwardId", "--timeout", "invalid"}, "invalid argument"})
+					"unsupported poll timeout", "poll", []string{"--fast-forward-id", "YourFastForwardId", "--timeout", "5m"}, "unknown flag: --timeout"})
 			}
 			for _, tc := range cases {
 				t.Run(tc.name, func(t *testing.T) {
