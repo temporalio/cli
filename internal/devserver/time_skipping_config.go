@@ -38,26 +38,9 @@ var timeSkippingDynamicConfigDefaults = map[dynamicconfig.Key]any{
 
 func applyTimeSkippingDynamicConfig(dynConf dynamicconfig.StaticClient) {
 	for key, fallback := range timeSkippingDynamicConfigDefaults {
-		value, exists := dynConf[key]
-		if !exists {
+		// Explicit dynamic config values take precedence over these defaults.
+		if _, exists := dynConf[key]; !exists {
 			dynConf[key] = fallback
-			continue
-		}
-		// Explicit global values win. Constrained values need the default as a
-		// fallback for namespaces they do not match.
-		constrained, ok := value.([]dynamicconfig.ConstrainedValue)
-		if !ok {
-			continue
-		}
-		hasGlobal := false
-		for _, entry := range constrained {
-			if entry.Constraints == (dynamicconfig.Constraints{}) {
-				hasGlobal = true
-				break
-			}
-		}
-		if !hasGlobal {
-			dynConf[key] = append(append([]dynamicconfig.ConstrainedValue(nil), constrained...), dynamicconfig.ConstrainedValue{Value: fallback})
 		}
 	}
 }
