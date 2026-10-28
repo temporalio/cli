@@ -57,6 +57,8 @@ func (s *SharedServerSuite) TestComputeConfig_ModalFunction_Update() {
 
 	res := s.Execute(modalComputeConfigArgs("update", s.Address(), deploymentName,
 		"--scaling-group", "modal-workflows",
+		"--workspace-id", "ws-123",
+		"--app-version", "7",
 		"--scale-up-backlog-threshold", "5",
 	)...)
 	s.NoError(res.Err)
@@ -73,6 +75,8 @@ func (s *SharedServerSuite) TestComputeConfig_ModalFunction_Update() {
 		"app_name":      "payments",
 		"function_name": "worker",
 		"environment":   "main",
+		"workspace_id":  "ws-123",
+		"version":       "7",
 	}, s.decodePayloadMap(sg.GetProvider().GetDetails()))
 	s.Equal("no-sync", sg.GetScaler().GetType())
 	s.Equal(map[string]any{"scale_up_backlog_threshold": float64(5)}, s.decodePayloadMap(sg.GetScaler().GetDetails()))
@@ -94,6 +98,54 @@ func (s *SharedServerSuite) TestComputeConfig_ModalFunction_Update() {
 	s.Nil(update.GetScalingGroup().GetProvider())
 	s.Equal(map[string]any{"max_worker_lifetime_ms": float64(300000)},
 		s.decodePayloadMap(update.GetScalingGroup().GetScaler().GetDetails()))
+	s.Equal(map[string]any{
+		"app_name":      "payments",
+		"function_name": "worker",
+		"environment":   "main",
+		"workspace_id":  "ws-123",
+		"version":       "7",
+	}, s.decodePayloadMap(fake.computeConfig.GetScalingGroups()["modal-workflows"].GetProvider().GetDetails()))
+}
+
+func (s *SharedServerSuite) TestComputeConfig_ModalFunction_ProviderReplacement() {
+	fake := s.newFakeComputeConfigServer()
+	fake.setComputeConfig(nil)
+	deploymentName := uuid.NewString()
+
+	res := s.Execute(modalComputeConfigArgs("update", s.Address(), deploymentName,
+		"--workspace-id", "ws-123", "--app-version", "7")...)
+	s.NoError(res.Err)
+	s.Len(fake.takeUpdates(), 1)
+
+	for _, tc := range []struct {
+		name    string
+		extra   []string
+		details map[string]any
+	}{
+		{
+			name:  "workspace and App version can change",
+			extra: []string{"--workspace-id", "ws-456", "--app-version", "8"},
+			details: map[string]any{
+				"app_name": "payments", "function_name": "worker", "environment": "main",
+				"workspace_id": "ws-456", "version": "8",
+			},
+		},
+		{
+			name: "omitted optional fields are removed",
+			details: map[string]any{
+				"app_name": "payments", "function_name": "worker", "environment": "main",
+			},
+		},
+	} {
+		res = s.Execute(modalComputeConfigArgs("update", s.Address(), deploymentName, tc.extra...)...)
+		s.NoError(res.Err, tc.name)
+		updates := fake.takeUpdates()
+		s.Len(updates, 1, tc.name)
+		update := updates[0].GetComputeConfigScalingGroups()["default"]
+		s.Equal([]string{"provider.type", "provider.details", "scaler.type", "scaler.details"}, update.GetUpdateMask().GetPaths(), tc.name)
+		s.Equal(tc.details, s.decodePayloadMap(update.GetScalingGroup().GetProvider().GetDetails()), tc.name)
+		s.Equal(tc.details, s.decodePayloadMap(fake.computeConfig.GetScalingGroups()["default"].GetProvider().GetDetails()), tc.name)
+	}
 }
 
 func (s *SharedServerSuite) TestComputeConfig_ModalFunction_UpdateMissingVersion() {
@@ -126,6 +178,16 @@ func (s *SharedServerSuite) TestComputeConfig_ModalFunction_Errors() {
 		{
 			name:    "provider fields must be passed together",
 			args:    append(append([]string{}, base...), "--app-name", "payments"),
+			errText: "--app-name, --function-name, and --environment are required when changing the provider",
+		},
+		{
+			name:    "workspace requires the other provider fields",
+			args:    append(append([]string{}, base...), "--workspace-id", "ws-123"),
+			errText: "--app-name, --function-name, and --environment are required when changing the provider",
+		},
+		{
+			name:    "App version requires the other provider fields",
+			args:    append(append([]string{}, base...), "--app-version", "7"),
 			errText: "--app-name, --function-name, and --environment are required when changing the provider",
 		},
 		{

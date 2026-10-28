@@ -44,7 +44,7 @@ func (c *TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand)
 
 // provider returns the Modal Function provider to set, or nil to leave it unchanged.
 // The required provider flags are passed together because provider details are
-// replaced as a whole; workspace and application version remain optional.
+// replaced as a whole; workspace and App version remain optional.
 func (c *TemporalWorkerDeploymentVersionComputeConfigModalFunctionUpdateCommand) provider() (*computepb.ComputeProvider, error) {
 	flags := c.Command.Flags()
 	providerSet := slices.ContainsFunc(
