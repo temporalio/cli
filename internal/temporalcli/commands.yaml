@@ -1957,7 +1957,8 @@ commands:
       or more scaling groups. Each scaling group is identified by a key
       and is made of a compute provider that starts Workers and a scaler
       that decides when to start them. Each compute provider has its own
-      command, such as `aws-lambda`, to create and update scaling groups:
+      command, such as `aws-lambda` or `modal-function`, to create and update
+      scaling groups:
 
       ```
       temporal worker deployment version compute-config [command] [options]
@@ -2115,6 +2116,166 @@ commands:
           function ARN to invoke when there are no active pollers for task
           queue targets in the Worker Deployment. Required when changing the
           compute provider.
+
+  - name: temporal worker deployment version compute-config modal-function
+    summary: Create or update Modal Function compute configuration (Experimental)
+    description: |
+      Modal Function commands set the compute configuration of a Worker
+      Deployment Version for a Modal Function that spawns a Worker in the
+      Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config modal-function [command] [options]
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal worker deployment version compute-config modal-function create
+    summary: Create a Version with Modal Function compute configuration (Experimental)
+    description: |
+      Create a new Worker Deployment Version with compute configuration for a
+      Modal Function that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config modal-function create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name YourModalApp \
+          --function-name YourModalFunction \
+          --environment YourModalEnvironment
+      ```
+
+      To select a specific Modal workspace or deployed App version,
+      pass --workspace-id or --app-version.
+
+      To tune when Workers are started, pass any of the scaler flags (the
+      --scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and
+      --metrics-poll-interval-ms). Each one that is not set keeps the
+      server default:
+
+      ```
+      temporal worker deployment version compute-config modal-function create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name YourModalApp \
+          --function-name YourModalFunction \
+          --environment YourModalEnvironment \
+          --scale-up-backlog-threshold 5 \
+          --scale-up-cooloff-ms 500 \
+          --max-worker-lifetime-ms 300000
+      ```
+
+      The Worker Deployment must already exist; create it with
+      `temporal worker deployment create`.
+
+      If a Worker Deployment Version with the supplied BuildID already exists,
+      this command will return an error. To update its compute configuration,
+      use `temporal worker deployment version compute-config modal-function update`.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - modal-function
+      - no-sync-scaler
+    options:
+      - name: app-name
+        type: string
+        required: true
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function.
+      - name: function-name
+        type: string
+        required: true
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for Task Queue targets in the Worker Deployment.
+      - name: environment
+        type: string
+        required: true
+        description: Modal environment containing the deployed application.
+
+  - name: temporal worker deployment version compute-config modal-function update
+    summary: Update Modal Function compute configuration for a Version (Experimental)
+    description: |
+      Update a scaling group in the compute configuration of a Worker
+      Deployment Version for a Modal Function that spawns a Worker in the
+      Worker Deployment. Only the scaling group named by --scaling-group
+      ("default" when unset) changes; other scaling groups are not affected.
+
+      To update the Modal application and function associated with an existing
+      Worker Deployment Version:
+
+      ```
+      temporal worker deployment version compute-config modal-function update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --app-name YourUpdatedModalApp \
+          --function-name YourUpdatedModalFunction \
+          --environment YourUpdatedModalEnvironment
+      ```
+
+      To update only the scaler of an existing scaling group, supply the
+      scaler flags without the provider flags. The scaler is replaced as a
+      whole, so scaler flags that are not passed go back to their defaults:
+
+      ```
+      temporal worker deployment version compute-config modal-function update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --scale-up-backlog-threshold 5 \
+          --max-worker-lifetime-ms 300000
+      ```
+
+      The provider flags are --app-name, --function-name, --environment,
+      --workspace-id, and --app-version. The scaler flags are the --scale-up-*
+      and --suppress-* flags, --max-worker-lifetime-ms, and
+      --metrics-poll-interval-ms. Provider flags are only needed when changing
+      the compute provider. Whenever any provider flag is passed, --app-name,
+      --function-name, and --environment must be passed together.
+
+      Provider details are replaced as a whole. Pass --workspace-id and
+      --app-version again to retain their existing values. Omitting
+      --workspace-id clears the workspace selection; the server rejects this
+      when per-workspace OAuth credentials require it. Omitting --app-version
+      uses the App's current deployed version. --workspace-id can be changed
+      to another workspace for which the account has credentials. Scaler-only
+      updates keep the existing provider details.
+
+      Changing the provider also resets the scaler: scaler flags passed with
+      it are applied, and the rest, or all of them if none are passed, go back
+      to their defaults.
+
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error. To create it, use
+      `temporal worker deployment version compute-config modal-function create`.
+
+      Returns an error if all compute configuration fields are empty.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - modal-function
+      - no-sync-scaler
+    options:
+      - name: app-name
+        type: string
+        description: |
+          Name of the deployed Modal application containing the Worker
+          function. Required when changing the compute provider.
+      - name: function-name
+        type: string
+        description: |
+          Name of the Modal function to invoke when there are no active pollers
+          for Task Queue targets in the Worker Deployment. Required when
+          changing the compute provider.
+      - name: environment
+        type: string
+        description: |
+          Modal environment containing the deployed application. Required when
+          changing the compute provider.
 
   - name: temporal worker deployment version compute-config remove
     summary: Remove compute configuration from a Version (Experimental)
@@ -5789,6 +5950,25 @@ option-sets:
           When setting the compute provider, --assume-role-arn and
           --assume-role-external-id are required unless this flag is passed,
           in which case both must be omitted.
+
+  - name: modal-function
+    options:
+      - name: workspace-id
+        type: string
+        description: |
+          Modal workspace ID that selects which of the account's Modal OAuth
+          credentials to use. Required for Temporal Cloud's Modal OAuth
+          connections and any server using per-workspace OAuth credentials.
+          Omit when the server uses a single Modal API key. The server validates
+          this requirement. Must be supplied with --app-name, --function-name,
+          and --environment.
+      - name: app-version
+        type: string
+        description: |
+          Optional Modal App version, expressed as a non-negative integer.
+          When setting provider details, omit or use 0 to select the App's
+          current deployed version. Must be supplied with --app-name,
+          --function-name, and --environment.
 
   - name: no-sync-scaler
     options:
