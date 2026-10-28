@@ -594,7 +594,10 @@ func (c *TemporalScheduleTimeSkippingEnableCommand) run(cctx *CommandContext, ar
 }
 
 // TODO: need to change to SDK polling.
-const scheduleTimeSkippingPollInterval = 500 * time.Millisecond
+const (
+	scheduleTimeSkippingPollInterval = 500 * time.Millisecond
+	scheduleTimeSkippingPollTimeout  = 10 * time.Second
+)
 
 func scheduleTimeSkippingPollStatus(info *commonpb.TimeSkippingInfo, fastForwardID string) (string, string) {
 	ff := info.GetFastForwardInfo()
@@ -614,15 +617,8 @@ func scheduleTimeSkippingPollStatus(info *commonpb.TimeSkippingInfo, fastForward
 }
 
 func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args []string) error {
-	if c.Command.Flags().Changed("timeout") && c.Timeout.Duration() <= 0 {
-		return errors.New("--timeout must be greater than zero")
-	}
-	ctx := context.Context(cctx)
-	if c.Timeout.Duration() > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.Timeout.Duration())
-		defer cancel()
-	}
+	ctx, cancel := context.WithTimeout(cctx, scheduleTimeSkippingPollTimeout)
+	defer cancel()
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
@@ -635,7 +631,7 @@ func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args
 		desc, err := handle.Describe(ctx)
 		if err != nil {
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				cctx.Printer.Println("poll timed out")
+				cctx.Printer.Println("poll timed out; try again")
 				return nil
 			}
 			return err
@@ -652,7 +648,7 @@ func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args
 		select {
 		case <-ctx.Done():
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				cctx.Printer.Println("poll timed out")
+				cctx.Printer.Println("poll timed out; try again")
 				return nil
 			}
 			return ctx.Err()

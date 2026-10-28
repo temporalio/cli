@@ -140,10 +140,9 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingEnableGeneratesFastForwardI
 		"--address", s.Address(),
 		"--schedule-id", schedID,
 		"--fast-forward-id", fastForwardID,
-		"--timeout", "200ms",
 	)
 	s.NoError(res.Err)
-	s.Equal("poll timed out", strings.TrimSpace(res.Stdout.String()))
+	s.Equal("poll timed out; try again", strings.TrimSpace(res.Stdout.String()))
 }
 
 func (s *SharedServerSuite) TestSchedule_TimeSkippingPollTimeout() {
@@ -166,10 +165,9 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPollTimeout() {
 			"--address", s.Address(),
 			"--schedule-id", schedID,
 			"--fast-forward-id", "YourFastForwardId",
-			"--timeout", "200ms",
 		)
 		s.NoError(res.Err)
-		s.Equal("poll timed out", strings.TrimSpace(res.Stdout.String()))
+		s.Equal("poll timed out; try again", strings.TrimSpace(res.Stdout.String()))
 	}
 }
 
@@ -196,7 +194,6 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingMinimalLifecycle() {
 		"--address", s.Address(),
 		"--schedule-id", schedID,
 		"--fast-forward-id", fastForwardID,
-		"--timeout", "10s",
 	)
 	s.NoError(res.Err)
 	s.Equal("completed", strings.TrimSpace(res.Stdout.String()))
@@ -271,7 +268,6 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPollFailed() {
 				"--address", s.Address(),
 				"--schedule-id", schedID,
 				"--fast-forward-id", "OriginalFastForwardId",
-				"--timeout", "5s",
 			)
 			require.NoError(t, res.Err)
 			require.Regexp(t, `^failed: \S`, strings.TrimSpace(res.Stdout.String()))
@@ -944,7 +940,6 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPropagatesWithSkipOverlap()
 		"--address", s.Address(),
 		"--schedule-id", scheduleID,
 		"--fast-forward-id", "ThreeActionsWithPropagation",
-		"--timeout", "30s",
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "completed")
