@@ -5957,10 +5957,11 @@ option-sets:
         type: string
         description: |
           Modal workspace ID that selects which of the account's Modal OAuth
-          credentials to use. Required when the server uses per-workspace OAuth
-          credentials; omit when it uses a single Modal API key. The server
-          validates this requirement. Must be supplied with --app-name,
-          --function-name, and --environment.
+          credentials to use. Required for Temporal Cloud's Modal OAuth
+          connections and any server using per-workspace OAuth credentials.
+          Omit when the server uses a single Modal API key. The server validates
+          this requirement. Must be supplied with --app-name, --function-name,
+          and --environment.
       - name: app-version
         type: string
         description: |

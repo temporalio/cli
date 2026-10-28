@@ -154,7 +154,7 @@ type ModalFunctionOptions struct {
 
 func (v *ModalFunctionOptions) BuildFlags(f *pflag.FlagSet) {
 	v.FlagSet = f
-	f.StringVar(&v.WorkspaceId, "workspace-id", "", "Modal workspace ID that selects which of the account's Modal OAuth credentials to use. Required when the server uses per-workspace OAuth credentials; omit when it uses a single Modal API key. The server validates this requirement. Must be supplied with --app-name, --function-name, and --environment.")
+	f.StringVar(&v.WorkspaceId, "workspace-id", "", "Modal workspace ID that selects which of the account's Modal OAuth credentials to use. Required for Temporal Cloud's Modal OAuth connections and any server using per-workspace OAuth credentials. Omit when the server uses a single Modal API key. The server validates this requirement. Must be supplied with --app-name, --function-name, and --environment.")
 	f.StringVar(&v.AppVersion, "app-version", "", "Optional Modal App version, expressed as a non-negative integer. When setting provider details, omit or use 0 to select the App's current deployed version. Must be supplied with --app-name, --function-name, and --environment.")
 }
 
