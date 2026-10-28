@@ -18,7 +18,7 @@ require (
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.54.1
 	go.temporal.io/api v1.63.8-0.20261016215345-3926793dec12
-	go.temporal.io/sdk v1.49.1-0.20261021203027-733b3b459a02
+	go.temporal.io/sdk v1.49.1-0.20261028204201-93056ed9a9de
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
 	go.temporal.io/server v1.33.0-165.0
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976

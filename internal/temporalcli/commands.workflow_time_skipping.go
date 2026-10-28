@@ -1,13 +1,12 @@
 package temporalcli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
-	commonpb "go.temporal.io/api/common/v1"
-	enumspb "go.temporal.io/api/enums/v1"
-	workflowservice "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/timeskipping"
 )
 
 func (c *TemporalWorkflowTimeSkippingEnableCommand) run(cctx *CommandContext, args []string) error {
@@ -71,44 +70,30 @@ func updateWorkflowOptionsForTimeSkipping(cctx *CommandContext, parent *Temporal
 	return nil
 }
 
-func workflowTimeSkippingPollResult(resp *workflowservice.PollWorkflowExecutionTimeSkippingResponse) (string, string, error) {
-	switch resp.GetFastForwardPollingResult() {
-	case enumspb.FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED:
-		return "completed", "", nil
-	case enumspb.FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT:
-		return "poll timed out", "", nil
-	case enumspb.FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED:
-		return "failed", resp.GetFailedReason(), nil
-	default:
-		return "", "", fmt.Errorf("unknown fast-forward polling result %v", resp.GetFastForwardPollingResult())
-	}
-}
-
 func (c *TemporalWorkflowTimeSkippingPollCommand) run(cctx *CommandContext, args []string) error {
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
-	resp, err := cl.WorkflowService().PollWorkflowExecutionTimeSkipping(cctx, &workflowservice.PollWorkflowExecutionTimeSkippingRequest{
-		Namespace: c.Parent.Parent.Namespace,
-		WorkflowExecution: &commonpb.WorkflowExecution{
-			WorkflowId: c.WorkflowId,
-			RunId:      c.RunId,
-		},
-		FastForwardId: c.FastForwardId,
+	// The SDK reissues the server long poll until our context ends, so a
+	// server-side poll window expiring is handled for us rather than being an
+	// outcome the user has to re-run on.
+	res, err := timeskipping.PollFastForward(cctx, cl, timeskipping.PollFastForwardOptions{
+		WorkflowID:    c.WorkflowId,
+		RunID:         c.RunId,
+		FastForwardID: c.FastForwardId,
 	})
 	if err != nil {
 		return err
 	}
-	status, reason, err := workflowTimeSkippingPollResult(resp)
-	if err != nil {
-		return err
-	}
-	if reason == "" {
-		cctx.Printer.Println(status)
-	} else {
-		cctx.Printer.Printlnf("%s: %s", status, reason)
+	switch {
+	case res.Completed:
+		cctx.Printer.Println("completed")
+	case errors.Is(cctx.Err(), context.DeadlineExceeded):
+		cctx.Printer.Println("poll timed out; try again")
+	default:
+		cctx.Printer.Printlnf("failed: %s", res.FailedReason)
 	}
 	return nil
 }
