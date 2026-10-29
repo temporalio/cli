@@ -1715,8 +1715,8 @@ func (s *SharedServerSuite) TestWorkflow_TimeSkippingMinimalLifecycle() {
 	fastForwardID := match[1]
 	_, err = uuid.Parse(fastForwardID)
 	s.NoError(err)
-	s.Contains(res.Stdout.String(), "--fast-forward-id "+fastForwardID)
-	s.NotContains(res.Stdout.String(), "--run-id")
+	s.NotContains(res.Stdout.String(), "Poll fast-forward:")
+	s.NotContains(res.Stdout.String(), "temporal workflow ")
 
 	res = s.Execute("workflow", "time-skipping", "poll", "--address", s.Address(),
 		"--workflow-id", run.GetID(), "--fast-forward-id", fastForwardID)
