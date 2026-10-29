@@ -1,12 +1,19 @@
 package temporalcli
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/cli/internal/printer"
 	commonpb "go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -180,4 +187,100 @@ func TestTimeSkippingToPrintableNilValues(t *testing.T) {
 			require.Equal(t, want, timeSkippingToPrintable(info))
 		})
 	}
+}
+
+func TestPrintTimeSkippingUpdateJSON(t *testing.T) {
+	for _, format := range []string{"json", "jsonl"} {
+		t.Run(format, func(t *testing.T) {
+			for _, tc := range []struct {
+				name    string
+				enabled bool
+				forward bool
+				id      string
+			}{
+				{name: "enabled with generated fast-forward ID", enabled: true, forward: true},
+				{name: "enabled with explicit fast-forward ID", enabled: true, forward: true, id: "YourFastForwardId"},
+				{name: "enabled without fast-forward", enabled: true},
+				{name: "disabled"},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					config := &client.TimeSkippingConfig{Enabled: false}
+					if tc.enabled {
+						var err error
+						config, err = timeSkippingConfig(time.Hour, tc.forward, tc.id, false, 0)
+						require.NoError(t, err)
+					}
+					var output bytes.Buffer
+					cctx := &CommandContext{JSONOutput: true}
+					cctx.Printer = &printer.Printer{Output: &output, JSON: true}
+					if format == "json" {
+						cctx.Printer.JSONIndent = "  "
+					}
+					require.NoError(t, printTimeSkippingUpdateJSON(cctx, config))
+					var result map[string]any
+					require.NoError(t, json.Unmarshal(output.Bytes(), &result))
+					want := map[string]any{"enabled": tc.enabled}
+					if tc.forward {
+						id, ok := result["fastForwardId"].(string)
+						require.True(t, ok)
+						require.Equal(t, config.FastForwardConfig.ID, id)
+						if tc.id == "" {
+							_, err := uuid.Parse(id)
+							require.NoError(t, err)
+						} else {
+							require.Equal(t, tc.id, id)
+						}
+						want["fastForwardId"] = id
+					}
+					require.Equal(t, want, result)
+					if format == "jsonl" {
+						require.Len(t, strings.Split(strings.TrimSpace(output.String()), "\n"), 1)
+					}
+				})
+			}
+		})
+	}
+	t.Run("nil config", func(t *testing.T) {
+		require.EqualError(t, printTimeSkippingUpdateJSON(nil, nil), "time-skipping configuration is required")
+	})
+	t.Run("output error is returned", func(t *testing.T) {
+		wantErr := errors.New("write failed")
+		cctx := &CommandContext{JSONOutput: true, Printer: &printer.Printer{
+			JSON: true, Output: timeSkippingResultErrorWriter{err: wantErr},
+		}}
+		require.ErrorIs(t, printTimeSkippingUpdateJSON(cctx, &client.TimeSkippingConfig{}), wantErr)
+	})
+}
+
+type timeSkippingResultErrorWriter struct{ err error }
+
+func (w timeSkippingResultErrorWriter) Write([]byte) (int, error) { return 0, w.err }
+
+func TestPrintTimeSkippingPollCompleted(t *testing.T) {
+	for _, format := range []string{"text", "json", "jsonl"} {
+		t.Run(format, func(t *testing.T) {
+			var output bytes.Buffer
+			cctx := &CommandContext{JSONOutput: format != "text"}
+			cctx.Printer = &printer.Printer{Output: &output, JSON: cctx.JSONOutput}
+			if format == "json" {
+				cctx.Printer.JSONIndent = "  "
+			}
+			require.NoError(t, printTimeSkippingPollCompleted(cctx))
+			if format == "text" {
+				require.Equal(t, "completed\n", output.String())
+			} else {
+				require.JSONEq(t, `{"completed":true}`, output.String())
+				if format == "jsonl" {
+					require.Len(t, strings.Split(strings.TrimSpace(output.String()), "\n"), 1)
+				}
+			}
+		})
+	}
+	t.Run("output error is returned", func(t *testing.T) {
+		wantErr := errors.New("write failed")
+		cctx := &CommandContext{JSONOutput: true, Printer: &printer.Printer{
+			JSON: true, Output: timeSkippingResultErrorWriter{err: wantErr},
+		}}
+		require.ErrorIs(t, printTimeSkippingPollCompleted(cctx), wantErr)
+	})
 }

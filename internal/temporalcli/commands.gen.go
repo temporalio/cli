@@ -2810,7 +2810,7 @@ func NewTemporalScheduleTimeSkippingCommand(cctx *CommandContext, parent *Tempor
 	s.Parent = parent
 	s.Command.Use = "time-skipping"
 	s.Command.Short = "Manage Schedule time skipping (Experimental)"
-	s.Command.Long = "Manage Schedule time skipping."
+	s.Command.Long = "Manage Schedule time skipping, where a schedule's virtual clock fast-forwards when idle.\nUse time skipping in testing environments to efficiently evaluate the behavior of a schedule.\n\nNote: This is an experimental feature and may change in the future."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingDisableCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalScheduleTimeSkippingEnableCommand(cctx, &s).Command)
@@ -2862,9 +2862,9 @@ func NewTemporalScheduleTimeSkippingEnableCommand(cctx *CommandContext, parent *
 	s.Command.Use = "enable [flags]"
 	s.Command.Short = "Enable Schedule time skipping (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Enable time skipping for a Schedule:\n\n\x1b[1mtemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\x1b[0m"
+		s.Command.Long = "Enable time skipping for a Schedule:\n\n\x1b[1mtemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\x1b[0m\n\nOnce enabled, the Schedule advances its virtual clock during inactivity,\nallowing scheduled Workflows to start without waiting for wall-clock time."
 	} else {
-		s.Command.Long = "Enable time skipping for a Schedule:\n\n```\ntemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\n```"
+		s.Command.Long = "Enable time skipping for a Schedule:\n\n```\ntemporal schedule time-skipping enable \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-duration 5h\n```\n\nOnce enabled, the Schedule advances its virtual clock during inactivity,\nallowing scheduled Workflows to start without waiting for wall-clock time."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.FastForwardDuration = 0
@@ -2896,9 +2896,9 @@ func NewTemporalScheduleTimeSkippingPollCommand(cctx *CommandContext, parent *Te
 	s.Command.Use = "poll [flags]"
 	s.Command.Short = "Poll a Schedule fast-forward (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Poll Schedule status for the result of a specific fast-forward:\n\n\x1b[1mtemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId\x1b[0m\n\nWaits up to 10 seconds. If the poll times out, poll again to check its status."
+		s.Command.Long = "Poll Schedule time-skipping status for a specific fast-forward setting:\n\n\x1b[1mtemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId\x1b[0m\n\nUse the global \x1b[1m--command-timeout\x1b[0m flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status."
 	} else {
-		s.Command.Long = "Poll Schedule status for the result of a specific fast-forward:\n\n```\ntemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId\n```\n\nWaits up to 10 seconds. If the poll times out, poll again to check its status."
+		s.Command.Long = "Poll Schedule time-skipping status for a specific fast-forward setting:\n\n```\ntemporal schedule time-skipping poll \\\n    --namespace YourNamespace \\\n    --schedule-id YourScheduleId \\\n    --fast-forward-id YourFastForwardId\n```\n\nUse the global `--command-timeout` flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.FastForwardId, "fast-forward-id", "", "ID of the fast-forward to poll. Required.")
@@ -5616,7 +5616,7 @@ func NewTemporalWorkflowTimeSkippingCommand(cctx *CommandContext, parent *Tempor
 	s.Parent = parent
 	s.Command.Use = "time-skipping"
 	s.Command.Short = "Manage Workflow time skipping (Experimental)"
-	s.Command.Long = "Manage Workflow time skipping."
+	s.Command.Long = "Manage Workflow time skipping, where a workflow skips time when idle.\nUse time skipping in testing environments to efficiently evaluate \nthe behavior of a workflow with extended periods of inactivity.\n\nNote: This is an experimental feature and may change in the future."
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkflowTimeSkippingDisableCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkflowTimeSkippingEnableCommand(cctx, &s).Command)
@@ -5668,9 +5668,9 @@ func NewTemporalWorkflowTimeSkippingEnableCommand(cctx *CommandContext, parent *
 	s.Command.Use = "enable [flags]"
 	s.Command.Short = "Enable Workflow time skipping (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Enable time skipping for a Workflow Execution:\n\n\x1b[1mtemporal workflow time-skipping enable \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-duration 5h\x1b[0m"
+		s.Command.Long = "Enable time skipping for a Workflow Execution:\n\n\x1b[1mtemporal workflow time-skipping enable \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId\x1b[0m\nOnce enabled, the workflow execution skips time during inactivity, \nexpediting the completion of timers, retry waits, and start delays."
 	} else {
-		s.Command.Long = "Enable time skipping for a Workflow Execution:\n\n```\ntemporal workflow time-skipping enable \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-duration 5h\n```"
+		s.Command.Long = "Enable time skipping for a Workflow Execution:\n\n```\ntemporal workflow time-skipping enable \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId\n```\nOnce enabled, the workflow execution skips time during inactivity, \nexpediting the completion of timers, retry waits, and start delays."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.FastForwardDuration = 0
@@ -5701,9 +5701,9 @@ func NewTemporalWorkflowTimeSkippingPollCommand(cctx *CommandContext, parent *Te
 	s.Command.Use = "poll [flags]"
 	s.Command.Short = "Poll a Workflow fast-forward (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Poll for the result of a specific Workflow fast-forward:\n\n\x1b[1mtemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\x1b[0m\n\nReports \x1b[1mcompleted\x1b[0m, \x1b[1mpoll timed out\x1b[0m, or \x1b[1mfailed\x1b[0m with a reason.\nA server-side poll timeout means the caller may poll again."
+		s.Command.Long = "Poll Workflow time-skipping status for a specific fast-forward setting:\n\n\x1b[1mtemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\x1b[0m\n\nUse the global \x1b[1m--command-timeout\x1b[0m flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status."
 	} else {
-		s.Command.Long = "Poll for the result of a specific Workflow fast-forward:\n\n```\ntemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\n```\n\nReports `completed`, `poll timed out`, or `failed` with a reason.\nA server-side poll timeout means the caller may poll again."
+		s.Command.Long = "Poll Workflow time-skipping status for a specific fast-forward setting:\n\n```\ntemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\n```\n\nUse the global `--command-timeout` flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status."
 	}
 	s.Command.Args = cobra.NoArgs
 	s.Command.Flags().StringVar(&s.FastForwardId, "fast-forward-id", "", "ID of the fast-forward to poll. Required.")

@@ -1,7 +1,6 @@
 package temporalcli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -44,7 +43,7 @@ func updateWorkflowOptionsForTimeSkipping(cctx *CommandContext, parent *Temporal
 		return err
 	}
 	if cctx.JSONOutput {
-		return nil
+		return printTimeSkippingUpdateJSON(cctx, config)
 	}
 	cctx.Printer.Printlnf("Workflow time skipping updated: %s", workflowID)
 	if config.Enabled {
@@ -52,20 +51,8 @@ func updateWorkflowOptionsForTimeSkipping(cctx *CommandContext, parent *Temporal
 	} else {
 		cctx.Printer.Println("Time skipping: disabled")
 	}
-	cctx.Printer.Println("Check status:")
-	cmd := fmt.Sprintf("  temporal workflow describe --namespace %s --workflow-id %s", parent.Namespace, workflowID)
-	if runID != "" {
-		cmd += " --run-id " + runID
-	}
-	cctx.Printer.Println(cmd)
 	if ff := config.FastForwardConfig; ff != nil {
 		cctx.Printer.Printlnf("Fast-forward ID: %s", ff.ID)
-		cctx.Printer.Println("Poll fast-forward:")
-		cmd := fmt.Sprintf("  temporal workflow time-skipping poll --namespace %s --workflow-id %s", parent.Namespace, workflowID)
-		if runID != "" {
-			cmd += " --run-id " + runID
-		}
-		cctx.Printer.Println(cmd + " --fast-forward-id " + ff.ID)
 	}
 	return nil
 }
@@ -76,9 +63,7 @@ func (c *TemporalWorkflowTimeSkippingPollCommand) run(cctx *CommandContext, args
 		return err
 	}
 	defer cl.Close()
-	// The SDK reissues the server long poll until our context ends, so a
-	// server-side poll window expiring is handled for us rather than being an
-	// outcome the user has to re-run on.
+	// The SDK retries server poll timeouts until the command context ends.
 	res, err := timeskipping.PollFastForward(cctx, cl, timeskipping.PollFastForwardOptions{
 		WorkflowID:    c.WorkflowId,
 		RunID:         c.RunId,
@@ -87,13 +72,8 @@ func (c *TemporalWorkflowTimeSkippingPollCommand) run(cctx *CommandContext, args
 	if err != nil {
 		return err
 	}
-	switch {
-	case res.Completed:
-		cctx.Printer.Println("completed")
-	case errors.Is(cctx.Err(), context.DeadlineExceeded):
-		cctx.Printer.Println("poll timed out; try again")
-	default:
-		cctx.Printer.Printlnf("failed: %s", res.FailedReason)
+	if !res.Completed {
+		return fmt.Errorf("fast-forward failed: %s", res.FailedReason)
 	}
-	return nil
+	return printTimeSkippingPollCompleted(cctx)
 }

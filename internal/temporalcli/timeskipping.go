@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/temporalio/cli/internal/printer"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 )
@@ -34,6 +35,32 @@ func timeSkippingConfig(duration time.Duration, hasDuration bool, fastForwardID 
 		config.FastForwardConfig = &client.FastForwardConfig{ID: fastForwardID, Duration: duration}
 	}
 	return config, nil
+}
+
+type timeSkippingUpdateResult struct {
+	Enabled       bool   `json:"enabled"`
+	FastForwardID string `json:"fastForwardId,omitempty"`
+}
+
+func printTimeSkippingUpdateJSON(cctx *CommandContext, config *client.TimeSkippingConfig) error {
+	if config == nil {
+		return errors.New("time-skipping configuration is required")
+	}
+	result := timeSkippingUpdateResult{Enabled: config.Enabled}
+	if ff := config.FastForwardConfig; ff != nil {
+		result.FastForwardID = ff.ID
+	}
+	return cctx.Printer.PrintStructured(result, printer.StructuredOptions{})
+}
+
+func printTimeSkippingPollCompleted(cctx *CommandContext) error {
+	if cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(struct {
+			Completed bool `json:"completed"`
+		}{Completed: true}, printer.StructuredOptions{})
+	}
+	cctx.Printer.Println("completed")
+	return nil
 }
 
 type printableTimeSkippingInfo struct {

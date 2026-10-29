@@ -82,6 +82,8 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingEnable() {
 	s.Contains(res.Stdout.String(), "Time skipping: enabled")
 	s.Contains(res.Stdout.String(), "Fast-forward duration: 5h 0m 0s")
 	s.Contains(res.Stdout.String(), "Fast-forward ID: YourFastForwardId")
+	s.NotContains(res.Stdout.String(), "Check status")
+	s.NotContains(res.Stdout.String(), "temporal schedule describe")
 	s.Contains(res.Stdout.String(), "Maximum skips per session: 17")
 	res = s.Execute(
 		"schedule", "describe",
@@ -124,7 +126,9 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingEnableGeneratesFastForwardI
 	fastForwardID := match[1]
 	_, err := uuid.Parse(fastForwardID)
 	require.NoError(s.T(), err)
-	s.Contains(res.Stdout.String(), "temporal schedule time-skipping poll --namespace default --schedule-id "+schedID+" --fast-forward-id "+fastForwardID)
+	s.NotContains(res.Stdout.String(), "Poll fast-forward:")
+	s.NotContains(res.Stdout.String(), "Disable time skipping:")
+	s.NotContains(res.Stdout.String(), "temporal schedule ")
 
 	res = s.Execute(
 		"schedule", "describe",
@@ -140,9 +144,10 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingEnableGeneratesFastForwardI
 		"--address", s.Address(),
 		"--schedule-id", schedID,
 		"--fast-forward-id", fastForwardID,
+		"--command-timeout", "200ms",
 	)
-	s.NoError(res.Err)
-	s.Equal("poll timed out; try again", strings.TrimSpace(res.Stdout.String()))
+	s.ErrorIs(res.Err, context.DeadlineExceeded)
+	s.Empty(res.Stdout.String())
 }
 
 func (s *SharedServerSuite) TestSchedule_TimeSkippingPollTimeout() {
@@ -158,17 +163,27 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPollTimeout() {
 	)
 	s.NoError(res.Err)
 
-	// A timeout leaves the fast-forward available to poll again.
-	for range 2 {
-		res = s.Execute(
-			"schedule", "time-skipping", "poll",
-			"--address", s.Address(),
-			"--schedule-id", schedID,
-			"--fast-forward-id", "YourFastForwardId",
-		)
-		s.NoError(res.Err)
-		s.Equal("poll timed out; try again", strings.TrimSpace(res.Stdout.String()))
+	// Each timeout leaves the same fast-forward available to poll again.
+	for _, tc := range []struct {
+		name, timeout    string
+		minimum, maximum time.Duration
+	}{
+		{name: "short command timeout", timeout: "200ms", minimum: 100 * time.Millisecond, maximum: 5 * time.Second},
+		{name: "command timeout extends beyond former cap", timeout: "12s", minimum: 11 * time.Second, maximum: 17 * time.Second},
+	} {
+		s.T().Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(s.Context, 20*time.Second)
+			defer cancel()
+			started := time.Now()
+			res := s.ExecuteWithContext(ctx, "schedule", "time-skipping", "poll", "--address", s.Address(),
+				"--schedule-id", schedID, "--fast-forward-id", "YourFastForwardId", "--command-timeout", tc.timeout)
+			require.ErrorIs(t, res.Err, context.DeadlineExceeded)
+			require.Empty(t, res.Stdout.String())
+			require.GreaterOrEqual(t, time.Since(started), tc.minimum)
+			require.Less(t, time.Since(started), tc.maximum)
+		})
 	}
+
 }
 
 func (s *SharedServerSuite) TestSchedule_TimeSkippingMinimalLifecycle() {
@@ -269,8 +284,9 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPollFailed() {
 				"--schedule-id", schedID,
 				"--fast-forward-id", "OriginalFastForwardId",
 			)
-			require.NoError(t, res.Err)
-			require.Regexp(t, `^failed: \S`, strings.TrimSpace(res.Stdout.String()))
+			require.ErrorContains(t, res.Err, "fast-forward failed:")
+			require.Regexp(t, `^fast-forward failed: \S`, res.Err.Error())
+			require.Empty(t, res.Stdout.String())
 		})
 	}
 }
@@ -978,5 +994,44 @@ func (s *SharedServerSuite) TestSchedule_TimeSkippingPropagatesWithSkipOverlap()
 		s.WithinDuration(scheduledTime, workflowDescription.GetWorkflowExecutionInfo().GetStartTime().AsTime(), 5*time.Second)
 		s.NotNil(workflowDescription.GetWorkflowExtendedInfo().GetTimeSkippingInfo())
 		s.True(workflowDescription.GetWorkflowExtendedInfo().GetTimeSkippingInfo().GetEffectiveConfig().GetEnabled())
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_TimeSkippingUpdateJSON() {
+	s.useTimeSkippingServer()
+	for _, output := range []string{"json", "jsonl"} {
+		s.T().Run(output, func(t *testing.T) {
+			schedID, _, res := s.createSchedule("--interval", "10d", "--paused")
+			require.NoError(t, res.Err)
+			res = s.Execute("schedule", "time-skipping", "enable", "--address", s.Address(),
+				"--schedule-id", schedID, "--fast-forward-duration", "5h", "--output", output)
+			require.NoError(t, res.Err)
+			var result struct {
+				Enabled       bool   `json:"enabled"`
+				FastForwardID string `json:"fastForwardId"`
+			}
+			require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &result))
+			require.True(t, result.Enabled)
+			_, err := uuid.Parse(result.FastForwardID)
+			require.NoError(t, err)
+			if output == "jsonl" {
+				require.Len(t, strings.Split(strings.TrimSpace(res.Stdout.String()), "\n"), 1)
+			}
+			res = s.Execute("schedule", "describe", "--address", s.Address(), "--schedule-id", schedID, "--output", "json")
+			require.NoError(t, res.Err)
+			var description workflowservice.DescribeScheduleResponse
+			require.NoError(t, protojson.Unmarshal(res.Stdout.Bytes(), &description))
+			require.Equal(t, result.FastForwardID, description.GetInfo().GetTimeSkippingInfo().GetFastForwardInfo().GetFastForwardId())
+
+			res = s.Execute("schedule", "time-skipping", "disable", "--address", s.Address(),
+				"--schedule-id", schedID, "--output", output)
+			require.NoError(t, res.Err)
+			require.JSONEq(t, `{"enabled":false}`, res.Stdout.String())
+
+			res = s.Execute("schedule", "time-skipping", "enable", "--address", s.Address(),
+				"--schedule-id", schedID+"-missing", "--fast-forward-duration", "5h", "--output", output)
+			require.Error(t, res.Err)
+			require.Empty(t, res.Stdout.String())
+		})
 	}
 }

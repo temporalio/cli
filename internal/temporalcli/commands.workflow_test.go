@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/google/uuid"
@@ -86,11 +87,10 @@ func (s *SharedServerSuite) TestWorkflow_TimeSkippingEnablePollDisable() {
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Fast-forward ID: WorkflowPollId")
-	statusCommand := fmt.Sprintf("temporal workflow describe --namespace %s --workflow-id %s --run-id %s", s.Namespace(), run.GetID(), run.GetRunID())
-	pollCommand := fmt.Sprintf("temporal workflow time-skipping poll --namespace %s --workflow-id %s --run-id %s --fast-forward-id WorkflowPollId", s.Namespace(), run.GetID(), run.GetRunID())
-	s.Contains(res.Stdout.String(), statusCommand)
-	s.Contains(res.Stdout.String(), pollCommand)
-	s.Less(strings.Index(res.Stdout.String(), "Check status:"), strings.Index(res.Stdout.String(), "Fast-forward ID:"))
+	s.NotContains(res.Stdout.String(), "Check status")
+	s.NotContains(res.Stdout.String(), "temporal workflow describe")
+	s.NotContains(res.Stdout.String(), "Poll fast-forward:")
+	s.NotContains(res.Stdout.String(), "temporal workflow ")
 
 	res = s.Execute(
 		"workflow", "time-skipping", "poll",
@@ -119,7 +119,8 @@ func (s *SharedServerSuite) TestWorkflow_TimeSkippingEnablePollDisable() {
 	)
 	s.NoError(res.Err)
 	s.Contains(res.Stdout.String(), "Time skipping: disabled")
-	s.Contains(res.Stdout.String(), statusCommand)
+	s.NotContains(res.Stdout.String(), "Check status")
+	s.NotContains(res.Stdout.String(), "temporal workflow describe")
 	s.NotContains(res.Stdout.String(), "Poll fast-forward:")
 	s.NoError(s.Client.CancelWorkflow(s.Context, run.GetID(), run.GetRunID()))
 }
@@ -1779,4 +1780,131 @@ func (s *SharedServerSuite) TestWorkflow_TimeSkippingEnableWithoutFastForward() 
 	res = s.Execute("workflow", "describe", "--address", s.Address(), "--workflow-id", run.GetID())
 	s.NoError(res.Err)
 	s.ContainsOnSameLine(res.Stdout.String(), "EffectiveEnabled", "false")
+}
+
+func (s *SharedServerSuite) TestWorkflow_TimeSkippingUpdateJSON() {
+	s.useTimeSkippingServer()
+	s.Worker().OnDevWorkflow(func(ctx workflow.Context, input any) (any, error) {
+		return nil, workflow.Sleep(ctx, 10*time.Hour)
+	})
+	for _, output := range []string{"json", "jsonl"} {
+		s.T().Run(output, func(t *testing.T) {
+			run, err := s.Client.ExecuteWorkflow(s.Context,
+				client.StartWorkflowOptions{TaskQueue: s.Worker().Options.TaskQueue}, DevWorkflow, nil)
+			require.NoError(t, err)
+			defer func() { _ = s.Client.CancelWorkflow(s.Context, run.GetID(), "") }()
+			res := s.Execute("workflow", "time-skipping", "enable", "--address", s.Address(),
+				"--workflow-id", run.GetID(), "--fast-forward-duration", "5h", "--output", output)
+			require.NoError(t, res.Err)
+			var result struct {
+				Enabled       bool   `json:"enabled"`
+				FastForwardID string `json:"fastForwardId"`
+			}
+			require.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &result))
+			require.True(t, result.Enabled)
+			_, err = uuid.Parse(result.FastForwardID)
+			require.NoError(t, err)
+			if output == "jsonl" {
+				require.Len(t, strings.Split(strings.TrimSpace(res.Stdout.String()), "\n"), 1)
+			}
+			res = s.Execute("workflow", "describe", "--address", s.Address(), "--workflow-id", run.GetID(), "--output", "json")
+			require.NoError(t, res.Err)
+			var description workflowservice.DescribeWorkflowExecutionResponse
+			require.NoError(t, protojson.Unmarshal(res.Stdout.Bytes(), &description))
+			require.Equal(t, result.FastForwardID, description.GetWorkflowExtendedInfo().GetTimeSkippingInfo().GetFastForwardInfo().GetFastForwardId())
+
+			res = s.Execute("workflow", "time-skipping", "disable", "--address", s.Address(),
+				"--workflow-id", run.GetID(), "--output", output)
+			require.NoError(t, res.Err)
+			require.JSONEq(t, `{"enabled":false}`, res.Stdout.String())
+
+			res = s.Execute("workflow", "time-skipping", "enable", "--address", s.Address(),
+				"--workflow-id", run.GetID()+"-missing", "--fast-forward-duration", "5h", "--output", output)
+			require.Error(t, res.Err)
+			require.Empty(t, res.Stdout.String())
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestWorkflow_TimeSkippingPollTimeoutAndRetry() {
+	s.useTimeSkippingServer()
+	taskQueue := uuid.NewString()
+	// Leave the Workflow Task unprocessed so fast-forward remains pending.
+	run, err := s.Client.ExecuteWorkflow(s.Context,
+		client.StartWorkflowOptions{TaskQueue: taskQueue}, "TimeSkippingPollWorkflow")
+	s.NoError(err)
+	defer func() { _ = s.Client.CancelWorkflow(s.Context, run.GetID(), "") }()
+
+	res := s.Execute("workflow", "time-skipping", "enable", "--address", s.Address(),
+		"--workflow-id", run.GetID(), "--fast-forward-duration", "5h", "--fast-forward-id", "YourFastForwardId")
+	s.NoError(res.Err)
+	args := []string{"workflow", "time-skipping", "poll", "--address", s.Address(),
+		"--workflow-id", run.GetID(), "--fast-forward-id", "YourFastForwardId"}
+
+	for _, timeout := range []string{"200ms", "500ms"} {
+		s.T().Run("command timeout "+timeout, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(s.Context, 10*time.Second)
+			defer cancel()
+			res := s.ExecuteWithContext(ctx, append(args, "--command-timeout", timeout)...)
+			require.ErrorIs(t, res.Err, context.DeadlineExceeded)
+			require.Empty(t, res.Stdout.String())
+		})
+	}
+
+	canceled, stop := context.WithCancel(s.Context)
+	stop()
+	res = s.ExecuteWithContext(canceled, args...)
+	s.ErrorContains(res.Err, "canceled")
+	s.Empty(res.Stdout.String())
+
+	// With no command timeout, polling must outlive the former 10-second cap.
+	ctx, cancel := context.WithTimeout(s.Context, 25*time.Second)
+	defer cancel()
+	resultCh := make(chan *CommandResult, 1)
+	go func() { resultCh <- s.ExecuteWithContext(ctx, args...) }()
+	select {
+	case result := <-resultCh:
+		s.FailNow("poll returned before fast-forward completed", "error: %v, stdout: %s", result.Err, result.Stdout.String())
+	case <-time.After(11 * time.Second):
+	}
+
+	// Caller timeouts did not stop the original fast-forward. Let it progress.
+	w := worker.New(s.Client, taskQueue, worker.Options{})
+	w.RegisterWorkflowWithOptions(func(ctx workflow.Context) error {
+		return workflow.Sleep(ctx, 10*time.Hour)
+	}, workflow.RegisterOptions{Name: "TimeSkippingPollWorkflow"})
+	s.NoError(w.Start())
+	defer w.Stop()
+	res = <-resultCh
+	s.NoError(res.Err)
+	s.Equal("completed", strings.TrimSpace(res.Stdout.String()))
+}
+
+func (s *SharedServerSuite) TestWorkflow_TimeSkippingPollFailed() {
+	s.useTimeSkippingServer()
+	for _, change := range []string{"disabled", "replaced"} {
+		s.T().Run(change, func(t *testing.T) {
+			// Without a worker, the original fast-forward remains pending.
+			run, err := s.Client.ExecuteWorkflow(s.Context,
+				client.StartWorkflowOptions{TaskQueue: uuid.NewString()}, "TimeSkippingPollWorkflow")
+			require.NoError(t, err)
+			defer func() { _ = s.Client.CancelWorkflow(s.Context, run.GetID(), "") }()
+			res := s.Execute("workflow", "time-skipping", "enable", "--address", s.Address(),
+				"--workflow-id", run.GetID(), "--fast-forward-duration", "5h", "--fast-forward-id", "OriginalFastForwardId")
+			require.NoError(t, res.Err)
+			if change == "disabled" {
+				res = s.Execute("workflow", "time-skipping", "disable", "--address", s.Address(),
+					"--workflow-id", run.GetID())
+			} else {
+				res = s.Execute("workflow", "time-skipping", "enable", "--address", s.Address(),
+					"--workflow-id", run.GetID(), "--fast-forward-duration", "5h", "--fast-forward-id", "ReplacementFastForwardId")
+			}
+			require.NoError(t, res.Err)
+			res = s.Execute("workflow", "time-skipping", "poll", "--address", s.Address(),
+				"--workflow-id", run.GetID(), "--fast-forward-id", "OriginalFastForwardId", "--command-timeout", "5s")
+			require.ErrorContains(t, res.Err, "fast-forward failed:")
+			require.Regexp(t, `^fast-forward failed: \S`, res.Err.Error())
+			require.Empty(t, res.Stdout.String())
+		})
+	}
 }

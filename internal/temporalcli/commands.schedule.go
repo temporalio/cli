@@ -1,7 +1,6 @@
 package temporalcli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -575,7 +574,10 @@ func patchScheduleTimeSkipping(cctx *CommandContext, parent *TemporalScheduleCom
 	if err != nil {
 		return err
 	}
-	printScheduleTimeSkippingResult(cctx, "updated", parent.Namespace, scheduleID, config)
+	if cctx.JSONOutput {
+		return printTimeSkippingUpdateJSON(cctx, config)
+	}
+	printScheduleTimeSkippingResult(cctx, "updated", scheduleID, config)
 	return nil
 }
 
@@ -594,42 +596,28 @@ func (c *TemporalScheduleTimeSkippingEnableCommand) run(cctx *CommandContext, ar
 	return patchScheduleTimeSkipping(cctx, c.Parent.Parent, c.ScheduleId, config)
 }
 
-const scheduleTimeSkippingPollTimeout = 10 * time.Second
-
 func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args []string) error {
-	ctx, cancel := context.WithTimeout(cctx, scheduleTimeSkippingPollTimeout)
-	defer cancel()
 	cl, err := dialClient(cctx, &c.Parent.Parent.ClientOptions)
 	if err != nil {
 		return err
 	}
 	defer cl.Close()
-	handle := cl.ScheduleClient().GetHandle(ctx, c.ScheduleId)
+	handle := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
 
-	res, err := timeskipping.PollScheduleFastForward(ctx, handle,
+	res, err := timeskipping.PollScheduleFastForward(cctx, handle,
 		timeskipping.PollScheduleFastForwardOptions{FastForwardID: c.FastForwardId})
-	if err != nil && !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+	if err != nil {
 		return err
 	}
-	switch {
-	case res.Completed:
-		cctx.Printer.Println("completed")
-	case res.FailedReason != "":
-		// The SDK names the ways a fast-forward stops being completable:
-		// superseded, time skipping switched off, never enabled.
-		cctx.Printer.Printlnf("failed: %s", res.FailedReason)
-	default:
-		// The SDK bounds the wait by our context, so reaching here is this
-		// command's own timeout rather than anything wrong with the fast-forward.
-		cctx.Printer.Println("poll timed out; try again")
+	if !res.Completed {
+		return fmt.Errorf("fast-forward failed: %s", res.FailedReason)
 	}
-	return nil
+	return printTimeSkippingPollCompleted(cctx)
 }
 
 func printScheduleTimeSkippingResult(
 	cctx *CommandContext,
 	action string,
-	namespace string,
 	scheduleID string,
 	config *client.TimeSkippingConfig,
 ) {
@@ -648,20 +636,6 @@ func printScheduleTimeSkippingResult(
 	if ff := config.FastForwardConfig; ff != nil {
 		cctx.Printer.Printlnf("Fast-forward duration: %s", formatDuration(ff.Duration))
 		cctx.Printer.Printlnf("Fast-forward ID: %s", ff.ID)
-		cctx.Printer.Println("Poll fast-forward:")
-		cctx.Printer.Printlnf("  temporal schedule time-skipping poll --namespace %s --schedule-id %s --fast-forward-id %s", namespace, scheduleID, ff.ID)
-	}
-	cctx.Printer.Println()
-	if config.Enabled {
-		cctx.Printer.Println("Check status:")
-	} else {
-		cctx.Printer.Println("Check status of time skipping:")
-	}
-	cctx.Printer.Printlnf("  temporal schedule describe --namespace %s --schedule-id %s", namespace, scheduleID)
-	if config.Enabled {
-		cctx.Printer.Println()
-		cctx.Printer.Println("Disable time skipping:")
-		cctx.Printer.Printlnf("  temporal schedule time-skipping disable --namespace %s --schedule-id %s", namespace, scheduleID)
 	}
 }
 
