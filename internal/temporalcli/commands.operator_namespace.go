@@ -354,6 +354,7 @@ func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowserv
 			"NamespaceInfo.OwnerEmail":             resp.NamespaceInfo.OwnerEmail,
 			"NamespaceInfo.State":                  resp.NamespaceInfo.State,
 			"NamespaceInfo.Data":                   resp.NamespaceInfo.Data,
+			"NamespaceInfo.Capabilities":           resp.NamespaceInfo.Capabilities,
 			"Config.WorkflowExecutionRetentionTtl": resp.Config.WorkflowExecutionRetentionTtl.AsDuration(),
 			"ReplicationConfig.ActiveClusterName":  resp.ReplicationConfig.ActiveClusterName,
 			"ReplicationConfig.Clusters":           resp.ReplicationConfig.Clusters,
@@ -375,6 +376,7 @@ func printNamespaceDescriptions(cctx *CommandContext, responses ...*workflowserv
 			Fields: []string{
 				"NamespaceInfo.Name", "NamespaceInfo.Id", "NamespaceInfo.Description",
 				"NamespaceInfo.OwnerEmail", "NamespaceInfo.State", "NamespaceInfo.Data",
+				"NamespaceInfo.Capabilities",
 				"Config.WorkflowExecutionRetentionTtl", "ReplicationConfig.ActiveClusterName",
 				"ReplicationConfig.Clusters", "ReplicationConfig.State",
 				"Config.HistoryArchivalState", "Config.VisibilityArchivalState",
