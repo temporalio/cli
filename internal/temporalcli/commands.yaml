@@ -3740,6 +3740,85 @@ commands:
       - schedule-id
       - overlap-policy
 
+  - name: temporal schedule time-skipping
+    summary: Manage Schedule time skipping (Experimental)
+    description: |
+      Manage Schedule time skipping, where a schedule's virtual clock fast-forwards when idle.
+      Use time skipping in testing environments to efficiently evaluate the behavior of a schedule.
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal schedule time-skipping enable
+    summary: Enable Schedule time skipping (Experimental)
+    description: |
+      Enable time skipping for a Schedule:
+
+      ```
+      temporal schedule time-skipping enable \
+          --namespace YourNamespace \
+          --schedule-id YourScheduleId \
+          --fast-forward-duration 5h
+      ```
+
+      Once enabled, the Schedule advances its virtual clock during inactivity,
+      allowing scheduled Workflows to start without waiting for wall-clock time.
+    option-sets:
+      - schedule-id
+      - max-skip-per-session
+    options:
+      - name: fast-forward-duration
+        type: duration
+        required: true
+        description: Fast-forward the Schedule's virtual time by this duration. Must be greater than zero.
+      - name: fast-forward-id
+        type: string
+        description: Identify this fast-forward in Schedule status. Generated if omitted. Not an idempotency key.
+      - name: disable-propagation
+        type: bool
+        description: |
+          Defaults to false. Omit this flag or set it to false to propagate the
+          time-skipping enabled state to Workflows started by this Schedule.
+          Set it to true, or specify it without a value, to disable propagation.
+          Fast-forward targets are never propagated. Virtual time is propagated
+          regardless of this flag.
+
+  - name: temporal schedule time-skipping disable
+    summary: Disable Schedule time skipping (Experimental)
+    description: |
+      Disable time skipping for a Schedule:
+
+      ```
+      temporal schedule time-skipping disable \
+          --namespace YourNamespace \
+          --schedule-id YourScheduleId
+      ```
+
+      No other time-skipping flags are needed.
+    option-sets:
+      - schedule-id
+
+  - name: temporal schedule time-skipping poll
+    summary: Poll a Schedule fast-forward (Experimental)
+    description: |
+      Poll Schedule time-skipping status for a specific fast-forward setting:
+
+      ```
+      temporal schedule time-skipping poll \
+          --namespace YourNamespace \
+          --schedule-id YourScheduleId \
+          --fast-forward-id YourFastForwardId
+      ```
+
+      Use the global `--command-timeout` flag to limit how long the poll waits.
+      A failed fast-forward or poll timeout returns a nonzero exit status.
+    option-sets:
+      - schedule-id
+    options:
+      - name: fast-forward-id
+        type: string
+        required: true
+        description: ID of the fast-forward to poll.
+
   - name: temporal schedule update
     summary: Update Schedule details
     description: |
@@ -3908,6 +3987,12 @@ commands:
       - name: headless
         type: bool
         description: Disable the Web UI.
+      - name: enable-time-skipping
+        type: bool
+        description: |
+          Enable Workflow and CHASM Schedule time skipping in all Namespaces for
+          this dev server run. Also enable CHASM Schedule creation and routing.
+          Explicit dynamic config values take precedence.
       - name: ip
         type: string
         description: IP address bound to the front-end Service.
@@ -4953,6 +5038,84 @@ commands:
         type: bool
         description: Print properties without changing their format.
 
+  - name: temporal workflow time-skipping
+    summary: Manage Workflow time skipping (Experimental)
+    description: |
+      Manage Workflow time skipping, where a workflow skips time when idle.
+      Use time skipping in testing environments to efficiently evaluate 
+      the behavior of a workflow with extended periods of inactivity.
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal workflow time-skipping enable
+    summary: Enable Workflow time skipping (Experimental)
+    description: |
+      Enable time skipping for a Workflow Execution:
+
+      ```
+      temporal workflow time-skipping enable \
+          --namespace YourNamespace \
+          --workflow-id YourWorkflowId
+      ```
+      Once enabled, the workflow execution skips time during inactivity, 
+      expediting the completion of timers, retry waits, and start delays.
+
+    option-sets:
+      - workflow-reference
+      - max-skip-per-session
+    options:
+      - name: fast-forward-duration
+        type: duration
+        description: Fast-forward the Workflow Execution's virtual time by this duration. Must be greater than zero.
+      - name: fast-forward-id
+        type: string
+        description: Identify this fast-forward in Workflow status and when polling for completion. Generated if omitted. Not an idempotency key. Requires --fast-forward-duration.
+      - name: disable-propagation
+        type: bool
+        description: |
+          Defaults to false. Omit this flag or set it to false to propagate the
+          time-skipping enabled state to child Workflows started by this Workflow.
+          Set it to true, or specify it without a value, to disable propagation.
+          Fast-forward targets are never propagated. Virtual time is propagated
+          regardless of this flag.
+
+  - name: temporal workflow time-skipping disable
+    summary: Disable Workflow time skipping (Experimental)
+    description: |
+      Disable time skipping for a Workflow Execution:
+
+      ```
+      temporal workflow time-skipping disable \
+          --namespace YourNamespace \
+          --workflow-id YourWorkflowId
+      ```
+
+      No other time-skipping flags are needed.
+    option-sets:
+      - workflow-reference
+
+  - name: temporal workflow time-skipping poll
+    summary: Poll a Workflow fast-forward (Experimental)
+    description: |
+      Poll Workflow time-skipping status for a specific fast-forward setting:
+
+      ```
+      temporal workflow time-skipping poll \
+          --namespace YourNamespace \
+          --workflow-id YourWorkflowId \
+          --fast-forward-id YourFastForwardId
+      ```
+
+      Use the global `--command-timeout` flag to limit how long the poll waits.
+      A failed fast-forward or poll timeout returns a nonzero exit status.
+    option-sets:
+      - workflow-reference
+    options:
+      - name: fast-forward-id
+        type: string
+        required: true
+        description: ID of the fast-forward to poll.
+
   - name: temporal workflow execute
     summary: Start new Workflow Execution
     description: |
@@ -5816,6 +5979,24 @@ option-sets:
         description: Schedule ID.
         required: true
         short: s
+
+  - name: max-skip-per-session
+    options:
+      - name: max-skip-per-session
+        type: int
+        description: |
+          Limit the number of time skips in a single time-skipping session.
+          A session starts when time skipping is enabled and ends when it is
+          automatically disabled. Updating the time-skipping configuration
+          resets the session. Omit to use the server default, which is 200 and
+          can be configured through the `system.timeSkippingMaxSkipPerSession`
+          dynamic config. Usually leave this unset unless a previous test
+          reached the limit and time skipping turned off automatically; then
+          set a higher value. If specified, must be between 1 and 10000. Use
+          `temporal schedule describe` or
+          `temporal workflow describe` to check `MaxSessionSkipCount`,
+          `CurrentSessionSkipCount`, and `EffectiveEnabled` in the time-skipping
+          status.
 
   - name: schedule-configuration
     options:

@@ -85,6 +85,7 @@ type StartOptions struct {
 	SqlitePragmas         map[string]string
 	FrontendHTTPPort      int
 	EnableGlobalNamespace bool
+	EnableTimeSkipping    bool
 	DynamicConfigValues   map[string]any
 	SearchAttributes      map[string]enums.IndexedValueType
 	LogConfig             func([]byte)
@@ -253,6 +254,9 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	// Dynamic config if set
 	for k, v := range s.DynamicConfigValues {
 		dynConf[dynamicconfig.MakeKey(k)] = v
+	}
+	if s.EnableTimeSkipping {
+		applyTimeSkippingDynamicConfig(dynConf)
 	}
 	opts = append(opts, temporal.WithDynamicConfigClient(dynConf))
 
