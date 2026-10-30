@@ -159,6 +159,7 @@ func (s *SharedServerSuite) TestTimeSkipping_PollExitStatus() {
 					cmd.Env = append(os.Environ(), "TEMPORAL_CLI_TIME_SKIPPING_TEST_PROCESS=1")
 					var stdout, stderr bytes.Buffer
 					cmd.Stdout, cmd.Stderr = &stdout, &stderr
+					started := time.Now()
 					err := cmd.Run()
 					if outcome == "completed" {
 						require.NoError(t, err, "stderr: %s", stderr.String())
@@ -180,7 +181,11 @@ func (s *SharedServerSuite) TestTimeSkipping_PollExitStatus() {
 					if outcome == "failed" {
 						require.Regexp(t, `Error: fast-forward failed: \S`, stderr.String())
 					} else {
-						require.Equal(t, "Error: program interrupted", strings.TrimSpace(stderr.String()))
+						// RPC cancellation may arrive before the global deadline handler.
+						require.Regexp(t, `^Error: \S`, stderr.String())
+						require.NotContains(t, stderr.String(), "fast-forward failed:")
+						require.GreaterOrEqual(t, time.Since(started), 100*time.Millisecond)
+						require.Less(t, time.Since(started), 5*time.Second)
 					}
 				}
 			})
