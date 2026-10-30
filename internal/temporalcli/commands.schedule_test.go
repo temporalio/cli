@@ -10,12 +10,14 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/cli/internal/temporalcli"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -509,6 +511,189 @@ func (s *SharedServerSuite) TestSchedule_Update() {
 			j.Schedule.Action.StartWorkflow.TaskQueue.Name == "SomeOtherTq" &&
 			j.Schedule.Spec.Interval[0].Interval == "3600s"
 	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func (s *SharedServerSuite) TestSchedule_Update_SearchAttributes() {
+	res := s.Execute("operator", "search-attribute", "create",
+		"--address", s.Address(),
+		"--name", "ScheduleUpdateKeyword", "--type", "Keyword")
+	s.NoError(res.Err)
+
+	initial := map[string]string{
+		"CustomKeywordField":    `"before"`,
+		"ScheduleUpdateKeyword": `"remove-me"`,
+	}
+	for _, tc := range []struct {
+		name string
+		args []string
+		want map[string]string
+	}{
+		{name: "preserve when omitted", want: initial},
+		{
+			name: "replace entire collection",
+			args: []string{"--schedule-search-attribute", `CustomKeywordField="after"`},
+			want: map[string]string{"CustomKeywordField": `"after"`},
+		},
+		{
+			name: "replace multiple attributes",
+			args: []string{"--schedule-search-attribute", `CustomKeywordField="after"`,
+				"--schedule-search-attribute", `ScheduleUpdateKeyword="keep-me"`},
+			want: map[string]string{"CustomKeywordField": `"after"`, "ScheduleUpdateKeyword": `"keep-me"`},
+		},
+		{
+			name: "null removes a key",
+			args: []string{"--schedule-search-attribute", `CustomKeywordField=null`,
+				"--schedule-search-attribute", `ScheduleUpdateKeyword="keep-me"`},
+			want: map[string]string{"ScheduleUpdateKeyword": `"keep-me"`},
+		},
+		{
+			name: "only null clears collection",
+			args: []string{"--schedule-search-attribute", `CustomKeywordField=null`},
+			want: map[string]string{},
+		},
+		{
+			name: "remove all",
+			args: []string{"--remove-schedule-search-attributes"},
+			want: map[string]string{},
+		},
+		{
+			name: "false does not remove",
+			args: []string{"--remove-schedule-search-attributes=false"},
+			want: initial,
+		},
+	} {
+		schedID, workflowID, res := s.createSchedule("--interval", "1h", "--paused",
+			"--schedule-search-attribute", `CustomKeywordField="before"`,
+			"--schedule-search-attribute", `ScheduleUpdateKeyword="remove-me"`,
+			"--schedule-memo", `label="unchanged"`,
+			"--search-attribute", `CustomKeywordField="workflow-value"`)
+		s.NoError(res.Err)
+
+		s.T().Run(tc.name, func(t *testing.T) {
+			h := NewCommandHarness(t)
+			res := h.Execute(append([]string{"schedule", "update",
+				"--address", s.Address(),
+				"--schedule-id", schedID,
+				"--workflow-id", workflowID,
+				"--task-queue", s.Worker().Options.TaskQueue,
+				"--type", "DevWorkflow", "--interval", "1h", "--paused",
+				"--search-attribute", `CustomKeywordField="workflow-value"`,
+			}, tc.args...)...)
+			h.NoError(res.Err)
+
+			h.EventuallyWithT(func(t *assert.CollectT) {
+				desc, err := s.Client.WorkflowService().DescribeSchedule(h.Context, &workflowservice.DescribeScheduleRequest{
+					Namespace: s.Namespace(), ScheduleId: schedID,
+				})
+				if !assert.NoError(t, err) {
+					return
+				}
+				got := make(map[string]string)
+				for key, payload := range desc.GetSearchAttributes().GetIndexedFields() {
+					got[key] = string(payload.GetData())
+				}
+				assert.Equal(t, tc.want, got)
+				workflowFields := desc.GetSchedule().GetAction().GetStartWorkflow().GetSearchAttributes().GetIndexedFields()
+				assert.Equal(t, `"workflow-value"`, string(workflowFields["CustomKeywordField"].GetData()))
+				assert.Equal(t, `"unchanged"`, string(desc.GetMemo().GetFields()["label"].GetData()))
+				assert.True(t, desc.GetSchedule().GetState().GetPaused())
+			}, 10*time.Second, 100*time.Millisecond)
+
+			h.EventuallyWithT(func(t *assert.CollectT) {
+				res := h.Execute("schedule", "list", "--address", s.Address(),
+					"--query", `CustomKeywordField = "after"`, "--output", "json")
+				if !assert.NoError(t, res.Err) {
+					return
+				}
+				var entries []struct{ ScheduleId string }
+				if !assert.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &entries)) {
+					return
+				}
+				found := false
+				for _, entry := range entries {
+					found = found || entry.ScheduleId == schedID
+				}
+				assert.Equal(t, tc.want["CustomKeywordField"] == `"after"`, found)
+			}, 10*time.Second, 100*time.Millisecond)
+		})
+	}
+}
+
+func (s *SharedServerSuite) TestSchedule_Update_SearchAttributeTypes() {
+	for _, attr := range []struct{ name, typ string }{
+		{"ScheduleUpdateInt", "Int"},
+		{"ScheduleUpdateDouble", "Double"},
+		{"ScheduleUpdateBool", "Bool"},
+		{"ScheduleUpdateText", "Text"},
+		{"ScheduleUpdateDatetime", "Datetime"},
+		{"ScheduleUpdateKeywordList", "KeywordList"},
+	} {
+		res := s.Execute("operator", "search-attribute", "create",
+			"--address", s.Address(), "--name", attr.name, "--type", attr.typ)
+		s.NoError(res.Err)
+	}
+	schedID, workflowID, res := s.createSchedule("--interval", "1h", "--paused")
+	s.NoError(res.Err)
+	res = s.Execute("schedule", "update",
+		"--address", s.Address(), "--schedule-id", schedID,
+		"--workflow-id", workflowID, "--task-queue", s.Worker().Options.TaskQueue,
+		"--type", "DevWorkflow", "--interval", "1h", "--paused",
+		"--schedule-search-attribute", `CustomKeywordField="keyword"`,
+		"--schedule-search-attribute", `ScheduleUpdateInt=42`,
+		"--schedule-search-attribute", `ScheduleUpdateDouble=1.25`,
+		"--schedule-search-attribute", `ScheduleUpdateBool=true`,
+		"--schedule-search-attribute", `ScheduleUpdateText="some text"`,
+		"--schedule-search-attribute", `ScheduleUpdateDatetime="2026-01-01T00:00:00Z"`,
+		"--schedule-search-attribute", `ScheduleUpdateKeywordList=["one","two"]`)
+	s.NoError(res.Err)
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		desc, err := s.Client.WorkflowService().DescribeSchedule(s.Context, &workflowservice.DescribeScheduleRequest{
+			Namespace: s.Namespace(), ScheduleId: schedID,
+		})
+		if !assert.NoError(t, err) {
+			return
+		}
+		got := make(map[string]string)
+		for key, payload := range desc.GetSearchAttributes().GetIndexedFields() {
+			got[key] = string(payload.GetData())
+		}
+		assert.Equal(t, map[string]string{
+			"CustomKeywordField":        `"keyword"`,
+			"ScheduleUpdateInt":         `42`,
+			"ScheduleUpdateDouble":      `1.25`,
+			"ScheduleUpdateBool":        `true`,
+			"ScheduleUpdateText":        `"some text"`,
+			"ScheduleUpdateDatetime":    `"2026-01-01T00:00:00Z"`,
+			"ScheduleUpdateKeywordList": `["one","two"]`,
+		}, got)
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func TestScheduleUpdate_InvalidSearchAttributes(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		err  string
+	}{
+		{"conflicting flags", []string{"--remove-schedule-search-attributes", "--schedule-search-attribute", `Key="value"`}, "cannot combine"},
+		{"missing equals", []string{"--schedule-search-attribute", "Key"}, "missing expected '='"},
+		{"invalid JSON", []string{"--schedule-search-attribute", "Key=invalid"}, "invalid JSON value"},
+		{"trailing JSON", []string{"--schedule-search-attribute", `Key="value" true`}, "unexpected trailing data"},
+		{"object", []string{"--schedule-search-attribute", `Key={"nested":true}`}, "unsupported search attribute type"},
+		{"non-string list", []string{"--schedule-search-attribute", `Key=[1]`}, "array element 0"},
+		{"number overflow", []string{"--schedule-search-attribute", `Key=1e999`}, "invalid number"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := NewCommandHarness(t)
+			// Invalid input must fail before attempting to connect to a server.
+			res := h.Execute(append([]string{"schedule", "update",
+				"--address", "127.0.0.1:1", "--schedule-id", "schedule",
+				"--task-queue", "queue", "--type", "Workflow",
+			}, tc.args...)...)
+			h.ErrorContains(res.Err, tc.err)
+			h.Empty(res.Stdout.String())
+		})
+	}
 }
 
 func (s *SharedServerSuite) TestSchedule_Memo_Update() {

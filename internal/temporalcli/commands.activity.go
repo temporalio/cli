@@ -200,7 +200,7 @@ func buildStartActivityOptions(opts *ActivityStartOptions) (client.StartActivity
 }
 
 // mapToSearchAttributes builds typed search attributes from a map produced by
-// json.Unmarshal into map[string]any. The possible types from json.Unmarshal are:
+// JSON decoding into map[string]any. The supported types are:
 //
 //	bool      → NewSearchAttributeKeyBool       (correct for Bool attributes)
 //	float64   → NewSearchAttributeKeyFloat64    (correct for Double; also used for Int,
@@ -208,6 +208,8 @@ func buildStartActivityOptions(opts *ActivityStartOptions) (client.StartActivity
 //	string    → NewSearchAttributeKeyKeyword    (correct for Keyword; also used for Text
 //	                                             and Datetime, since JSON has a single string type)
 //	[]any     → NewSearchAttributeKeyKeywordList (each element must be string)
+//	json.Number → NewSearchAttributeKeyInt64 or NewSearchAttributeKeyFloat64
+//	              (preserves integer precision when decoding with UseNumber)
 //	map[string]any, nil                          → rejected (no corresponding SA type)
 //
 // For inputs where the payload type metadata doesn't match the registered type
@@ -222,6 +224,16 @@ func mapToSearchAttributes(m map[string]any) (temporal.SearchAttributes, error) 
 			updates = append(updates, temporal.NewSearchAttributeKeyKeyword(k).ValueSet(val))
 		case float64:
 			updates = append(updates, temporal.NewSearchAttributeKeyFloat64(k).ValueSet(val))
+		case json.Number:
+			if integer, err := val.Int64(); err == nil {
+				updates = append(updates, temporal.NewSearchAttributeKeyInt64(k).ValueSet(integer))
+			} else {
+				number, err := val.Float64()
+				if err != nil {
+					return temporal.SearchAttributes{}, fmt.Errorf("invalid number for search attribute %q: %w", k, err)
+				}
+				updates = append(updates, temporal.NewSearchAttributeKeyFloat64(k).ValueSet(number))
+			}
 		case bool:
 			updates = append(updates, temporal.NewSearchAttributeKeyBool(k).ValueSet(val))
 		case []any:
