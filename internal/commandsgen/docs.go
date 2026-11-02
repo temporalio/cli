@@ -130,7 +130,7 @@ func (w *docWriter) writeSubcommand(c *Command) {
 	w.fileMap[fileName].WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
 	if w.hasOptionsSection(c) {
-		w.writeOptionsSection(c, fileName)
+		w.writeOptionsSection(c, fileName, 1)
 	}
 }
 
@@ -150,24 +150,29 @@ func (w *docWriter) hasOptionsSection(c *Command) bool {
 // command's own options are the top frame of the options stack; everything
 // below it is inherited from parent commands.
 //
+// Only the options of the file's top-level command (at fileDepth) and its
+// ancestors go into the Global Flags section, since those apply to every
+// command in the file. Options of a parent between that command and this one
+// (e.g. "workflow reset" for "workflow reset with-workflow-update-options")
+// apply only to that parent's subtree, and are already documented in the
+// parent's own options section.
+//
 // The reference to the "#global-flags" anchor is only emitted when there are
 // inherited options, since that is what causes a Global Flags section (and thus
 // the anchor) to be generated for the file. A command with no inherited options
 // (e.g. a top-level command in a split subdirectory) would otherwise link to an
 // anchor that never exists.
-func (w *docWriter) writeOptionsSection(c *Command, fileName string) {
+func (w *docWriter) writeOptionsSection(c *Command, fileName string, fileDepth int) {
 	scope := "this command"
 	if !w.isLeafCommand(c) {
 		scope = "this command and all of its subcommands"
 	}
 
-	var options, globalOptions []Option
-	for i, o := range w.optionsStack {
-		if i == len(w.optionsStack)-1 {
-			options = append(options, o...)
-		} else {
-			globalOptions = append(globalOptions, o...)
-		}
+	top := len(w.optionsStack) - 1
+	options := append([]Option(nil), w.optionsStack[top]...)
+	var globalOptions []Option
+	for _, o := range w.optionsStack[:min(fileDepth+1, top)] {
+		globalOptions = append(globalOptions, o...)
 	}
 
 	sort.Slice(options, func(i, j int) bool {
@@ -254,7 +259,7 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 		buf.WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
 	}
 	if w.hasOptionsSection(c) {
-		w.writeOptionsSection(c, fileName)
+		w.writeOptionsSection(c, fileName, len(splitParts))
 	}
 }
 
@@ -275,7 +280,7 @@ func (w *docWriter) writeSplitSubcommand(c *Command, splitRoot string) {
 	buf.WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
 	if w.hasOptionsSection(c) {
-		w.writeOptionsSection(c, fileName)
+		w.writeOptionsSection(c, fileName, len(splitParts))
 	}
 }
 
@@ -378,9 +383,11 @@ func (w *docWriter) writeGlobalFlagsSections() {
 }
 
 func (w *docWriter) processOptions(c *Command) {
-	// Pop options from stack if we are moving up a level
-	if len(w.optionsStack) >= len(strings.Split(c.FullName, " ")) {
-		w.optionsStack = w.optionsStack[:len(w.optionsStack)-1]
+	// Keep only the frames of this command's ancestors. Commands are sorted by
+	// full name, so every ancestor has been processed before this command, and
+	// the frame at index i belongs to its ancestor at depth i.
+	if d := c.depth(); len(w.optionsStack) > d {
+		w.optionsStack = w.optionsStack[:d]
 	}
 	var options []Option
 	options = append(options, c.Options...)

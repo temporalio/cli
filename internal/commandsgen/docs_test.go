@@ -297,3 +297,97 @@ func section(t *testing.T, doc, start, end string) string {
 	}
 	return rest[:j]
 }
+
+// globalFlagsFixture has a root option, a parent with its own options directly
+// above its child ("alpha run", with no sibling sorted before it), and a later
+// command file ("beta") processed after that deeper subtree.
+const globalFlagsFixture = `
+commands:
+  - name: app
+    summary: App
+    description: App.
+    options:
+      - name: root-flag
+        type: string
+        description: A root flag.
+  - name: app alpha
+    summary: Alpha
+    description: Manage alphas.
+    docs:
+      keywords:
+        - alpha
+      description-header: Manage alphas
+      tags:
+        - Alphas
+  - name: app alpha run
+    summary: Run
+    description: Run an alpha.
+    options:
+      - name: target
+        type: string
+        description: The alpha to run.
+  - name: app alpha run extra
+    summary: Extra
+    description: Run an alpha, then do something extra.
+    options:
+      - name: extra-flag
+        type: string
+        description: An extra flag.
+  - name: app beta
+    summary: Beta
+    description: Manage betas.
+    docs:
+      keywords:
+        - beta
+      description-header: Manage betas
+      tags:
+        - Betas
+  - name: app beta leaf
+    summary: Leaf
+    description: A beta leaf.
+    options:
+      - name: beta-flag
+        type: string
+        description: A beta flag.
+`
+
+func TestGenerateDocsFilesGlobalFlagsScope(t *testing.T) {
+	cmds, err := ParseCommands([]byte(globalFlagsFixture))
+	if err != nil {
+		t.Fatalf("ParseCommands: %v", err)
+	}
+
+	cases := []struct {
+		name    string
+		subdirs []string
+		alpha   string
+		beta    string
+	}{
+		{name: "single file", alpha: "alpha", beta: "beta"},
+		{name: "split subdirectory", subdirs: []string{"app"}, alpha: "app/alpha", beta: "app/beta"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			docs, err := GenerateDocsFiles(cmds, tc.subdirs)
+			if err != nil {
+				t.Fatalf("GenerateDocsFiles: %v", err)
+			}
+			for _, file := range []string{tc.alpha, tc.beta} {
+				doc, ok := docs[file]
+				if !ok {
+					t.Fatalf("expected file %q, got keys: %v", file, keys(docs))
+				}
+				global := section(t, string(doc), "## Global Flags", "")
+				if !strings.Contains(global, "`--root-flag`") {
+					t.Errorf("expected --root-flag in the %s Global Flags, got:\n%s", file, global)
+				}
+				// "alpha run" options apply only to its subtree, so they belong in
+				// its own section, not in any file's Global Flags.
+				if strings.Contains(global, "`--target`") {
+					t.Errorf("expected no --target in the %s Global Flags, got:\n%s", file, global)
+				}
+			}
+		})
+	}
+}
