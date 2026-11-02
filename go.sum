@@ -487,8 +487,8 @@ go.temporal.io/sdk v1.49.1-0.20261028204201-93056ed9a9de h1:uI7eiW/cJ0Q/HKKPMiCr
 go.temporal.io/sdk v1.49.1-0.20261028204201-93056ed9a9de/go.mod h1:OsF05yeW+3KDYpBEn8BQmj78RXX3qWo/SPJr3s5PLK4=
 go.temporal.io/sdk/contrib/envconfig v1.0.2 h1:MGHfsuPUtsf7X9M6WYn3zYJj/mWsuYHnA1uuiL0KEuE=
 go.temporal.io/sdk/contrib/envconfig v1.0.2/go.mod h1:MuMiH7hksps2uXnmKuAWaP9P6WbkSDy62kl64t1VJVg=
-go.temporal.io/server v1.29.0-135.0.0.20261029221550-8a1919f5b298 h1:6QPCXAf7yfa7SvI09XzS2D9tAG6SbbTFVT24wt+iFD0=
-go.temporal.io/server v1.29.0-135.0.0.20261029221550-8a1919f5b298/go.mod h1:5HOYvdlHebW+gFKd8FcgWV1L0Rrnzll8XgaGXxeetHc=
+go.temporal.io/server v1.29.0-135.0.0.20261030183317-69c692e8773e h1:EkdLWsOI9yn+8c9pOrVDzPr/51iJ4VODZSD61f7TxFE=
+go.temporal.io/server v1.29.0-135.0.0.20261030183317-69c692e8773e/go.mod h1:5HOYvdlHebW+gFKd8FcgWV1L0Rrnzll8XgaGXxeetHc=
 go.temporal.io/testx v0.0.0-20261028001837-eec3975de26f h1:D61aaxDgdkRK9CvGxxgDH26oqABa/TIgsbEjb89NMoY=
 go.temporal.io/testx v0.0.0-20261028001837-eec3975de26f/go.mod h1:T3nNOPpInc8t5TL9vz9li9untPQANYexE36UQeXObqQ=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
