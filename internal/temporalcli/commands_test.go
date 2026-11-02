@@ -276,6 +276,19 @@ func (s *SharedServerSuite) TearDownSuite() {
 	s.Stop()
 }
 
+// Use a separate server so CHASM Schedule creation does not change the behavior
+// expected by existing Schedule tests in the shared server suite.
+func (s *SharedServerSuite) useTimeSkippingServer() {
+	sharedServer := s.DevServer
+	s.DevServer = StartDevServer(s.T(), DevServerOptions{
+		StartOptions: devserver.StartOptions{EnableTimeSkipping: true},
+	})
+	s.T().Cleanup(func() {
+		s.DevServer.Stop()
+		s.DevServer = sharedServer
+	})
+}
+
 func (s *SharedServerSuite) Stop() {
 	s.DevServer.Stop()
 }
