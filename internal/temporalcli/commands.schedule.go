@@ -605,7 +605,7 @@ func (c *TemporalScheduleTimeSkippingPollCommand) run(cctx *CommandContext, args
 	handle := cl.ScheduleClient().GetHandle(cctx, c.ScheduleId)
 
 	res, err := timeskipping.PollScheduleFastForward(cctx, handle,
-		timeskipping.PollScheduleFastForwardOptions{FastForwardID: c.FastForwardId})
+		timeskipping.SchedulePollFastForwardOptions{FastForwardID: c.FastForwardId})
 	if err != nil {
 		return err
 	}

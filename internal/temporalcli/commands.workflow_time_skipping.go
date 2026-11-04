@@ -63,12 +63,16 @@ func (c *TemporalWorkflowTimeSkippingPollCommand) run(cctx *CommandContext, args
 		return err
 	}
 	defer cl.Close()
+	// The poll cannot be scoped to a run: the wait spans the chain across retry,
+	// continue-as-new and cron, and the server rejects a poll that names a run.
+	// The SDK takes the workflow ID from the run and offers no RunID option.
+	//
 	// The SDK retries server poll timeouts until the command context ends.
-	res, err := timeskipping.PollFastForward(cctx, cl, timeskipping.PollFastForwardOptions{
-		WorkflowID:    c.WorkflowId,
-		RunID:         c.RunId,
-		FastForwardID: c.FastForwardId,
-	})
+	res, err := timeskipping.PollWorkflowFastForward(cctx, cl,
+		cl.GetWorkflow(cctx, c.WorkflowId, ""),
+		timeskipping.WorkflowPollFastForwardOptions{
+			FastForwardID: c.FastForwardId,
+		})
 	if err != nil {
 		return err
 	}
