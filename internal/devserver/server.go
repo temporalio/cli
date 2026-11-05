@@ -239,6 +239,8 @@ func (s *StartOptions) buildServerOptions() ([]temporal.ServerOption, *slog.Leve
 	}
 
 	dynConf := make(dynamicconfig.StaticClient, len(s.DynamicConfigValues)+1)
+	// The embedded server is upgraded through the CLI binary.
+	dynConf[dynamicconfig.MakeKey("frontend.enableServerVersionCheckLogging")] = false
 	// Setting host level mutable state cache size to 8k.
 	dynConf[dynamicconfig.HistoryCacheHostLevelMaxSize.Key()] = 8096
 	// Up default visibility RPS
