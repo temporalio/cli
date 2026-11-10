@@ -104,7 +104,7 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("title: Temporal CLI " + fileName + " command reference\n")
 	w.fileMap[fileName].WriteString("sidebar_label: " + fileName + "\n")
 	w.fileMap[fileName].WriteString("description: " + c.Docs.DescriptionHeader + "\n")
-	w.fileMap[fileName].WriteString("toc_max_heading_level: 4\n")
+	w.fileMap[fileName].WriteString("toc_max_heading_level: 6\n")
 
 	w.fileMap[fileName].WriteString("keywords:\n")
 	for _, keyword := range c.Docs.Keywords {
@@ -217,7 +217,7 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 	buf.WriteString("title: Temporal CLI " + c.FullName + " command reference\n")
 	buf.WriteString("sidebar_label: " + leafName + "\n")
 	buf.WriteString("description: " + c.Docs.DescriptionHeader + "\n")
-	buf.WriteString("toc_max_heading_level: 4\n")
+	buf.WriteString("toc_max_heading_level: 6\n")
 	buf.WriteString("keywords:\n")
 	for _, keyword := range c.Docs.Keywords {
 		buf.WriteString("  - " + keyword + "\n")
