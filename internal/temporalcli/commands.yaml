@@ -2117,6 +2117,177 @@ commands:
           queue targets in the Worker Deployment. Required when changing the
           compute provider.
 
+  - name: temporal worker deployment version compute-config gcp-cloud-run
+    summary: Create or update GCP Cloud Run compute configuration (Experimental)
+    description: |
+      GCP Cloud Run commands set the compute configuration of a Worker
+      Deployment Version for a GCP Cloud Run worker pool that spawns a Worker
+      in the Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config gcp-cloud-run [command] [options]
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal worker deployment version compute-config gcp-cloud-run create
+    summary: Create a Version with GCP Cloud Run compute configuration (Experimental)
+    description: |
+      Create a new Worker Deployment Version with compute configuration for a
+      GCP Cloud Run worker pool that spawns a Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config gcp-cloud-run create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --project YourGCPProject \
+          --worker-pool-region us-central1 \
+          --worker-pool YourWorkerPool \
+          --service-account customer-sa@proj.iam.gserviceaccount.com
+      ```
+
+      To set how the worker pool is scaled, pass all of the scaler flags
+      (--min-instances, --max-instances, --initial-instances,
+      --utilization-target, --scale-down-stabilization-ms,
+      --scale-up-cooldown-ms, and --scale-down-cooldown-ms) together. When
+      none are passed, the server defaults apply:
+
+      ```
+      temporal worker deployment version compute-config gcp-cloud-run create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --project YourGCPProject \
+          --worker-pool-region us-central1 \
+          --worker-pool YourWorkerPool \
+          --service-account customer-sa@proj.iam.gserviceaccount.com \
+          --min-instances 1 \
+          --max-instances 3 \
+          --initial-instances 1 \
+          --utilization-target 0.75 \
+          --scale-down-stabilization-ms 300000 \
+          --scale-up-cooldown-ms 2000 \
+          --scale-down-cooldown-ms 60000
+      ```
+
+      The Worker Deployment must already exist; create it with
+      `temporal worker deployment create`.
+
+      If a Worker Deployment Version with the supplied BuildID already exists,
+      this command will return an error. To update its compute configuration,
+      use `temporal worker deployment version compute-config gcp-cloud-run update`.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - rate-based-scaler
+    options:
+      - name: project
+        type: string
+        required: true
+        description: |
+          GCP project ID hosting the Cloud Run worker pool.
+      - name: worker-pool-region
+        type: string
+        required: true
+        description: |
+          Region of the Cloud Run worker pool.
+      - name: worker-pool
+        type: string
+        required: true
+        description: |
+          GCP Cloud Run worker pool name to scale when there are no active
+          pollers for task queue targets in the Worker Deployment.
+      - name: service-account
+        type: string
+        required: true
+        description: |
+          Customer GCP service account the Temporal server impersonates to
+          manage the Cloud Run worker pool.
+
+  - name: temporal worker deployment version compute-config gcp-cloud-run update
+    summary: Update GCP Cloud Run compute configuration for a Version (Experimental)
+    description: |
+      Update a scaling group in the compute configuration of a Worker
+      Deployment Version, for a GCP Cloud Run worker pool that spawns a Worker
+      in the Worker Deployment. Only the scaling group named by
+      --scaling-group ("default" when unset) changes; other scaling groups are
+      not affected.
+
+      To update the GCP Cloud Run worker pool associated with an existing
+      Worker Deployment Version:
+
+      ```
+      temporal worker deployment version compute-config gcp-cloud-run update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --project YourGCPProject \
+          --worker-pool-region us-central1 \
+          --worker-pool YourWorkerPool \
+          --service-account customer-sa@proj.iam.gserviceaccount.com
+      ```
+
+      To update only the scaler of an existing scaling group, supply the
+      scaler flags without the provider flags:
+
+      ```
+      temporal worker deployment version compute-config gcp-cloud-run update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --min-instances 1 \
+          --max-instances 5 \
+          --initial-instances 1 \
+          --utilization-target 0.75 \
+          --scale-down-stabilization-ms 300000 \
+          --scale-up-cooldown-ms 2000 \
+          --scale-down-cooldown-ms 60000
+      ```
+
+      The provider flags are --project, --worker-pool-region, --worker-pool,
+      and --service-account. The scaler flags are --min-instances,
+      --max-instances, --initial-instances, --utilization-target,
+      --scale-down-stabilization-ms, --scale-up-cooldown-ms, and
+      --scale-down-cooldown-ms. The provider flags are only needed when
+      changing the compute provider, and they must all be passed together.
+      The scaler flags must also all be passed together. Changing the
+      provider keeps the scaler settings, unless the scaler flags are
+      passed with it to replace them.
+
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error. To create it, use
+      `temporal worker deployment version compute-config gcp-cloud-run create`.
+
+      Returns an error if all compute configuration fields are empty.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - rate-based-scaler
+    options:
+      - name: project
+        type: string
+        description: |
+          GCP project ID hosting the Cloud Run worker pool. Required when
+          changing the compute provider.
+      - name: worker-pool-region
+        type: string
+        description: |
+          Region of the Cloud Run worker pool. Required when changing the
+          compute provider.
+      - name: worker-pool
+        type: string
+        description: |
+          GCP Cloud Run worker pool name to scale when there are no active
+          pollers for task queue targets in the Worker Deployment. Required
+          when changing the compute provider.
+      - name: service-account
+        type: string
+        description: |
+          Customer GCP service account the Temporal server impersonates to
+          manage the Cloud Run worker pool. Required when changing the
+          compute provider.
+
   - name: temporal worker deployment version compute-config modal-function
     summary: Create or update Modal Function compute configuration (Experimental)
     description: |
@@ -6026,6 +6197,57 @@ option-sets:
           How often Task Queue metrics are checked while Worker starts are
           paused, in milliseconds. Only valid with
           --scale-up-dispatch-rate-epsilon. Defaults to 90000 when unset.
+
+  - name: rate-based-scaler
+    options:
+      - name: min-instances
+        type: int
+        description: |
+          Minimum number of Cloud Run worker pool instances the scaler will
+          maintain. Must be passed with the other scaler flags. Defaults to 0
+          when unset.
+      - name: max-instances
+        type: int
+        description: |
+          Maximum number of Cloud Run worker pool instances the scaler may
+          scale up to. Must be passed with the other scaler flags. Defaults to
+          30 when unset.
+      - name: initial-instances
+        type: int
+        description: |
+          Number of Cloud Run worker pool instances the scaler starts with.
+          Must be passed with the other scaler flags, and this value must be
+          between the min and max (inclusive). Defaults to 0 when unset.
+      - name: utilization-target
+        type: float
+        description: |
+          Target average worker utilization the scaler aims for, as a fraction
+          in the range (0, 1]. Must be passed with the other scaler flags. Lower
+          values keep more spare capacity per worker. Defaults to 0.8 when
+          unset.
+      - name: scale-down-stabilization-ms
+        type: int
+        description: |
+          Duration the scaler waits after it last saw unmet task demand
+          before it may scale the Cloud Run worker pool down, in milliseconds.
+          Raise this to keep the pool from scaling down before long-running or
+          bursty activities finish. Must be passed with the other scaler flags.
+          A value of 0 disables the wait. Defaults to 90000 (90 seconds) when
+          unset.
+      - name: scale-up-cooldown-ms
+        type: int
+        description: |
+          Minimum time between two scale-ups of the Cloud Run worker pool, in
+          milliseconds. Must not exceed the scaler's metrics poll interval of
+          60000 (1 minute). Must be passed with the other scaler flags. A value
+          of 0 disables the wait. Defaults to 2000 when unset.
+      - name: scale-down-cooldown-ms
+        type: int
+        description: |
+          Minimum time between two scale-downs of the Cloud Run worker pool, in
+          milliseconds. Must not exceed the scaler's metrics poll interval of
+          60000 (1 minute). Must be passed with the other scaler flags. A value
+          of 0 disables the wait. Defaults to 60000 (1 minute) when unset.
 
   - name: deployment-version-or-unversioned
     options:
