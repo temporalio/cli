@@ -4306,10 +4306,103 @@ func NewTemporalWorkerDeploymentVersionComputeConfigCommand(cctx *CommandContext
 		s.Command.Long = "A Worker Deployment Version's compute configuration is made of one\nor more scaling groups. Each scaling group is identified by a key\nand is made of a compute provider that starts Workers and a scaler\nthat decides when to start them. Each compute provider has its own\ncommand, such as `aws-lambda` or `modal-function`, to create and update\nscaling groups:\n\n```\ntemporal worker deployment version compute-config [command] [options]\n```\n\nNote: This is an experimental feature and may change in the future."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigDescribeCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigRemoveCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigCommand) *TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand
+	s.Parent = parent
+	s.Command.Use = "aws-agentcore"
+	s.Command.Short = "Create or update AWS Agentcore compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "AWS Agentcore commands set the compute configuration of a Worker\nDeployment Version for an AWS Bedrock Agentcore Runtime that spawns a\nWorker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment version compute-config aws-agentcore [command] [options]\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "AWS Agentcore commands set the compute configuration of a Worker\nDeployment Version for an AWS Bedrock Agentcore Runtime that spawns a\nWorker in the Worker Deployment:\n\n```\ntemporal worker deployment version compute-config aws-agentcore [command] [options]\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCreateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	AwsAssumeRoleOptions
+	NoSyncScalerOptions
+	EndpointArn string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCreateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand) *TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCreateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a Version with AWS Agentcore compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for an\nAWS Bedrock Agentcore Runtime that spawns a Worker in the Worker\nDeployment:\n\n\x1b[1mtemporal worker deployment version compute-config aws-agentcore create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --endpoint-arn YourAgentcoreRuntimeEndpointARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\x1b[0m\n\nTo tune when Workers are started, pass any of the scaler flags (the\n--scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and\n--metrics-poll-interval-ms). Each one that is not set keeps the\nserver default:\n\n\x1b[1mtemporal worker deployment version compute-config aws-agentcore create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --endpoint-arn YourAgentcoreRuntimeEndpointARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID \\\n    --scale-up-backlog-threshold 5 \\\n    --scale-up-cooloff-ms 500 \\\n    --max-worker-lifetime-ms 300000\x1b[0m\n\nThe Worker Deployment must already exist; create it with\n\x1b[1mtemporal worker deployment create\x1b[0m.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse \x1b[1mtemporal worker deployment version compute-config aws-agentcore update\x1b[0m.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for an\nAWS Bedrock Agentcore Runtime that spawns a Worker in the Worker\nDeployment:\n\n```\ntemporal worker deployment version compute-config aws-agentcore create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --endpoint-arn YourAgentcoreRuntimeEndpointARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\n```\n\nTo tune when Workers are started, pass any of the scaler flags (the\n--scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and\n--metrics-poll-interval-ms). Each one that is not set keeps the\nserver default:\n\n```\ntemporal worker deployment version compute-config aws-agentcore create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --endpoint-arn YourAgentcoreRuntimeEndpointARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID \\\n    --scale-up-backlog-threshold 5 \\\n    --scale-up-cooloff-ms 500 \\\n    --max-worker-lifetime-ms 300000\n```\n\nThe Worker Deployment must already exist; create it with\n`temporal worker deployment create`.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse `temporal worker deployment version compute-config aws-agentcore update`.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.EndpointArn, "endpoint-arn", "", "AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment. The endpoint ARN encodes the runtime, endpoint name, and region. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "endpoint-arn")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.AwsAssumeRoleOptions.BuildFlags(s.Command.Flags())
+	s.NoSyncScalerOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreUpdateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	AwsAssumeRoleOptions
+	NoSyncScalerOptions
+	EndpointArn string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreUpdateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreCommand) *TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreUpdateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigAwsAgentcoreUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update AWS Agentcore compute configuration for a Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version, for an AWS Bedrock Agentcore Runtime that spawns a\nWorker in the Worker Deployment. Only the scaling group named by\n--scaling-group (\"default\" when unset) changes; other scaling groups\nare not affected.\n\nTo update the AWS Bedrock Agentcore Runtime endpoint associated with an\nexisting Worker Deployment Version:\n\n\x1b[1mtemporal worker deployment version compute-config aws-agentcore update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --endpoint-arn YourAgentcoreRuntimeEndpointARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\x1b[0m\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags. The scaler is replaced as a\nwhole, so scaler flags that are not passed go back to their\ndefaults:\n\n\x1b[1mtemporal worker deployment version compute-config aws-agentcore update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scale-up-backlog-threshold 5 \\\n    --max-worker-lifetime-ms 300000\x1b[0m\n\nThe provider flags are --endpoint-arn, --assume-role-arn,\n--assume-role-external-id, and --skip-role-and-external-id. The\nscaler flags are the --scale-up-* and --suppress-* flags,\n--max-worker-lifetime-ms, and --metrics-poll-interval-ms. The\nprovider flags are only needed when changing the compute provider,\nand they must be passed together: --endpoint-arn with either both\nrole flags or --skip-role-and-external-id. Changing the provider\nalso resets the scaler: scaler flags passed with it are applied, and\nthe rest, or all of them if none are passed, go back to their\ndefaults.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n\x1b[1mtemporal worker deployment version compute-config aws-agentcore create\x1b[0m.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version, for an AWS Bedrock Agentcore Runtime that spawns a\nWorker in the Worker Deployment. Only the scaling group named by\n--scaling-group (\"default\" when unset) changes; other scaling groups\nare not affected.\n\nTo update the AWS Bedrock Agentcore Runtime endpoint associated with an\nexisting Worker Deployment Version:\n\n```\ntemporal worker deployment version compute-config aws-agentcore update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --endpoint-arn YourAgentcoreRuntimeEndpointARN \\\n    --assume-role-arn YourAssumeRoleARN \\\n    --assume-role-external-id YourExternalID\n```\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags. The scaler is replaced as a\nwhole, so scaler flags that are not passed go back to their\ndefaults:\n\n```\ntemporal worker deployment version compute-config aws-agentcore update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --scale-up-backlog-threshold 5 \\\n    --max-worker-lifetime-ms 300000\n```\n\nThe provider flags are --endpoint-arn, --assume-role-arn,\n--assume-role-external-id, and --skip-role-and-external-id. The\nscaler flags are the --scale-up-* and --suppress-* flags,\n--max-worker-lifetime-ms, and --metrics-poll-interval-ms. The\nprovider flags are only needed when changing the compute provider,\nand they must be passed together: --endpoint-arn with either both\nrole flags or --skip-role-and-external-id. Changing the provider\nalso resets the scaler: scaler flags passed with it are applied, and\nthe rest, or all of them if none are passed, go back to their\ndefaults.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n`temporal worker deployment version compute-config aws-agentcore create`.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.EndpointArn, "endpoint-arn", "", "AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are no active pollers for task queue targets in the Worker Deployment. The endpoint ARN encodes the runtime, endpoint name, and region. Required when changing the compute provider.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.AwsAssumeRoleOptions.BuildFlags(s.Command.Flags())
+	s.NoSyncScalerOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
 	return &s
 }
 
