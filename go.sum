@@ -417,8 +417,8 @@ github.com/temporalio/sqlparser v0.1.0/go.mod h1:143qKdh3G45IgV9p+gbAwp3ikRDI8mx
 github.com/temporalio/tchannel-go v1.22.1-0.20220818200552-1be8d8cffa5b/go.mod h1:c+V9Z/ZgkzAdyGvHrvC5AsXgN+M9Qwey04cBdKYzV7U=
 github.com/temporalio/tchannel-go v1.22.1 h1:H1hsQvAk0ExXgzGI3Qll6M0WjAlu2ysL2FtvZ/jdkU4=
 github.com/temporalio/tchannel-go v1.22.1/go.mod h1:ezRQRwu9KQXy8Wuuv1aaFFxoCNz5CeNbVOOkh3xctbY=
-github.com/temporalio/ui-server/v2 v2.58.1 h1:v2ZM/IJa3rGRncEUslPhL6W7RcnSnK/hb+z7+cq6+OE=
-github.com/temporalio/ui-server/v2 v2.58.1/go.mod h1:oFCnjNuPldQTryDVy+lj2hNd6KmQTIYs67lJkcnj7ig=
+github.com/temporalio/ui-server/v2 v2.56.1 h1:/Xy9j8fcyutdQvGI9aqq/9m59bAYd1j3u483pYXT7ds=
+github.com/temporalio/ui-server/v2 v2.56.1/go.mod h1:Gp50F2alEzH9SuDl96DTHCgCrlIBwSw9ISQJCSYZujk=
 github.com/tidwall/btree v1.8.1 h1:27ehoXvm5AG/g+1VxLS1SD3vRhp/H7LuEfwNvddEdmA=
 github.com/tidwall/btree v1.8.1/go.mod h1:jBbTdUWhSZClZWoDg54VnvV7/54modSOzDN7VXftj1A=
 github.com/twmb/murmur3 v1.1.8 h1:8Yt9taO/WN3l08xErzjeschgZU2QSrwm1kclYq+0aRg=
@@ -481,12 +481,12 @@ go.opentelemetry.io/otel/trace v1.45.0 h1:l/mP6Uv7oNO7/TblbhpbgMidxhq1uO/rPsikOy
 go.opentelemetry.io/otel/trace v1.45.0/go.mod h1:qoJJA2xNMnxRrdISU/kLtfUH2wNeQbiv+jhs/CxI8bc=
 go.opentelemetry.io/proto/otlp v1.11.0 h1:5rrYs0Ykyj50sdU/JU0x8etU+LubXWb+gED6TbEdMIk=
 go.opentelemetry.io/proto/otlp v1.11.0/go.mod h1:SmVizdCOAm3XBtG1g1NnOdhW6jtddT72hLMhv8VwA8E=
-go.temporal.io/api v1.64.0 h1:Wu7TMdVN/4KdU+v0As6SMm86uapnM1yI7PhC5Hvhqso=
-go.temporal.io/api v1.64.0/go.mod h1:acM0I9WPuYg8W3Pd9jOZvEgi7mRUttUQ4+e7fowKVnM=
+go.temporal.io/api v1.63.5 h1:c11+kPYHkXXL3UiShPdbMD+xtvqGsbTibUA9ypmiCa4=
+go.temporal.io/api v1.63.5/go.mod h1:SrlW2JMwVlDP4nRWSNznUFqnSHd+YeMDS1BkYo63HCQ=
 go.temporal.io/auto-scaled-workers v0.2.1-1.32.0.158.0 h1:V2Gj+EWLO+rX2PbtOy4uLrJ9cUG6k+JZZU4j0xZ1PRU=
 go.temporal.io/auto-scaled-workers v0.2.1-1.32.0.158.0/go.mod h1:ZGNY7kCU0EZpXx02D81/jGXHbUcFcVIzzguJ/f8pvUQ=
-go.temporal.io/sdk v1.49.0 h1:CtGI0BUe/SCo3eoqTwuWWtXKueii9GBVus7KrKKH1Vo=
-go.temporal.io/sdk v1.49.0/go.mod h1:xP0FulN5JJSfisESUP60LlWsrKz2tLSStGjVdk8r5cc=
+go.temporal.io/sdk v1.47.0 h1:lZ39w1+uWSjHTL0F3mSc0t4XUnKX8CCcWxqSiLbaHnc=
+go.temporal.io/sdk v1.47.0/go.mod h1:ilKs0twgP4JpP8pfhIgZumnOEyBiYn6ZO/ta//NnKMU=
 go.temporal.io/sdk/contrib/envconfig v1.0.2 h1:MGHfsuPUtsf7X9M6WYn3zYJj/mWsuYHnA1uuiL0KEuE=
 go.temporal.io/sdk/contrib/envconfig v1.0.2/go.mod h1:MuMiH7hksps2uXnmKuAWaP9P6WbkSDy62kl64t1VJVg=
 go.temporal.io/server v1.32.2 h1:X2LlGNAXOrdCYSwBxO7cvZgHAN2m8frhcsNcoeezK/4=
