@@ -570,26 +570,30 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	s.ContainsOnSameLine(res.Stdout.String(), deploymentName2, version2.BuildID)
 
 	// json
-	res = s.Execute(
-		"worker", "deployment", "list",
-		"--address", s.Address(),
-		"--output", "json",
-	)
-	s.NoError(res.Err)
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+			"--output", "json",
+		)
+		assert.NoError(t, res.Err)
 
-	var jsonOut []jsonDeploymentInfoType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	jsonOut = filterByNamePrefix(jsonOut, prefix)
-	sort.Slice(jsonOut, func(i, j int) bool {
-		return jsonOut[i].Name < jsonOut[j].Name
-	})
-	s.Equal(2, len(jsonOut))
-	s.Equal(deploymentName1, jsonOut[0].Name)
-	s.Equal(version1.DeploymentName, jsonOut[0].RoutingConfig.CurrentVersionDeploymentName)
-	s.Equal(version1.BuildID, jsonOut[0].RoutingConfig.CurrentVersionBuildID)
-	s.Equal(deploymentName2, jsonOut[1].Name)
-	s.Equal(version2.DeploymentName, jsonOut[1].RoutingConfig.CurrentVersionDeploymentName)
-	s.Equal(version2.BuildID, jsonOut[1].RoutingConfig.CurrentVersionBuildID)
+		var jsonOut []jsonDeploymentInfoType
+		assert.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		jsonOut = filterByNamePrefix(jsonOut, prefix)
+		sort.Slice(jsonOut, func(i, j int) bool {
+			return jsonOut[i].Name < jsonOut[j].Name
+		})
+		if !assert.Len(t, jsonOut, 2) {
+			return
+		}
+		assert.Equal(t, deploymentName1, jsonOut[0].Name)
+		assert.Equal(t, version1.DeploymentName, jsonOut[0].RoutingConfig.CurrentVersionDeploymentName)
+		assert.Equal(t, version1.BuildID, jsonOut[0].RoutingConfig.CurrentVersionBuildID)
+		assert.Equal(t, deploymentName2, jsonOut[1].Name)
+		assert.Equal(t, version2.DeploymentName, jsonOut[1].RoutingConfig.CurrentVersionDeploymentName)
+		assert.Equal(t, version2.BuildID, jsonOut[1].RoutingConfig.CurrentVersionBuildID)
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {
