@@ -1257,11 +1257,13 @@ func computeProviderConfig(c *ComputeConfigArgs) (providerType string, detailsPa
 
 // scalerTypeByProvider maps each compute provider to the scaling algorithm
 // compatible with its launch strategy in temporal-auto-scaled-workers: aws-lambda
-// is invoke-based ("no-sync"); gcp-cloud-run is worker-set-based ("rate-based").
+// is invoke-based ("no-sync"); aws-agentcore is invoke-based and uses
+// "no-sync-session", which invokes once per no-sync task so each AgentCore
+// session gets its own worker; gcp-cloud-run is worker-set-based ("rate-based").
 // WCI rejects an incompatible pairing at CreateWorkerDeploymentVersion.
 var scalerTypeByProvider = map[string]string{
 	"aws-lambda":    "no-sync",
-	"aws-agentcore": "no-sync",
+	"aws-agentcore": "no-sync-session",
 	"gcp-cloud-run": "rate-based",
 }
 
@@ -1534,7 +1536,7 @@ func (c *TemporalWorkerDeploymentUpdateVersionComputeConfigCommand) run(cctx *Co
 			}
 			updatePaths = []string{"provider.type", "provider.details", "scaler.type"}
 			// scaler.details must stay consistent with the scaler type. A
-			// non-GCP scaler (no-sync) can't carry the rate-based details, so
+			// non-GCP scaler (no-sync, no-sync-session) can't carry the rate-based details, so
 			// clear them when switching away from GCP; for GCP, overwrite only
 			// when new settings were supplied, otherwise preserve existing ones.
 			if providerType != "gcp-cloud-run" || scalerDetails != nil {

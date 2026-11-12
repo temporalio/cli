@@ -23,7 +23,7 @@ func TestScalerTypeForProvider(t *testing.T) {
 		expectErr bool
 	}{
 		{"aws-lambda is invoke-based -> no-sync", "aws-lambda", "no-sync", false},
-		{"aws-agentcore is invoke-based -> no-sync", "aws-agentcore", "no-sync", false},
+		{"aws-agentcore is invoke-based -> no-sync-session", "aws-agentcore", "no-sync-session", false},
 		{"gcp-cloud-run is worker-set-based -> rate-based", "gcp-cloud-run", "rate-based", false},
 		{"unknown provider errors", "azure-container-apps", "", true},
 		{"empty provider errors", "", "", true},
