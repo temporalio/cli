@@ -436,6 +436,9 @@ func printActivityDescription(
 		Status                  string
 		RunState                string `cli:",cardOmitEmpty"`
 		TaskQueue               string
+		PriorityKey             int32         `cli:",cardOmitEmpty"`
+		FairnessKey             string        `cli:",cardOmitEmpty"`
+		FairnessWeight          float32       `cli:",cardOmitEmpty"`
 		ScheduleToCloseTimeout  time.Duration `cli:",cardOmitEmpty"`
 		ScheduleToStartTimeout  time.Duration `cli:",cardOmitEmpty"`
 		StartToCloseTimeout     time.Duration `cli:",cardOmitEmpty"`
@@ -460,6 +463,9 @@ func printActivityDescription(
 		Status:                  statusShorthand(info.GetStatus()),
 		RunState:                runStateShorthand(info.GetRunState()),
 		TaskQueue:               info.GetTaskQueue(),
+		PriorityKey:             info.GetPriority().GetPriorityKey(),
+		FairnessKey:             info.GetPriority().GetFairnessKey(),
+		FairnessWeight:          info.GetPriority().GetFairnessWeight(),
 		ScheduleToCloseTimeout:  info.GetScheduleToCloseTimeout().AsDuration(),
 		ScheduleToStartTimeout:  info.GetScheduleToStartTimeout().AsDuration(),
 		StartToCloseTimeout:     info.GetStartToCloseTimeout().AsDuration(),

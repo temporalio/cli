@@ -213,6 +213,134 @@ func (s *SharedServerSuite) TestDeployment_Set_Current_Version() {
 	s.ErrorContains(res.Err, "specify either --build-id or --unversioned")
 }
 
+func (s *SharedServerSuite) TestDeployment_Describe_Version_Omits_Unset_Times() {
+	deploymentName := uuid.NewString()
+	currentBuildId := uuid.NewString()
+	rampingBuildId := uuid.NewString()
+
+	res := s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	// A version that has only ever been current has no ramping since time, so
+	// it must not be rendered (previously it showed as "a long while ago").
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "current")
+	s.Contains(res.Stdout.String(), "CurrentSinceTime")
+	s.NotContains(res.Stdout.String(), "RampingSinceTime")
+	s.NotContains(res.Stdout.String(), "a long while ago")
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	var rawOut map[string]any
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("current", rawOut["status"])
+	s.NotContains(rawOut, "drainageInfo")
+	s.Contains(rawOut, "currentSinceTime")
+	s.NotContains(rawOut, "rampingSinceTime")
+
+	// The SDK metadata helper does not send an identity, so use the API
+	// request to verify when the server returns the version modifier.
+	payload, err := converter.GetDefaultDataConverter().ToPayload(1)
+	s.NoError(err)
+	_, err = s.DevServer.Client.WorkflowService().UpdateWorkerDeploymentVersionMetadata(
+		context.Background(),
+		&workflowservice.UpdateWorkerDeploymentVersionMetadataRequest{
+			Namespace:         "default",
+			DeploymentVersion: &deploymentpb.WorkerDeploymentVersion{DeploymentName: deploymentName, BuildId: currentBuildId},
+			UpsertEntries:     map[string]*common.Payload{"key": payload},
+			Identity:          "test-version-modifier",
+		},
+	)
+	s.NoError(err)
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	rawOut = nil
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("test-version-modifier", rawOut["lastModifierIdentity"])
+
+	// Once a version is ramping, its ramping since time is shown and the
+	// never-current version omits its current since time.
+	res = s.Execute(
+		"worker", "deployment", "set-ramping-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--percentage", "5",
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Status", "ramping")
+	s.Contains(res.Stdout.String(), "RampingSinceTime")
+	s.NotContains(res.Stdout.String(), "CurrentSinceTime")
+	s.NotContains(res.Stdout.String(), "a long while ago")
+
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	rawOut = nil
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Equal("ramping", rawOut["status"])
+	s.Contains(rawOut, "rampingSinceTime")
+	s.NotContains(rawOut, "currentSinceTime")
+
+	// Deactivating the old current version produces drainage info.
+	res = s.Execute(
+		"worker", "deployment", "set-current-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", rampingBuildId,
+		"--allow-no-pollers",
+		"--yes",
+	)
+	s.NoError(res.Err)
+	res = s.Execute(
+		"worker", "deployment", "describe-version",
+		"--address", s.Address(),
+		"--deployment-name", deploymentName, "--build-id", currentBuildId,
+		"--output", "json",
+	)
+	s.NoError(res.Err)
+	rawOut = nil
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &rawOut))
+	s.Contains([]any{"draining", "drained"}, rawOut["status"])
+	s.Equal("test-version-modifier", rawOut["lastModifierIdentity"])
+	drainage, ok := rawOut["drainageInfo"].(map[string]any)
+	s.True(ok)
+	s.NotEmpty(drainage["lastChangedTime"])
+	s.NotEmpty(drainage["lastCheckedTime"])
+}
+
 func (s *SharedServerSuite) TestDeployment_Set_Current_Version_AllowNoPollers() {
 	deploymentName := uuid.NewString()
 	buildId := uuid.NewString()
@@ -442,26 +570,30 @@ func (s *SharedServerSuite) TestDeployment_List() {
 	s.ContainsOnSameLine(res.Stdout.String(), deploymentName2, version2.BuildID)
 
 	// json
-	res = s.Execute(
-		"worker", "deployment", "list",
-		"--address", s.Address(),
-		"--output", "json",
-	)
-	s.NoError(res.Err)
+	s.EventuallyWithT(func(t *assert.CollectT) {
+		res := s.Execute(
+			"worker", "deployment", "list",
+			"--address", s.Address(),
+			"--output", "json",
+		)
+		assert.NoError(t, res.Err)
 
-	var jsonOut []jsonDeploymentInfoType
-	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
-	jsonOut = filterByNamePrefix(jsonOut, prefix)
-	sort.Slice(jsonOut, func(i, j int) bool {
-		return jsonOut[i].Name < jsonOut[j].Name
-	})
-	s.Equal(2, len(jsonOut))
-	s.Equal(deploymentName1, jsonOut[0].Name)
-	s.Equal(version1.DeploymentName, jsonOut[0].RoutingConfig.CurrentVersionDeploymentName)
-	s.Equal(version1.BuildID, jsonOut[0].RoutingConfig.CurrentVersionBuildID)
-	s.Equal(deploymentName2, jsonOut[1].Name)
-	s.Equal(version2.DeploymentName, jsonOut[1].RoutingConfig.CurrentVersionDeploymentName)
-	s.Equal(version2.BuildID, jsonOut[1].RoutingConfig.CurrentVersionBuildID)
+		var jsonOut []jsonDeploymentInfoType
+		assert.NoError(t, json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
+		jsonOut = filterByNamePrefix(jsonOut, prefix)
+		sort.Slice(jsonOut, func(i, j int) bool {
+			return jsonOut[i].Name < jsonOut[j].Name
+		})
+		if !assert.Len(t, jsonOut, 2) {
+			return
+		}
+		assert.Equal(t, deploymentName1, jsonOut[0].Name)
+		assert.Equal(t, version1.DeploymentName, jsonOut[0].RoutingConfig.CurrentVersionDeploymentName)
+		assert.Equal(t, version1.BuildID, jsonOut[0].RoutingConfig.CurrentVersionBuildID)
+		assert.Equal(t, deploymentName2, jsonOut[1].Name)
+		assert.Equal(t, version2.DeploymentName, jsonOut[1].RoutingConfig.CurrentVersionDeploymentName)
+		assert.Equal(t, version2.BuildID, jsonOut[1].RoutingConfig.CurrentVersionBuildID)
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func (s *SharedServerSuite) TestDeployment_Describe_Drainage() {

@@ -80,7 +80,7 @@ jobs:
           )
 
       - name: Upload junit-xml artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: junit-xml--${{github.run_id}}--${{github.run_attempt}}--${{matrix.os}}
@@ -124,8 +124,11 @@ jobs:
           printf '%s\n' "$TEMPORAL_TLS_KEY_CONTENT" >> client.key
           go run ./cmd/temporal workflow list --limit 2
 
+      # Disabled: since the cloud api key update on 2026-10-09, these steps fail
+      # against sdk-ci namespace with "Request unauthorized" error.
+      # Remove "&& false" to re-enable here and in the next.
       - name: Test cloud API key env var
-        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
+        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' && false }}
         env:
           TEMPORAL_ADDRESS: ca-central-1.aws.api.temporal.io:7233
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}
@@ -134,7 +137,7 @@ jobs:
         run: go run ./cmd/temporal workflow list --limit 2
 
       - name: Test cloud API key arg
-        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' }}
+        if: ${{ matrix.cloudTestTarget && env.HAS_SECRETS == 'true' && false }}
         env:
           TEMPORAL_ADDRESS: ca-central-1.aws.api.temporal.io:7233
           TEMPORAL_NAMESPACE: ${{ vars.TEMPORAL_CLIENT_NAMESPACE }}

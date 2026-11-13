@@ -104,7 +104,7 @@ func (w *docWriter) writeCommand(c *Command) {
 	w.fileMap[fileName].WriteString("title: Temporal CLI " + fileName + " command reference\n")
 	w.fileMap[fileName].WriteString("sidebar_label: " + fileName + "\n")
 	w.fileMap[fileName].WriteString("description: " + c.Docs.DescriptionHeader + "\n")
-	w.fileMap[fileName].WriteString("toc_max_heading_level: 4\n")
+	w.fileMap[fileName].WriteString("toc_max_heading_level: 6\n")
 
 	w.fileMap[fileName].WriteString("keywords:\n")
 	for _, keyword := range c.Docs.Keywords {
@@ -129,29 +129,50 @@ func (w *docWriter) writeSubcommand(c *Command) {
 	w.fileMap[fileName].WriteString(prefix + " " + c.leafName() + "\n\n")
 	w.fileMap[fileName].WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
-	if w.isLeafCommand(c) {
-		w.writeLeafOptions(fileName)
+	if w.hasOptionsSection(c) {
+		w.writeOptionsSection(c, fileName, 1)
 	}
 }
 
-// writeLeafOptions writes the option table (or the global-flags fallback message)
-// for a leaf command, and records its inherited options for the file's Global
-// Flags section. The command's own options are the top frame of the options
-// stack; everything below it is inherited from parent commands.
+// hasOptionsSection reports whether a command gets an option table. Leaf
+// commands always do. A command with subcommands does only when it declares
+// options of its own (e.g. "workflow reset" or "task-queue versioning"). Those
+// options are generated as persistent flags, so they apply to the command and
+// to every subcommand under it, and are documented nowhere else. Parents that
+// only group subcommands, or only pull in option sets, get no table.
+func (w *docWriter) hasOptionsSection(c *Command) bool {
+	return w.isLeafCommand(c) || len(c.Options) > 0
+}
+
+// writeOptionsSection writes the option table (or the global-flags fallback
+// message) for a command that has an options section (see hasOptionsSection),
+// and records its inherited options for the file's Global Flags section. The
+// command's own options are the top frame of the options stack; everything
+// below it is inherited from parent commands.
+//
+// Only the options of the file's top-level command (at fileDepth) and its
+// ancestors go into the Global Flags section, since those apply to every
+// command in the file. Options of a parent between that command and this one
+// (e.g. "workflow reset" for "workflow reset with-workflow-update-options")
+// apply only to that parent's subtree, and are already documented in the
+// parent's own options section.
 //
 // The reference to the "#global-flags" anchor is only emitted when there are
 // inherited options, since that is what causes a Global Flags section (and thus
 // the anchor) to be generated for the file. A command with no inherited options
 // (e.g. a top-level command in a split subdirectory) would otherwise link to an
 // anchor that never exists.
-func (w *docWriter) writeLeafOptions(fileName string) {
-	var options, globalOptions []Option
-	for i, o := range w.optionsStack {
-		if i == len(w.optionsStack)-1 {
-			options = append(options, o...)
-		} else {
-			globalOptions = append(globalOptions, o...)
-		}
+func (w *docWriter) writeOptionsSection(c *Command, fileName string, fileDepth int) {
+	scope := "this command"
+	if !w.isLeafCommand(c) {
+		scope = "this command and all of its subcommands"
+	}
+
+	top := len(w.optionsStack) - 1
+	options := append([]Option(nil), w.optionsStack[top]...)
+	var globalOptions []Option
+	for _, o := range w.optionsStack[:min(fileDepth+1, top)] {
+		globalOptions = append(globalOptions, o...)
 	}
 
 	sort.Slice(options, func(i, j int) bool {
@@ -162,14 +183,14 @@ func (w *docWriter) writeLeafOptions(fileName string) {
 	hasGlobal := len(globalOptions) > 0
 	switch {
 	case len(options) > 0 && hasGlobal:
-		buf.WriteString("Use the following options to change the behavior of this command. ")
+		buf.WriteString("Use the following options to change the behavior of " + scope + ". ")
 		buf.WriteString("You can also use any of the [global flags](#global-flags) that apply to all subcommands.\n\n")
 		w.writeOptionsTable(options, fileName)
 	case len(options) > 0:
-		buf.WriteString("Use the following options to change the behavior of this command.\n\n")
+		buf.WriteString("Use the following options to change the behavior of " + scope + ".\n\n")
 		w.writeOptionsTable(options, fileName)
 	case hasGlobal:
-		buf.WriteString("Use [global flags](#global-flags) to customize the connection to the Temporal Service for this command.\n\n")
+		buf.WriteString("Use [global flags](#global-flags) to customize the connection to the Temporal Service for " + scope + ".\n\n")
 	}
 
 	w.collectGlobalFlags(fileName, globalOptions)
@@ -217,7 +238,7 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 	buf.WriteString("title: Temporal CLI " + c.FullName + " command reference\n")
 	buf.WriteString("sidebar_label: " + leafName + "\n")
 	buf.WriteString("description: " + c.Docs.DescriptionHeader + "\n")
-	buf.WriteString("toc_max_heading_level: 4\n")
+	buf.WriteString("toc_max_heading_level: 6\n")
 	buf.WriteString("keywords:\n")
 	for _, keyword := range c.Docs.Keywords {
 		buf.WriteString("  - " + keyword + "\n")
@@ -232,12 +253,13 @@ func (w *docWriter) writeSplitCommand(c *Command, splitRoot string) {
 
 	buf.WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
-	if w.isLeafCommand(c) {
-		w.writeLeafOptions(fileName)
-	} else {
+	if !w.isLeafCommand(c) {
 		buf.WriteString(fmt.Sprintf("This page provides a reference for the `temporal %s` commands. ", c.FullName))
 		buf.WriteString("The flags applicable to each subcommand are presented in a table within the heading for the subcommand. ")
 		buf.WriteString("Refer to [Global Flags](#global-flags) for flags that you can use with every subcommand.\n\n")
+	}
+	if w.hasOptionsSection(c) {
+		w.writeOptionsSection(c, fileName, len(splitParts))
 	}
 }
 
@@ -257,8 +279,8 @@ func (w *docWriter) writeSplitSubcommand(c *Command, splitRoot string) {
 	buf.WriteString(prefix + " " + leafName + "\n\n")
 	buf.WriteString(escapeMDXDescription(c.Description) + "\n\n")
 
-	if w.isLeafCommand(c) {
-		w.writeLeafOptions(fileName)
+	if w.hasOptionsSection(c) {
+		w.writeOptionsSection(c, fileName, len(splitParts))
 	}
 }
 
@@ -361,9 +383,11 @@ func (w *docWriter) writeGlobalFlagsSections() {
 }
 
 func (w *docWriter) processOptions(c *Command) {
-	// Pop options from stack if we are moving up a level
-	if len(w.optionsStack) >= len(strings.Split(c.FullName, " ")) {
-		w.optionsStack = w.optionsStack[:len(w.optionsStack)-1]
+	// Keep only the frames of this command's ancestors. Commands are sorted by
+	// full name, so every ancestor has been processed before this command, and
+	// the frame at index i belongs to its ancestor at depth i.
+	if d := c.depth(); len(w.optionsStack) > d {
+		w.optionsStack = w.optionsStack[:d]
 	}
 	var options []Option
 	options = append(options, c.Options...)

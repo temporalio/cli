@@ -142,6 +142,23 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		RootRunId:            info.GetRootExecution().GetRunId(),
 	}, printer.StructuredOptions{})
 
+	if priority := info.GetPriority(); priority != nil &&
+		(priority.GetPriorityKey() != 0 || priority.GetFairnessKey() != "" || priority.GetFairnessWeight() != 0) {
+		cctx.Printer.Println()
+		cctx.Printer.Println(color.MagentaString("Priority:"))
+		if err := cctx.Printer.PrintStructured(struct {
+			PriorityKey    int32   `cli:",cardOmitEmpty"`
+			FairnessKey    string  `cli:",cardOmitEmpty"`
+			FairnessWeight float32 `cli:",cardOmitEmpty"`
+		}{
+			PriorityKey:    priority.GetPriorityKey(),
+			FairnessKey:    priority.GetFairnessKey(),
+			FairnessWeight: priority.GetFairnessWeight(),
+		}, printer.StructuredOptions{}); err != nil {
+			return fmt.Errorf("displaying workflow priority failed: %w", err)
+		}
+	}
+
 	extendedInfo := resp.WorkflowExtendedInfo
 	if extendedInfo != nil {
 		cctx.Printer.Println(color.MagentaString("Extended Execution Info:"))
@@ -262,6 +279,9 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				ActivityId           string
 				Type                 string
 				State                enums.PendingActivityState
+				PriorityKey          int32   `cli:",cardOmitEmpty"`
+				FairnessKey          string  `cli:",cardOmitEmpty"`
+				FairnessWeight       float32 `cli:",cardOmitEmpty"`
 				Attempt              int32
 				MaximumAttempts      int32
 				ScheduledTime        time.Time
@@ -276,6 +296,9 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 				acts[i].ActivityId = a.ActivityId
 				acts[i].Type = a.ActivityType.GetName()
 				acts[i].State = a.State
+				acts[i].PriorityKey = a.GetPriority().GetPriorityKey()
+				acts[i].FairnessKey = a.GetPriority().GetFairnessKey()
+				acts[i].FairnessWeight = a.GetPriority().GetFairnessWeight()
 				acts[i].Attempt = a.Attempt
 				acts[i].MaximumAttempts = a.MaximumAttempts
 				acts[i].ScheduledTime = timestampToTime(a.ScheduledTime)

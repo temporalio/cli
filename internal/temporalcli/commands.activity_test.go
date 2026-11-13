@@ -1440,6 +1440,9 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 		"--retry-backoff-coefficient", "3",
 		"--retry-maximum-interval", "120s",
 		"--search-attribute", `CustomKeywordField="describe"`,
+		"--priority-key", "2",
+		"--fairness-key", "tenant-a",
+		"--fairness-weight", "4.5",
 	)
 	runID := started["runId"].(string)
 	<-activityStarted
@@ -1487,6 +1490,9 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 		require.NoError(t, AssertContainsOnSameLine(out, "Status", "Running"))
 		require.NoError(t, AssertContainsOnSameLine(out, "Namespace", "default"))
 		require.NoError(t, AssertContainsOnSameLine(out, "TaskQueue", s.Worker().Options.TaskQueue))
+		require.NoError(t, AssertContainsOnSameLine(out, "PriorityKey", "2"))
+		require.NoError(t, AssertContainsOnSameLine(out, "FairnessKey", "tenant-a"))
+		require.NoError(t, AssertContainsOnSameLine(out, "FairnessWeight", "4.5"))
 		require.NoError(t, AssertContainsOnSameLine(out, "StartToCloseTimeout", "30s"))
 		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToCloseTimeout", "5m0s"))
 		require.NoError(t, AssertContainsOnSameLine(out, "ScheduleToStartTimeout", "1m0s"))
@@ -1517,6 +1523,11 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 		require.Equal(t, "describe-test", info["activityId"])
 		require.NotNil(t, info["activityType"])
 		require.NotNil(t, info["taskQueue"])
+		priority, ok := info["priority"].(map[string]any)
+		require.True(t, ok, "priority should be present in JSON describe")
+		require.Equal(t, float64(2), priority["priorityKey"])
+		require.Equal(t, "tenant-a", priority["fairnessKey"])
+		require.Equal(t, float64(4.5), priority["fairnessWeight"])
 		require.Equal(t, "300s", info["scheduleToCloseTimeout"])
 		require.Equal(t, "60s", info["scheduleToStartTimeout"])
 		require.Equal(t, "30s", info["startToCloseTimeout"])
