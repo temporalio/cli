@@ -148,6 +148,16 @@ func (s *SharedServerSuite) TestOperator_NamespaceCreateListAndDescribe() {
 	s.Equal(describeResp.Config.WorkflowExecutionRetentionTtl.AsDuration(), 72*time.Hour)
 	s.Equal(enums.ARCHIVAL_STATE_DISABLED, describeResp.Config.VisibilityArchivalState)
 	s.Len(describeResp.Config.VisibilityArchivalUri, 0)
+
+	// Text output should include namespace capabilities
+	s.NotNil(describeResp.NamespaceInfo.Capabilities)
+	res = s.Execute(
+		"operator", "namespace", "describe",
+		"--address", s.Address(),
+		"-n", nsName,
+	)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "NamespaceInfo.Capabilities", "syncUpdate", "true")
 }
 
 func (s *SharedServerSuite) TestNamespaceUpdate() {
