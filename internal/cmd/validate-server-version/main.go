@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
+	"sort"
+	"strings"
 
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/module"
@@ -13,6 +16,8 @@ import (
 
 const (
 	serverModule = "go.temporal.io/server"
+	apiModule    = "go.temporal.io/api"
+	sdkModule    = "go.temporal.io/sdk"
 	releaseURL   = "https://api.github.com/repos/temporalio/temporal/releases/latest"
 )
 
@@ -24,9 +29,14 @@ func main() {
 }
 
 func run() error {
-	serverVersion, err := getServerVersion()
+	requires, err := readRequires("go.mod")
 	if err != nil {
 		return err
+	}
+
+	serverVersion, ok := requires[serverModule]
+	if !ok {
+		return fmt.Errorf("server dependency %s not found in go.mod", serverModule)
 	}
 	fmt.Printf("Found server dependency: %s@%s\n", serverModule, serverVersion)
 
@@ -45,28 +55,109 @@ func run() error {
 		return err
 	}
 
+	if err := validateSDKVersions(requires); err != nil {
+		return err
+	}
+	fmt.Println("✓ SDK dependencies are tagged versions")
+
+	serverAPIVersion, err := getServerAPIVersion(serverVersion)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("API version required by %s@%s: %s\n", serverModule, serverVersion, serverAPIVersion)
+
+	if err := validateAPIVersion(requires[apiModule], serverAPIVersion); err != nil {
+		return err
+	}
+	fmt.Println("✓ API dependency matches server")
+
 	fmt.Println("✓ Server dependency version validation passed!")
 	return nil
 }
 
-func getServerVersion() (string, error) {
-	data, err := os.ReadFile("go.mod")
+// readRequires returns the module path to version mapping of all requirements in a go.mod file.
+func readRequires(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to read go.mod: %w", err)
+		return nil, fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	f, err := modfile.Parse("go.mod", data, nil)
+	f, err := modfile.Parse(path, data, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse go.mod: %w", err)
+		return nil, fmt.Errorf("failed to parse %s: %w", path, err)
 	}
 
+	requires := make(map[string]string, len(f.Require))
 	for _, req := range f.Require {
-		if req.Mod.Path == serverModule {
-			return req.Mod.Version, nil
+		requires[req.Mod.Path] = req.Mod.Version
+	}
+	return requires, nil
+}
+
+// validateSDKVersions ensures the SDK and its contrib modules are pinned to tagged versions.
+func validateSDKVersions(requires map[string]string) error {
+	var paths []string
+	for path := range requires {
+		if path == sdkModule || strings.HasPrefix(path, sdkModule+"/") {
+			paths = append(paths, path)
 		}
 	}
+	sort.Strings(paths)
 
-	return "", fmt.Errorf("server dependency %s not found in go.mod", serverModule)
+	for _, path := range paths {
+		version := requires[path]
+		if module.IsPseudoVersion(version) {
+			return fmt.Errorf("SDK dependency must be a tagged version, not a pseudo-version: %s@%s", path, version)
+		}
+		fmt.Printf("  %s@%s\n", path, version)
+	}
+	return nil
+}
+
+// getServerAPIVersion returns the API version required by the given server version's go.mod.
+func getServerAPIVersion(serverVersion string) (string, error) {
+	out, err := exec.Command("go", "mod", "download", "-json", serverModule+"@"+serverVersion).Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to download %s@%s: %w", serverModule, serverVersion, err)
+	}
+
+	var info struct {
+		GoMod string
+		Error string
+	}
+	if err := json.Unmarshal(out, &info); err != nil {
+		return "", fmt.Errorf("failed to parse go mod download output: %w", err)
+	}
+	if info.Error != "" {
+		return "", fmt.Errorf("failed to download %s@%s: %s", serverModule, serverVersion, info.Error)
+	}
+
+	requires, err := readRequires(info.GoMod)
+	if err != nil {
+		return "", err
+	}
+	version, ok := requires[apiModule]
+	if !ok {
+		return "", fmt.Errorf("%s not found in %s@%s go.mod", apiModule, serverModule, serverVersion)
+	}
+	return version, nil
+}
+
+// validateAPIVersion ensures the CLI uses exactly the API version the server was released with.
+func validateAPIVersion(cliAPIVersion, serverAPIVersion string) error {
+	if cliAPIVersion == "" {
+		return fmt.Errorf("API dependency %s not found in go.mod", apiModule)
+	}
+	if cliAPIVersion != serverAPIVersion {
+		return fmt.Errorf(
+			"API dependency version %s does not match server\n"+
+				"  %s: %s\n"+
+				"  Required by %s: %s\n"+
+				"  An SDK or other dependency bump may have raised the API version",
+			cliAPIVersion, apiModule, cliAPIVersion, serverModule, serverAPIVersion,
+		)
+	}
+	return nil
 }
 
 func fetchLatestRelease() (string, error) {
