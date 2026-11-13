@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -116,20 +117,28 @@ func validateSDKVersions(requires map[string]string) error {
 
 // getServerAPIVersion returns the API version required by the given server version's go.mod.
 func getServerAPIVersion(serverVersion string) (string, error) {
-	out, err := exec.Command("go", "mod", "download", "-json", serverModule+"@"+serverVersion).Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to download %s@%s: %w", serverModule, serverVersion, err)
-	}
+	// go mod download exits nonzero on failure but reports the cause in the JSON Error field,
+	// so parse the output before checking the exit error.
+	out, runErr := exec.Command("go", "mod", "download", "-json", serverModule+"@"+serverVersion).Output()
 
 	var info struct {
 		GoMod string
 		Error string
 	}
-	if err := json.Unmarshal(out, &info); err != nil {
-		return "", fmt.Errorf("failed to parse go mod download output: %w", err)
-	}
-	if info.Error != "" {
+	parseErr := json.Unmarshal(out, &info)
+	if parseErr == nil && info.Error != "" {
 		return "", fmt.Errorf("failed to download %s@%s: %s", serverModule, serverVersion, info.Error)
+	}
+	if runErr != nil {
+		var exitErr *exec.ExitError
+		if errors.As(runErr, &exitErr) && len(exitErr.Stderr) > 0 {
+			return "", fmt.Errorf("failed to download %s@%s: %w: %s",
+				serverModule, serverVersion, runErr, strings.TrimSpace(string(exitErr.Stderr)))
+		}
+		return "", fmt.Errorf("failed to download %s@%s: %w", serverModule, serverVersion, runErr)
+	}
+	if parseErr != nil {
+		return "", fmt.Errorf("failed to parse go mod download output: %w", parseErr)
 	}
 
 	requires, err := readRequires(info.GoMod)
