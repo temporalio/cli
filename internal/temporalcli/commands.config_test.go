@@ -243,8 +243,14 @@ func TestConfig_Delete(t *testing.T) {
 [profile.foo]
 address = "my-address"
 namespace = "my-namespace"
+some_future_key = "some future value not handled"
+ 
+[profile.foo.tls]
 
-[profile.foo.tls]`))
+[profile.foo.oauth]
+
+[profile.bar]
+`))
 	f.Close()
 	h.NoError(err)
 	h.Options.EnvLookup = EnvLookupMap{"TEMPORAL_CONFIG_FILE": f.Name(), "TEMPORAL_PROFILE": "foo"}
@@ -263,11 +269,41 @@ namespace = "my-namespace"
 	h.Contains(res.Stdout.String(), "my-address")
 	h.NotContains(res.Stdout.String(), "my-namespace")
 
+	// Check the raw TOML for fields we don't recognize but should preserve
+	raw := readRawTOML(f.Name(), h)
+	h.Equal(map[string]any{
+		"profile": map[string]any{
+			"foo": map[string]any{
+				"address":         "my-address",
+				"some_future_key": "some future value not handled",
+				"tls":             map[string]any{},
+				"oauth":           map[string]any{},
+			},
+			"bar": map[string]any{},
+		},
+	}, raw)
+
 	// Delete entire profile
 	res = h.Execute("config", "delete-profile", "--profile", "foo")
 	h.NoError(res.Err)
 	res = h.Execute("config", "get")
 	h.ErrorContains(res.Err, `profile "foo" not found`)
+
+	// Unrecognized fields within the deleted profile should be gone too
+	raw = readRawTOML(f.Name(), h)
+	h.Equal(map[string]any{
+		"profile": map[string]any{
+			"bar": map[string]any{},
+		},
+	}, raw)
+}
+
+func readRawTOML(path string, h *CommandHarness) any {
+	b, err := os.ReadFile(path)
+	h.NoError(err)
+	var all any
+	h.NoError(toml.Unmarshal(b, &all))
+	return all
 }
 
 func TestConfig_List(t *testing.T) {
@@ -399,7 +435,93 @@ func TestConfig_Set(t *testing.T) {
 				},
 			},
 		},
-		all)
+		all,
+	)
+}
+
+func TestConfig_SetPreservesUnknownFields(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+	env := EnvLookupMap{}
+	h.Options.EnvLookup = env
+
+	// Put some data in temp file
+	f, err := os.CreateTemp("", "")
+	h.NoError(err)
+	defer os.Remove(f.Name())
+	_, err = f.Write([]byte(`
+[profile.foo]
+address = "my-address"
+namespace = "my-namespace"
+api_key = "my-api-key"
+authority = "my-authority"
+codec = { endpoint = "my-endpoint", auth = "my-auth" }
+grpc_meta = { some-header1 = "some-value1", some-header2 = "some-value2", some-header3 = "some-value3" }
+some_future_key = "some future value not handled"
+
+[profile.foo.tls]
+disabled = true
+client_cert_path = "my-client-cert-path"
+client_cert_data = "my-client-cert-data"
+client_key_path = "my-client-key-path"
+client_key_data = "my-client-key-data"
+server_ca_cert_path = "my-server-ca-cert-path"
+server_ca_cert_data = "my-server-ca-cert-data"
+# Intentionally absent
+# server_name = "my-server-name"
+disable_host_verification = true
+some_future_key = "this is opaque"
+
+[profile.foo.oauth]
+access_token = "my token"`))
+	f.Close()
+	h.NoError(err)
+	env["TEMPORAL_CONFIG_FILE"] = f.Name()
+	env["TEMPORAL_PROFILE"] = "foo"
+
+	res := h.Execute("config", "set", "--prop", "address", "--value", "a-new-address")
+	h.NoError(res.Err)
+
+	// TOML parse that whole thing and confirm equals
+	all := readRawTOML(f.Name(), h)
+	h.Equal(
+		map[string]any{
+			"profile": map[string]any{
+				"foo": map[string]any{
+					"address":         "a-new-address",
+					"namespace":       "my-namespace",
+					"api_key":         "my-api-key",
+					"authority":       "my-authority",
+					"some_future_key": "some future value not handled",
+					"tls": map[string]any{
+						"disabled":                  true,
+						"client_cert_path":          "my-client-cert-path",
+						"client_cert_data":          "my-client-cert-data",
+						"client_key_path":           "my-client-key-path",
+						"client_key_data":           "my-client-key-data",
+						"server_ca_cert_path":       "my-server-ca-cert-path",
+						"server_ca_cert_data":       "my-server-ca-cert-data",
+						"disable_host_verification": true,
+						// TODO: envconfig v1.1.0 or greater, uncomment the line below
+						//"some_future_key":           "this is opaque",
+					},
+					"codec": map[string]any{
+						"endpoint": "my-endpoint",
+						"auth":     "my-auth",
+					},
+					"grpc_meta": map[string]any{
+						"some-header1": "some-value1",
+						"some-header2": "some-value2",
+						"some-header3": "some-value3",
+					},
+					"oauth": map[string]any{
+						"access_token": "my token",
+					},
+				},
+			},
+		},
+		all,
+	)
 }
 
 func (s *SharedServerSuite) TestAPIKey_DefaultsTLS() {

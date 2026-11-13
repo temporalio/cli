@@ -16,7 +16,7 @@ import (
 func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config
 	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
+	conf, confProfile, additionalProfileFields, err := loadEnvConfigProfile(cctx, profileName, true)
 	if err != nil {
 		return err
 	}
@@ -35,13 +35,13 @@ func (c *TemporalConfigDeleteCommand) run(cctx *CommandContext, _ []string) erro
 	}
 
 	// Save
-	return writeEnvConfigFile(cctx, conf)
+	return writeEnvConfigFile(cctx, conf, additionalProfileFields)
 }
 
 func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config
 	profileName := envConfigProfileName(cctx)
-	conf, _, err := loadEnvConfigProfile(cctx, profileName, true)
+	conf, _, additionalProfileFields, err := loadEnvConfigProfile(cctx, profileName, true)
 	if err != nil {
 		return err
 	}
@@ -52,15 +52,16 @@ func (c *TemporalConfigDeleteProfileCommand) run(cctx *CommandContext, _ []strin
 		return fmt.Errorf("to delete an entire profile, --profile must be provided explicitly")
 	}
 	delete(conf.Profiles, profileName)
+	delete(additionalProfileFields, profileName)
 
 	// Save
-	return writeEnvConfigFile(cctx, conf)
+	return writeEnvConfigFile(cctx, conf, additionalProfileFields)
 }
 
 func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config profile
 	profileName := envConfigProfileName(cctx)
-	conf, confProfile, err := loadEnvConfigProfile(cctx, profileName, true)
+	conf, confProfile, _, err := loadEnvConfigProfile(cctx, profileName, true)
 	if err != nil {
 		return err
 	}
@@ -147,10 +148,7 @@ func (c *TemporalConfigGetCommand) run(cctx *CommandContext, _ []string) error {
 }
 
 func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error {
-	clientConfig, err := envconfig.LoadClientConfig(envconfig.LoadClientConfigOptions{
-		ConfigFilePath: cctx.RootCommand.ConfigFile,
-		EnvLookup:      cctx.Options.EnvLookup,
-	})
+	clientConfig, _, err := loadEnvConfig(cctx)
 	if err != nil {
 		return err
 	}
@@ -167,7 +165,7 @@ func (c *TemporalConfigListCommand) run(cctx *CommandContext, _ []string) error 
 
 func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 	// Load config
-	conf, confProfile, err := loadEnvConfigProfile(cctx, envConfigProfileName(cctx), false)
+	conf, confProfile, additionalProfileFields, err := loadEnvConfigProfile(cctx, envConfigProfileName(cctx), false)
 	if err != nil {
 		return err
 	}
@@ -218,7 +216,7 @@ func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 	}
 
 	// Save
-	return writeEnvConfigFile(cctx, conf)
+	return writeEnvConfigFile(cctx, conf, additionalProfileFields)
 }
 
 func envConfigProfileName(cctx *CommandContext) string {
@@ -230,29 +228,61 @@ func envConfigProfileName(cctx *CommandContext) string {
 	return envconfig.DefaultConfigFileProfile
 }
 
+func loadEnvConfig(cctx *CommandContext) (*envconfig.ClientConfig, map[string]map[string]any, error) {
+	var clientConfig envconfig.ClientConfig
+	var rawTOML []byte
+
+	configFile := configFilePath(cctx)
+
+	// A missing config file is functionally identical to an empty one
+	if b, err := os.ReadFile(configFile); err == nil {
+		rawTOML = b
+	} else if !os.IsNotExist(err) {
+		return nil, nil, fmt.Errorf("failed reading file at %v: %w", configFile, err)
+	}
+
+	additionalProfileFields := make(map[string]map[string]any)
+
+	err := clientConfig.FromTOML(rawTOML, envconfig.ClientConfigFromTOMLOptions{AdditionalProfileFields: additionalProfileFields})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed parsing config: %w", err)
+	}
+
+	// TODO: envconfig v1.0.2 and below will reject extra fields in modeled subsections, but updating that is tied to new
+	// API and server versions. Until it's time for the next server release, we can preserve the old behavior while still allowing
+	// for extra sections like oauth. This can be safely deleted once updated to envconfig v1.1.0 or later
+	for profileName, profile := range additionalProfileFields {
+		// tls and codec are the only two sections modeled in the current envconfig
+		delete(profile, "tls")
+		delete(profile, "codec")
+		if len(profile) == 0 {
+			delete(additionalProfileFields, profileName)
+		}
+	}
+
+	return &clientConfig, additionalProfileFields, nil
+}
+
 func loadEnvConfigProfile(
 	cctx *CommandContext,
 	profile string,
 	failIfNotFound bool,
-) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, error) {
-	clientConfig, err := envconfig.LoadClientConfig(envconfig.LoadClientConfigOptions{
-		ConfigFilePath: cctx.RootCommand.ConfigFile,
-		EnvLookup:      cctx.Options.EnvLookup,
-	})
+) (*envconfig.ClientConfig, *envconfig.ClientConfigProfile, map[string]map[string]any, error) {
+	clientConfig, additionalProfileFields, err := loadEnvConfig(cctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Load profile
 	clientProfile := clientConfig.Profiles[profile]
 	if clientProfile == nil {
 		if failIfNotFound {
-			return nil, nil, fmt.Errorf("profile %q not found", profile)
+			return nil, nil, nil, fmt.Errorf("profile %q not found", profile)
 		}
 		clientProfile = &envconfig.ClientConfigProfile{}
 		clientConfig.Profiles[profile] = clientProfile
 	}
-	return &clientConfig, clientProfile, nil
+	return clientConfig, clientProfile, additionalProfileFields, nil
 }
 
 var envConfigPropsToFieldNames = map[string]string{
@@ -312,27 +342,32 @@ func reflectEnvConfigProp(
 	return parentVal.FieldByName(field), nil
 }
 
-func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig) error {
-	// Get file
+func configFilePath(cctx *CommandContext) string {
 	configFile := cctx.RootCommand.ConfigFile
 	if configFile == "" {
 		configFile, _ = cctx.Options.EnvLookup.LookupEnv("TEMPORAL_CONFIG_FILE")
 		if configFile == "" {
 			configFile = envconfig.DefaultConfigFilePath()
-
 		}
 	}
 
+	return configFile
+}
+
+func writeEnvConfigFile(cctx *CommandContext, conf *envconfig.ClientConfig, additionalProfileFields map[string]map[string]any) error {
+	// Get file
+	configFile := configFilePath(cctx)
+
 	// Convert to TOML
-	b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{})
+	b, err := conf.ToTOML(envconfig.ClientConfigToTOMLOptions{AdditionalProfileFields: additionalProfileFields})
 	if err != nil {
 		return fmt.Errorf("failed building TOML: %w", err)
 	}
 
 	// Write to file, making dirs as needed
-	if err := os.MkdirAll(filepath.Dir(configFile), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(configFile), 0o700); err != nil {
 		return fmt.Errorf("failed making config file parent dirs: %w", err)
-	} else if err := os.WriteFile(configFile, b, 0600); err != nil {
+	} else if err := os.WriteFile(configFile, b, 0o600); err != nil {
 		return fmt.Errorf("failed writing config file: %w", err)
 	}
 	return nil
