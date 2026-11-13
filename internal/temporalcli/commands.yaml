@@ -3634,6 +3634,7 @@ commands:
       - schedule-configuration
       - schedule-create-only
       - schedule-id
+      - schedule-search-attributes
       - overlap-policy
       - shared-workflow-start
       - payload-input
@@ -3760,12 +3761,36 @@ commands:
       change. To view the current configuration of a Schedule, use
       `temporal schedule describe` before updating.
 
-      Schedule memo and search attributes cannot be updated with this
-      command. They are set only during Schedule creation and are not affected
-      by updates.
+      To replace the Schedule's Search Attributes, supply
+      "--schedule-search-attribute" for every attribute you want to keep:
+
+      ```
+      temporal schedule update \
+          --schedule-id YourScheduleId \
+          --workflow-id YourBaseWorkflowIdName \
+          --task-queue YourTaskQueue \
+          --type YourWorkflowType \
+          --interval 1h \
+          --schedule-search-attribute 'YourAttribute="YourValue"'
+      ```
+
+      Attributes omitted from the replacement or set to null are removed.
+      Use "--remove-schedule-search-attributes" to remove all Search Attributes.
+      These two flags cannot be combined. If neither is supplied, existing
+      Schedule Search Attributes are preserved. These attributes are separate
+      from the Workflow Search Attributes set with "--search-attribute".
+
+      Schedule memo is set only during creation and is not affected by updates.
+    options:
+      - name: remove-schedule-search-attributes
+        type: bool
+        description: |
+          Remove all Search Attributes from the Schedule.
+          Can't be combined with "--schedule-search-attribute".
     option-sets:
       - schedule-configuration
       - schedule-id
+      - schedule-search-attributes
       - overlap-policy
       - shared-workflow-start
       - payload-input
@@ -5871,19 +5896,22 @@ option-sets:
 
   - name: schedule-create-only
     options:
-      - name: schedule-search-attribute
-        type: string[]
-        description: |
-          Set schedule Search Attributes using `KEY="VALUE` pairs.
-          Keys must be identifiers, and values must be JSON values.
-          For example: 'YourKey={"your": "value"}'.
-          Can be passed multiple times.
       - name: schedule-memo
         type: string[]
         description: |
           Set schedule memo using `KEY="VALUE` pairs.
           Keys must be identifiers, and values must be JSON values.
           For example: 'YourKey={"your": "value"}'.
+          Can be passed multiple times.
+
+  - name: schedule-search-attributes
+    options:
+      - name: schedule-search-attribute
+        type: string[]
+        description: |
+          Set Schedule Search Attributes using `KEY=VALUE` pairs.
+          Keys must be identifiers, and values must be JSON values.
+          For example: 'YourAttribute="YourValue"'.
           Can be passed multiple times.
 
   - name: workflow-reference
