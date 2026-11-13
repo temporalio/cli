@@ -63,11 +63,23 @@ jobs:
         # prerelease: false would still sort above the real v2.0.0 under
         # sort -V (confirmed: v2.0.0-serverless > v2.0.0), silently skipping
         # the real GA release's docs update on every future comparison.
+        #
+        # The job-level gate's !contains(tag_name, '-') is only an
+        # approximation of "stable vX.Y.Z" — GitHub Actions expressions have
+        # no regex, so a non-hyphen malformed tag (v2.0.0+serverless,
+        # v2.0.0.serverless) would pass it. Re-validate the exact shape here,
+        # where real regex is available, before this tag can win the sort -V
+        # comparison below (confirmed: both examples sort above v2.0.0).
         if: github.event_name != 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::notice::${RELEASE_TAG} is not a stable vX.Y.Z tag; skipping."
+            echo "IS_LATEST=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
           highest="$(gh api "repos/${{ github.repository }}/releases" --paginate \
             --jq '.[] | select(.draft == false and .prerelease == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | .tag_name' \
             | sort -V | tail -n1)"
