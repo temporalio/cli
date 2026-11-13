@@ -2117,6 +2117,140 @@ commands:
           queue targets in the Worker Deployment. Required when changing the
           compute provider.
 
+  - name: temporal worker deployment version compute-config aws-agentcore
+    summary: Create or update AWS Agentcore compute configuration (Experimental)
+    description: |
+      AWS Agentcore commands set the compute configuration of a Worker
+      Deployment Version for an AWS Bedrock Agentcore Runtime that spawns a
+      Worker in the Worker Deployment:
+
+      ```
+      temporal worker deployment version compute-config aws-agentcore [command] [options]
+      ```
+
+      Note: This is an experimental feature and may change in the future.
+
+  - name: temporal worker deployment version compute-config aws-agentcore create
+    summary: Create a Version with AWS Agentcore compute configuration (Experimental)
+    description: |
+      Create a new Worker Deployment Version with compute configuration for an
+      AWS Bedrock Agentcore Runtime that spawns a Worker in the Worker
+      Deployment:
+
+      ```
+      temporal worker deployment version compute-config aws-agentcore create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --endpoint-arn YourAgentcoreRuntimeEndpointARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID
+      ```
+
+      To tune when Workers are started, pass any of the scaler flags (the
+      --scale-up-* and --suppress-* flags, --max-worker-lifetime-ms, and
+      --metrics-poll-interval-ms). Each one that is not set keeps the
+      server default:
+
+      ```
+      temporal worker deployment version compute-config aws-agentcore create \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --endpoint-arn YourAgentcoreRuntimeEndpointARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID \
+          --scale-up-backlog-threshold 5 \
+          --scale-up-cooloff-ms 500 \
+          --max-worker-lifetime-ms 300000
+      ```
+
+      The Worker Deployment must already exist; create it with
+      `temporal worker deployment create`.
+
+      If a Worker Deployment Version with the supplied BuildID already exists,
+      this command will return an error. To update its compute configuration,
+      use `temporal worker deployment version compute-config aws-agentcore update`.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - aws-assume-role
+      - no-sync-scaler
+    options:
+      - name: endpoint-arn
+        type: string
+        required: true
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+
+  - name: temporal worker deployment version compute-config aws-agentcore update
+    summary: Update AWS Agentcore compute configuration for a Version (Experimental)
+    description: |
+      Update a scaling group in the compute configuration of a Worker
+      Deployment Version, for an AWS Bedrock Agentcore Runtime that spawns a
+      Worker in the Worker Deployment. Only the scaling group named by
+      --scaling-group ("default" when unset) changes; other scaling groups
+      are not affected.
+
+      To update the AWS Bedrock Agentcore Runtime endpoint associated with an
+      existing Worker Deployment Version:
+
+      ```
+      temporal worker deployment version compute-config aws-agentcore update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --endpoint-arn YourAgentcoreRuntimeEndpointARN \
+          --assume-role-arn YourAssumeRoleARN \
+          --assume-role-external-id YourExternalID
+      ```
+
+      To update only the scaler of an existing scaling group, supply the
+      scaler flags without the provider flags. The scaler is replaced as a
+      whole, so scaler flags that are not passed go back to their
+      defaults:
+
+      ```
+      temporal worker deployment version compute-config aws-agentcore update \
+          --deployment-name YourDeploymentName \
+          --build-id YourBuildID \
+          --scale-up-backlog-threshold 5 \
+          --max-worker-lifetime-ms 300000
+      ```
+
+      The provider flags are --endpoint-arn, --assume-role-arn,
+      --assume-role-external-id, and --skip-role-and-external-id. The
+      scaler flags are the --scale-up-* and --suppress-* flags,
+      --max-worker-lifetime-ms, and --metrics-poll-interval-ms. The
+      provider flags are only needed when changing the compute provider,
+      and they must be passed together: --endpoint-arn with either both
+      role flags or --skip-role-and-external-id. Changing the provider
+      also resets the scaler: scaler flags passed with it are applied, and
+      the rest, or all of them if none are passed, go back to their
+      defaults.
+
+      If a Worker Deployment Version with the supplied BuildID does not exist,
+      this command will return an error. To create it, use
+      `temporal worker deployment version compute-config aws-agentcore create`.
+
+      Returns an error if all compute configuration fields are empty.
+
+      Note: This is an experimental feature and may change in the future.
+    option-sets:
+      - deployment-version
+      - scaling-group
+      - aws-assume-role
+      - no-sync-scaler
+    options:
+      - name: endpoint-arn
+        type: string
+        description: |
+          AWS Bedrock Agentcore Runtime endpoint ARN to invoke when there are
+          no active pollers for task queue targets in the Worker Deployment.
+          The endpoint ARN encodes the runtime, endpoint name, and region.
+          Required when changing the compute provider.
+
   - name: temporal worker deployment version compute-config modal-function
     summary: Create or update Modal Function compute configuration (Experimental)
     description: |
