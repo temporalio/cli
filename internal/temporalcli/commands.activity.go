@@ -155,7 +155,7 @@ func buildStartActivityOptions(opts *ActivityStartOptions) (client.StartActivity
 		HeartbeatTimeout:       opts.HeartbeatTimeout.Duration(),
 		StartDelay:             opts.StartDelay.Duration(),
 		Summary:                opts.StaticSummary,
-		Details:                opts.StaticDetails,
+		StaticDetails:          opts.StaticDetails,
 		Priority: temporal.Priority{
 			PriorityKey:    opts.PriorityKey,
 			FairnessKey:    opts.FairnessKey,
