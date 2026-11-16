@@ -30,6 +30,58 @@ func TestIsPseudoVersion(t *testing.T) {
 	}
 }
 
+func TestValidateSDKVersions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		requires map[string]string
+		wantErr  bool
+	}{
+		{"tagged", map[string]string{"go.temporal.io/sdk": "v1.47.0", "go.temporal.io/sdk/contrib/envconfig": "v1.0.2"}, false},
+		{"pseudo sdk", map[string]string{"go.temporal.io/sdk": "v1.47.1-0.20240101120000-abcdef123456"}, true},
+		{"pseudo contrib", map[string]string{"go.temporal.io/sdk": "v1.47.0", "go.temporal.io/sdk/contrib/envconfig": "v0.0.0-20240101120000-abcdef123456"}, true},
+		{"unrelated pseudo", map[string]string{"go.temporal.io/sdkx": "v0.0.0-20240101120000-abcdef123456"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateSDKVersions(tt.requires)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateSDKVersions(%v) error = %v, wantErr %v", tt.requires, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		cliAPI    string
+		serverAPI string
+		wantErr   bool
+	}{
+		{"match", "v1.63.5", "v1.63.5", false},
+		{"cli ahead", "v1.64.3", "v1.63.5", true},
+		{"cli behind", "v1.63.4", "v1.63.5", true},
+		{"missing", "", "v1.63.5", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateAPIVersion(tt.cliAPI, tt.serverAPI)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateAPIVersion(%q, %q) error = %v, wantErr %v",
+					tt.cliAPI, tt.serverAPI, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateVersionConstraint(t *testing.T) {
 	t.Parallel()
 

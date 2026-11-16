@@ -1,6 +1,6 @@
 module github.com/temporalio/cli
 
-go 1.26.10
+go 1.26.11
 
 require (
 	github.com/BurntSushi/toml v1.4.0
@@ -16,7 +16,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.1
 	github.com/temporalio/cli/cliext v0.0.0
-	github.com/temporalio/ui-server/v2 v2.56.3
+	github.com/temporalio/ui-server/v2 v2.56.4
 	go.temporal.io/api v1.63.5
 	go.temporal.io/sdk v1.47.0
 	go.temporal.io/sdk/contrib/envconfig v1.0.2
@@ -137,8 +137,8 @@ require (
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
-	github.com/labstack/echo/v4 v4.16.1 // indirect
+	github.com/klauspost/compress v1.20.4 // indirect
+	github.com/labstack/echo/v4 v4.16.4 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/lib/pq v1.12.3 // indirect
 	github.com/mailru/easyjson v0.9.2 // indirect
