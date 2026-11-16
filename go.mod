@@ -3,7 +3,7 @@ module github.com/temporalio/cli
 go 1.27.3
 
 require (
-	github.com/BurntSushi/toml v1.4.0
+	github.com/BurntSushi/toml v1.6.0
 	github.com/alitto/pond v1.9.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/dustin/go-humanize v1.0.1
@@ -17,10 +17,10 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/temporalio/cli/cliext v0.0.0
 	github.com/temporalio/ui-server/v2 v2.56.4
-	go.temporal.io/api v1.64.3
-	go.temporal.io/sdk v1.51.0
-	go.temporal.io/sdk/contrib/envconfig v1.0.2
-	go.temporal.io/server v1.33.0-167.2
+	go.temporal.io/api v1.64.1-0.20261030195137-01272cbd37c9
+	go.temporal.io/sdk v1.49.0
+	go.temporal.io/sdk/contrib/envconfig v1.1.0
+	go.temporal.io/server v1.33.0-166.3
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
 	golang.org/x/mod v0.41.0
 	golang.org/x/term v0.47.0

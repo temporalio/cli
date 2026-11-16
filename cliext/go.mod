@@ -3,12 +3,12 @@ module github.com/temporalio/cli/cliext
 go 1.27.3
 
 require (
-	github.com/BurntSushi/toml v1.4.0
+	github.com/BurntSushi/toml v1.6.0
 	github.com/mattn/go-isatty v0.0.23
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	go.temporal.io/sdk v1.51.0
-	go.temporal.io/sdk/contrib/envconfig v1.0.2
+	go.temporal.io/sdk v1.49.0
+	go.temporal.io/sdk/contrib/envconfig v1.1.0
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/grpc v1.83.2
 )
@@ -27,7 +27,7 @@ require (
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
-	go.temporal.io/api v1.64.3 // indirect
+	go.temporal.io/api v1.64.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
