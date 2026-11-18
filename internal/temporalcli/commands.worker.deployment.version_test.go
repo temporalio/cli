@@ -295,6 +295,60 @@ func (s *SharedServerSuite) TestComputeConfig_Describe() {
 	s.Empty(fake.takeUpdates())
 }
 
+func (s *SharedServerSuite) TestComputeConfig_Describe_RateBased() {
+	fake := s.newFakeComputeConfigServer()
+	details, err := converter.GetDefaultDataConverter().ToPayload(map[string]any{
+		"min_count":              1,
+		"max_count":              3,
+		"initial_count":          1,
+		"utilization_target":     0.75,
+		"no_sync_quiet_ms":       300000,
+		"scale_up_cooldown_ms":   5000,
+		"scale_down_cooldown_ms": 30000,
+	})
+	s.NoError(err)
+	fake.setComputeConfig(&computepb.ComputeConfig{
+		ScalingGroups: map[string]*computepb.ComputeConfigScalingGroup{
+			"default": {
+				Provider: &computepb.ComputeProvider{Type: "gcp-cloud-run"},
+				Scaler:   &computepb.ComputeScaler{Type: "rate-based", Details: details},
+			},
+		},
+	})
+	describeArgs := []string{
+		"worker", "deployment", "version", "compute-config", "describe",
+		"--address", s.Address(),
+		"--deployment-name", uuid.NewString(),
+		"--build-id", "build-17",
+	}
+
+	// The rate-based settings are listed under the names of their flags.
+	res := s.Execute(describeArgs...)
+	s.NoError(res.Err)
+	s.ContainsOnSameLine(res.Stdout.String(), "Scaler",
+		"rate-based (min_instances 1, max_instances 3, initial_instances 1, utilization_target 0.75, "+
+			"scale_down_stabilization_ms 300000, scale_up_cooldown_ms 5000, scale_down_cooldown_ms 30000)")
+
+	res = s.Execute(append(describeArgs, "-o", "json")...)
+	s.NoError(res.Err)
+	var described struct {
+		ScalingGroups map[string]struct {
+			Scaler map[string]any `json:"scaler"`
+		} `json:"scalingGroups"`
+	}
+	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &described))
+	s.Equal(map[string]any{
+		"type":                     "rate-based",
+		"minInstances":             float64(1),
+		"maxInstances":             float64(3),
+		"initialInstances":         float64(1),
+		"utilizationTarget":        0.75,
+		"scaleDownStabilizationMs": float64(300000),
+		"scaleUpCooldownMs":        float64(5000),
+		"scaleDownCooldownMs":      float64(30000),
+	}, described.ScalingGroups["default"].Scaler)
+}
+
 func (s *SharedServerSuite) TestComputeConfig_Remove() {
 	fake := s.newFakeComputeConfigServer()
 	deploymentName := uuid.NewString()
