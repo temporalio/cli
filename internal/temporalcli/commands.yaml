@@ -432,6 +432,13 @@ commands:
       You may follow this command with `temporal activity reset`, and the new
       values will apply after the reset.
 
+      After the update, the server re-applies its timeout rules. It caps the
+      schedule-to-start and start-to-close timeouts at the schedule-to-close
+      timeout, and the heartbeat timeout at the start-to-close timeout, so
+      lowering one timeout can lower others. Raising the schedule-to-close
+      timeout doesn't raise the others. Pass `--start-to-close-timeout` as
+      well if each attempt needs more time.
+
       For a Standalone Activity before its first dispatch, use `--start-delay`
       to change when the first Activity Task becomes available. The duration is
       measured from the Activity's original schedule time, and `0s` makes it
@@ -476,9 +483,9 @@ commands:
           Limits time an activity task can stay in a task queue before a worker
           picks it up.
           This timeout is always non retryable, as all a retry would achieve is
-          to put it back into the same
-          queue. Defaults to the schedule-to-close timeout or workflow execution
-          timeout if not specified.
+          to put it back into the same queue.
+          If omitted, the current value is unchanged. Set to 0s to clear it,
+          and the server sets it to the schedule-to-close timeout.
       - name: start-to-close-timeout
         type: duration
         description: |
