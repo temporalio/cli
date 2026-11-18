@@ -70,7 +70,7 @@ func (c *TemporalWorkflowTimeSkippingPollCommand) run(cctx *CommandContext, args
 	// The SDK retries server poll timeouts until the command context ends.
 	res, err := timeskipping.PollWorkflowFastForward(cctx, cl,
 		cl.GetWorkflow(cctx, c.WorkflowId, ""),
-		timeskipping.WorkflowPollFastForwardOptions{
+		timeskipping.PollWorkflowFastForwardOptions{
 			FastForwardID: c.FastForwardId,
 		})
 	if err != nil {
