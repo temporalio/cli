@@ -248,18 +248,6 @@ func loadEnvConfig(cctx *CommandContext) (*envconfig.ClientConfig, map[string]ma
 		return nil, nil, fmt.Errorf("failed parsing config: %w", err)
 	}
 
-	// TODO: envconfig v1.0.2 and below will reject extra fields in modeled subsections, but updating that is tied to new
-	// API and server versions. Until it's time for the next server release, we can preserve the old behavior while still allowing
-	// for extra sections like oauth. This can be safely deleted once updated to envconfig v1.1.0 or later
-	for profileName, profile := range additionalProfileFields {
-		// tls and codec are the only two sections modeled in the current envconfig
-		delete(profile, "tls")
-		delete(profile, "codec")
-		if len(profile) == 0 {
-			delete(additionalProfileFields, profileName)
-		}
-	}
-
 	return &clientConfig, additionalProfileFields, nil
 }
 

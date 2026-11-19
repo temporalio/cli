@@ -502,8 +502,7 @@ access_token = "my token"`))
 						"server_ca_cert_path":       "my-server-ca-cert-path",
 						"server_ca_cert_data":       "my-server-ca-cert-data",
 						"disable_host_verification": true,
-						// TODO: envconfig v1.1.0 or greater, uncomment the line below
-						//"some_future_key":           "this is opaque",
+						"some_future_key":           "this is opaque",
 					},
 					"codec": map[string]any{
 						"endpoint": "my-endpoint",
