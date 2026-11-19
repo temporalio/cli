@@ -49,6 +49,11 @@ func (c *TemporalWorkflowDescribeCommand) run(cctx *CommandContext, args []strin
 		return nil
 	}
 
+	// JSON output is handled below, with the close event and result added
+	if c.Raw && !cctx.JSONOutput {
+		return cctx.Printer.PrintStructured(resp, printer.StructuredOptions{})
+	}
+
 	// Try to also get the close event if the description says completed. We don't
 	// just ask always because we don't want the race where it may have finished
 	// between when we called describe and now
