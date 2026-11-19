@@ -5688,9 +5688,9 @@ func NewTemporalWorkflowTimeSkippingEnableCommand(cctx *CommandContext, parent *
 }
 
 type TemporalWorkflowTimeSkippingPollCommand struct {
-	Parent  *TemporalWorkflowTimeSkippingCommand
-	Command cobra.Command
-	WorkflowReferenceOptions
+	Parent        *TemporalWorkflowTimeSkippingCommand
+	Command       cobra.Command
+	WorkflowId    string
 	FastForwardId string
 }
 
@@ -5701,14 +5701,15 @@ func NewTemporalWorkflowTimeSkippingPollCommand(cctx *CommandContext, parent *Te
 	s.Command.Use = "poll [flags]"
 	s.Command.Short = "Poll a Workflow fast-forward (Experimental)"
 	if hasHighlighting {
-		s.Command.Long = "Poll Workflow time-skipping status for a specific fast-forward setting:\n\n\x1b[1mtemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\x1b[0m\n\nUse the global \x1b[1m--command-timeout\x1b[0m flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status."
+		s.Command.Long = "Poll Workflow time-skipping status for a specific fast-forward setting:\n\n\x1b[1mtemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\x1b[0m\n\nUse the global \x1b[1m--command-timeout\x1b[0m flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status.\n\nThe wait spans the Workflow's chain of Runs, following it across retries,\ncontinue-as-new, and cron, so there is no \x1b[1m--run-id\x1b[0m flag."
 	} else {
-		s.Command.Long = "Poll Workflow time-skipping status for a specific fast-forward setting:\n\n```\ntemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\n```\n\nUse the global `--command-timeout` flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status."
+		s.Command.Long = "Poll Workflow time-skipping status for a specific fast-forward setting:\n\n```\ntemporal workflow time-skipping poll \\\n    --namespace YourNamespace \\\n    --workflow-id YourWorkflowId \\\n    --fast-forward-id YourFastForwardId\n```\n\nUse the global `--command-timeout` flag to limit how long the poll waits.\nA failed fast-forward or poll timeout returns a nonzero exit status.\n\nThe wait spans the Workflow's chain of Runs, following it across retries,\ncontinue-as-new, and cron, so there is no `--run-id` flag."
 	}
 	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVarP(&s.WorkflowId, "workflow-id", "w", "", "Workflow ID. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "workflow-id")
 	s.Command.Flags().StringVar(&s.FastForwardId, "fast-forward-id", "", "ID of the fast-forward to poll. Required.")
 	_ = cobra.MarkFlagRequired(s.Command.Flags(), "fast-forward-id")
-	s.WorkflowReferenceOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)

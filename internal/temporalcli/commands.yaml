@@ -5108,9 +5108,15 @@ commands:
 
       Use the global `--command-timeout` flag to limit how long the poll waits.
       A failed fast-forward or poll timeout returns a nonzero exit status.
-    option-sets:
-      - workflow-reference
+
+      The wait spans the Workflow's chain of Runs, following it across retries,
+      continue-as-new, and cron, so there is no `--run-id` flag.
     options:
+      - name: workflow-id
+        type: string
+        short: w
+        description: Workflow ID.
+        required: true
       - name: fast-forward-id
         type: string
         required: true

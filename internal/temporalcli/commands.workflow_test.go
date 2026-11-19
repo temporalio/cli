@@ -96,7 +96,6 @@ func (s *SharedServerSuite) TestWorkflow_TimeSkippingEnablePollDisable() {
 		"workflow", "time-skipping", "poll",
 		"--address", s.Address(),
 		"--workflow-id", run.GetID(),
-		"--run-id", run.GetRunID(),
 		"--fast-forward-id", "WorkflowPollId",
 	)
 	s.NoError(res.Err)
