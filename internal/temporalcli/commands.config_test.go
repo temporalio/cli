@@ -523,6 +523,57 @@ access_token = "my token"`))
 	)
 }
 
+func TestConfig_SetClearsTLS(t *testing.T) {
+	h := NewCommandHarness(t)
+	defer h.Close()
+	env := EnvLookupMap{}
+	h.Options.EnvLookup = env
+
+	// Put some data in temp file
+	f, err := os.CreateTemp("", "")
+	h.NoError(err)
+	defer os.Remove(f.Name())
+	_, err = f.Write([]byte(`
+[profile.foo]
+[profile.foo.tls]
+disabled = true
+client_cert_path = "my-client-cert-path"
+client_cert_data = "my-client-cert-data"
+client_key_path = "my-client-key-path"
+client_key_data = "my-client-key-data"
+server_ca_cert_path = "my-server-ca-cert-path"
+server_ca_cert_data = "my-server-ca-cert-data"
+# Intentionally absent
+# server_name = "my-server-name"
+disable_host_verification = true
+some_future_key = "this is opaque"
+
+[profile.foo.oauth]
+access_token = "my token"`))
+	f.Close()
+	h.NoError(err)
+	env["TEMPORAL_CONFIG_FILE"] = f.Name()
+	env["TEMPORAL_PROFILE"] = "foo"
+
+	res := h.Execute("config", "set", "--prop", "tls", "--value", "false")
+	h.NoError(res.Err)
+
+	// TOML parse that whole thing and confirm equals
+	all := readRawTOML(f.Name(), h)
+	h.Equal(
+		map[string]any{
+			"profile": map[string]any{
+				"foo": map[string]any{
+					"oauth": map[string]any{
+						"access_token": "my token",
+					},
+				},
+			},
+		},
+		all,
+	)
+}
+
 func (s *SharedServerSuite) TestAPIKey_DefaultsTLS() {
 	// A workflow list with an API key should fail because TLS is enabled by
 	// default when --api-key is present

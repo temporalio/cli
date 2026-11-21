@@ -195,6 +195,9 @@ func (c *TemporalConfigSetCommand) run(cctx *CommandContext, _ []string) error {
 				}
 			case "false":
 				reflectVal.SetZero()
+
+				// Removing the object needs to remove all of its additional fields as well
+				delete(additionalProfileFields[envConfigProfileName(cctx)], c.Prop)
 			default:
 				return fmt.Errorf("must be 'true' or 'false' to set this property")
 			}
