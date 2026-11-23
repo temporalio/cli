@@ -453,6 +453,9 @@ func printActivityDescription(
 		SearchAttributes        map[string]*common.Payload `cli:",cardOmitEmpty"`
 		LastFailure             string                     `cli:",cardOmitEmpty"`
 		LastWorkerIdentity      string                     `cli:",cardOmitEmpty"`
+		StartedByPrincipal      *common.ResolvedPrincipal  `cli:",cardOmitEmpty"`
+		ClosedByPrincipal       *common.ResolvedPrincipal  `cli:",cardOmitEmpty"`
+		LastWorkerPrincipal     *common.ResolvedPrincipal  `cli:",cardOmitEmpty"`
 		LastAttemptCompleteTime time.Time                  `cli:",cardOmitEmpty"`
 		StateTransitionCount    int64
 	}{
@@ -479,6 +482,9 @@ func printActivityDescription(
 		CloseTime:               timestampToTime(info.GetCloseTime()),
 		SearchAttributes:        info.GetSearchAttributes().GetIndexedFields(),
 		LastWorkerIdentity:      info.GetLastWorkerIdentity(),
+		StartedByPrincipal:      info.GetStartedByPrincipal(),
+		ClosedByPrincipal:       info.GetClosedByPrincipal(),
+		LastWorkerPrincipal:     info.GetLastWorkerPrincipal(),
 		LastAttemptCompleteTime: timestampToTime(info.GetLastAttemptCompleteTime()),
 		StateTransitionCount:    info.GetStateTransitionCount(),
 	}
