@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	activitypb "go.temporal.io/api/activity/v1"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
@@ -23,6 +24,8 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -1570,6 +1573,69 @@ func (s *SharedServerSuite) TestActivity_Describe() {
 		require.Contains(t, rawOut, `{"name":"DevActivity"}`)
 		assertDescribeRequest(t, false)
 	})
+}
+
+func (s *SharedServerSuite) TestActivity_DescribePrincipals() {
+	principal := func(name string) *common.ResolvedPrincipal {
+		return &common.ResolvedPrincipal{Type: "jwt", NameAtWriteTime: name}
+	}
+	for _, withPrincipals := range []bool{true, false} {
+		name := "missing"
+		info := &activitypb.ActivityExecutionInfo{ActivityId: "principal-test"}
+		if withPrincipals {
+			name = "present"
+			info.StartedByPrincipal = principal("starter")
+			info.ClosedByPrincipal = principal("closer")
+			info.LastWorkerPrincipal = principal("worker")
+		}
+		s.T().Run(name, func(t *testing.T) {
+			h := NewCommandHarness(t)
+			h.Options.AdditionalClientGRPCDialOptions = append(h.Options.AdditionalClientGRPCDialOptions,
+				grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req, reply any,
+					cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+					if _, ok := req.(*workflowservice.DescribeActivityExecutionRequest); ok {
+						proto.Merge(reply.(proto.Message), &workflowservice.DescribeActivityExecutionResponse{Info: info})
+						return nil
+					}
+					return invoker(ctx, method, req, reply, cc, opts...)
+				}))
+			for _, format := range []struct {
+				name string
+				args []string
+			}{
+				{name: "text"},
+				{name: "json", args: []string{"-o", "json"}},
+				{name: "jsonl", args: []string{"-o", "jsonl"}},
+				{name: "raw", args: []string{"--raw"}},
+			} {
+				t.Run(format.name, func(t *testing.T) {
+					args := append([]string{"activity", "describe", "--activity-id", "principal-test", "--address", s.Address()}, format.args...)
+					res := h.Execute(args...)
+					require.NoError(t, res.Err)
+					out := res.Stdout.String()
+					if format.name == "json" || format.name == "jsonl" {
+						var result workflowservice.DescribeActivityExecutionResponse
+						require.NoError(t, protojson.Unmarshal(res.Stdout.Bytes(), &result))
+						require.True(t, proto.Equal(info, result.GetInfo()))
+					} else if format.name == "raw" {
+						start := strings.Index(out, "{")
+						require.NotEqual(t, -1, start)
+						var result activitypb.ActivityExecutionInfo
+						require.NoError(t, protojson.Unmarshal([]byte(strings.TrimSpace(out[start:])), &result))
+						require.True(t, proto.Equal(info, &result))
+					} else if withPrincipals && format.name == "text" {
+						require.NoError(t, AssertContainsOnSameLine(out, "StartedByPrincipal", "jwt", "starter"))
+						require.NoError(t, AssertContainsOnSameLine(out, "ClosedByPrincipal", "jwt", "closer"))
+						require.NoError(t, AssertContainsOnSameLine(out, "LastWorkerPrincipal", "jwt", "worker"))
+					} else {
+						require.NotContains(t, out, "StartedByPrincipal")
+						require.NotContains(t, out, "ClosedByPrincipal")
+						require.NotContains(t, out, "LastWorkerPrincipal")
+					}
+				})
+			}
+		})
+	}
 }
 
 func (s *SharedServerSuite) TestActivity_Describe_StartDelay() {
