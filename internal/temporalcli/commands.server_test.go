@@ -409,6 +409,55 @@ func TestServer_StartDev_BannerPersistenceFile(t *testing.T) {
 	h.Contains(out, dbFilename)
 }
 
+func TestServer_StartDev_DisableMetrics(t *testing.T) {
+	t.Run("disables metrics endpoint and banner line", func(t *testing.T) {
+		h := NewCommandHarness(t)
+		defer h.Close()
+
+		port := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+		httpPort := strconv.Itoa(devserver.MustGetFreePort("127.0.0.1"))
+		resCh := make(chan *CommandResult, 1)
+		go func() {
+			resCh <- h.Execute("server", "start-dev", "-p", port, "--http-port", httpPort, "--headless", "--disable-metrics")
+		}()
+
+		var cl client.Client
+		h.EventuallyWithT(func(t *assert.CollectT) {
+			select {
+			case res := <-resCh:
+				require.NoError(t, res.Err)
+				require.Fail(t, "got early server result")
+			default:
+			}
+			var err error
+			cl, err = client.Dial(client.Options{HostPort: "127.0.0.1:" + port})
+			assert.NoError(t, err)
+		}, 10*time.Second, 200*time.Millisecond)
+		defer cl.Close()
+
+		h.CancelContext()
+		var res *CommandResult
+		select {
+		case <-time.After(20 * time.Second):
+			h.Fail("didn't cleanup after 20 seconds")
+		case res = <-resCh:
+			h.NoError(res.Err)
+		}
+		out := res.Stdout.String()
+		h.Contains(out, "Temporal Server:")
+		h.NotContains(out, "Temporal Metrics:")
+		h.NotContains(out, "/metrics")
+	})
+
+	t.Run("conflicts with metrics-port", func(t *testing.T) {
+		h := NewCommandHarness(t)
+		defer h.Close()
+
+		res := h.Execute("server", "start-dev", "--disable-metrics", "--metrics-port", "12345", "--headless")
+		h.ErrorContains(res.Err, "cannot specify both --disable-metrics and --metrics-port")
+	})
+}
+
 type testLogger struct {
 	t *testing.T
 }

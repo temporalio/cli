@@ -37,13 +37,20 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		t.Ip = "127.0.0.1"
 	}
 	// Prepare options
+	if t.DisableMetrics && t.Command.Flags().Changed("metrics-port") {
+		return fmt.Errorf("cannot specify both --disable-metrics and --metrics-port")
+	}
+	metricsPort := t.MetricsPort
+	if t.DisableMetrics {
+		metricsPort = 0
+	}
 	opts := devserver.StartOptions{
 		FrontendIP:             t.Ip,
 		FrontendPort:           t.Port,
 		Namespaces:             append([]string{"default"}, t.Namespace...),
 		Logger:                 cctx.Logger,
 		DatabaseFile:           t.DbFilename,
-		MetricsPort:            t.MetricsPort,
+		MetricsPort:            metricsPort,
 		FrontendHTTPPort:       t.HttpPort,
 		ClusterID:              uuid.NewString(),
 		MasterClusterName:      "active",
@@ -145,11 +152,13 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 		}
 	}
 	// Grab a free port for metrics ahead-of-time so we know what port is selected
-	if opts.MetricsPort == 0 {
-		opts.MetricsPort = devserver.MustGetFreePort(opts.FrontendIP)
-	} else {
-		if err := devserver.CheckPortFree(opts.FrontendIP, opts.MetricsPort); err != nil {
-			return fmt.Errorf("can't set metrics port %d: %w", opts.MetricsPort, err)
+	if !t.DisableMetrics {
+		if opts.MetricsPort == 0 {
+			opts.MetricsPort = devserver.MustGetFreePort(opts.FrontendIP)
+		} else {
+			if err := devserver.CheckPortFree(opts.FrontendIP, opts.MetricsPort); err != nil {
+				return fmt.Errorf("can't set metrics port %d: %w", opts.MetricsPort, err)
+			}
 		}
 	}
 
@@ -174,7 +183,9 @@ func (t *TemporalServerStartDevCommand) run(cctx *CommandContext, args []string)
 	if !t.Headless {
 		cctx.Printer.Printlnf("%-21s http://%v:%v%v", "Temporal UI:", toFriendlyIp(opts.UIIP), opts.UIPort, opts.PublicPath)
 	}
-	cctx.Printer.Printlnf("%-21s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
+	if !t.DisableMetrics {
+		cctx.Printer.Printlnf("%-21s http://%v:%v/metrics", "Temporal Metrics:", toFriendlyIp(opts.FrontendIP), opts.MetricsPort)
+	}
 	<-cctx.Done()
 	if !t.Parent.Parent.LogLevel.ChangedFromDefault {
 		// The server routinely emits various warnings on shutdown.

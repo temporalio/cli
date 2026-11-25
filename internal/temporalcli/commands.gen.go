@@ -2917,6 +2917,7 @@ type TemporalServerStartDevCommand struct {
 	Port               int
 	HttpPort           int
 	MetricsPort        int
+	DisableMetrics     bool
 	UiPort             int
 	Headless           bool
 	Ip                 string
@@ -2948,6 +2949,7 @@ func NewTemporalServerStartDevCommand(cctx *CommandContext, parent *TemporalServ
 	s.Command.Flags().IntVarP(&s.Port, "port", "p", 7233, "Port for the front-end gRPC Service.")
 	s.Command.Flags().IntVar(&s.HttpPort, "http-port", 0, "Port for the HTTP API service. Defaults to a random free port.")
 	s.Command.Flags().IntVar(&s.MetricsPort, "metrics-port", 0, "Port for the '/metrics' HTTP endpoint. Defaults to a random free port.")
+	s.Command.Flags().BoolVar(&s.DisableMetrics, "disable-metrics", false, "Disable the '/metrics' HTTP endpoint.")
 	s.Command.Flags().IntVar(&s.UiPort, "ui-port", 0, "Port for the Web UI. Defaults to '--port' value + 1000.")
 	s.Command.Flags().BoolVar(&s.Headless, "headless", false, "Disable the Web UI.")
 	s.Command.Flags().StringVar(&s.Ip, "ip", "localhost", "IP address bound to the front-end Service.")

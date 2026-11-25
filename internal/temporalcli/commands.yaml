@@ -3900,6 +3900,9 @@ commands:
         description: |
           Port for the '/metrics' HTTP endpoint.
           Defaults to a random free port.
+      - name: disable-metrics
+        type: bool
+        description: Disable the '/metrics' HTTP endpoint.
       - name: ui-port
         type: int
         description: |
