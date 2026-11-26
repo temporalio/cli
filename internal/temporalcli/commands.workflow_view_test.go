@@ -132,6 +132,18 @@ func (s *SharedServerSuite) TestWorkflow_Describe_Completed() {
 	s.NoError(json.Unmarshal(res.Stdout.Bytes(), &jsonOut))
 	s.NotNil(jsonOut["closeEvent"])
 	s.Equal(map[string]any{"foo": "bar"}, jsonOut["result"])
+
+	// Raw
+	res = s.Execute(
+		"workflow", "describe",
+		"--raw",
+		"--address", s.Address(),
+		"-w", run.GetID(),
+	)
+	s.NoError(res.Err)
+	out = res.Stdout.String()
+	s.ContainsOnSameLine(out, "WorkflowExecutionInfo", `"status":"WORKFLOW_EXECUTION_STATUS_COMPLETED"`)
+	s.NotContains(out, "Execution Info:")
 }
 
 func (s *SharedServerSuite) TestWorkflow_Describe_Versioned() {
