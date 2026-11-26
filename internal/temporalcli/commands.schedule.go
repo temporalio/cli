@@ -18,6 +18,7 @@ import (
 	schedpb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 )
 
 type printableSchedule struct {
@@ -35,6 +36,7 @@ type printableSchedule struct {
 	OverlapPolicy  enumspb.ScheduleOverlapPolicy // describe only
 	CatchupWindow  string                        // describe only
 	PauseOnFailure bool                          // describe only
+	Priority       *temporal.Priority            `cli:",cardOmitEmpty"` // describe only
 	// Schedule.State
 	Notes            string `cli:",cardOmitEmpty"`
 	Paused           bool
@@ -74,6 +76,14 @@ func describeResultToPrintable(id string, desc *client.ScheduleDescription) *pri
 	}
 	// Schedule.Action
 	out.Action = desc.Schedule.Action
+
+	// Extract priority from workflow action if present
+	if workflowAction, ok := desc.Schedule.Action.(*client.ScheduleWorkflowAction); ok {
+		if workflowAction.Priority != (temporal.Priority{}) {
+			out.Priority = &workflowAction.Priority
+		}
+	}
+
 	// Schedule.Spec
 	specToPrintable(out, desc.Schedule.Spec)
 	// Schedule.Policy
@@ -273,6 +283,7 @@ func toScheduleAction(sw *SharedWorkflowStartOptions, i *PayloadInputOptions) (c
 		Memo:                    opts.Memo,
 		StaticSummary:           opts.StaticSummary,
 		StaticDetails:           opts.StaticDetails,
+		Priority:                opts.Priority,
 	}
 	if action.Args, err = i.buildRawInput(); err != nil {
 		return nil, err
