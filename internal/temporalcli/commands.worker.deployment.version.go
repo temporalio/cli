@@ -431,6 +431,13 @@ type formattedScalerDescription struct {
 	ScaleUpDispatchRateEpsilonConfirmMs *int64   `json:"scaleUpDispatchRateEpsilonConfirmMs,omitempty"`
 	SuppressScaleUpMs                   *int64   `json:"suppressScaleUpMs,omitempty"`
 	SuppressPollIntervalMs              *int64   `json:"suppressPollIntervalMs,omitempty"`
+	MinInstances                        *int64   `json:"minInstances,omitempty"`
+	MaxInstances                        *int64   `json:"maxInstances,omitempty"`
+	InitialInstances                    *int64   `json:"initialInstances,omitempty"`
+	UtilizationTarget                   *float64 `json:"utilizationTarget,omitempty"`
+	ScaleDownStabilizationMs            *int64   `json:"scaleDownStabilizationMs,omitempty"`
+	ScaleUpCooldownMs                   *int64   `json:"scaleUpCooldownMs,omitempty"`
+	ScaleDownCooldownMs                 *int64   `json:"scaleDownCooldownMs,omitempty"`
 }
 
 func formatComputeConfigDescription(cc *computepb.ComputeConfig) formattedComputeConfigDescription {
@@ -443,6 +450,7 @@ func formatComputeConfigDescription(cc *computepb.ComputeConfig) formattedComput
 		if s := msgSG.GetScaler(); s != nil {
 			sg.Scaler = &formattedScalerDescription{Type: s.GetType()}
 			decodeNoSyncScalerSettings(s, sg.Scaler)
+			decodeRateBasedScalerSettings(s, sg.Scaler)
 		}
 		out.ScalingGroups[name] = sg
 	}
@@ -468,6 +476,16 @@ func scalerSummary(fs *formattedScalerDescription) string {
 	addInt("scale_up_dispatch_rate_epsilon_confirm_ms", fs.ScaleUpDispatchRateEpsilonConfirmMs)
 	addInt("suppress_scale_up_ms", fs.SuppressScaleUpMs)
 	addInt("suppress_poll_interval_ms", fs.SuppressPollIntervalMs)
+	// The rate-based scaler's settings, named after their flags.
+	addInt("min_instances", fs.MinInstances)
+	addInt("max_instances", fs.MaxInstances)
+	addInt("initial_instances", fs.InitialInstances)
+	if v := fs.UtilizationTarget; v != nil {
+		parts = append(parts, "utilization_target "+strconv.FormatFloat(*v, 'g', -1, 64))
+	}
+	addInt("scale_down_stabilization_ms", fs.ScaleDownStabilizationMs)
+	addInt("scale_up_cooldown_ms", fs.ScaleUpCooldownMs)
+	addInt("scale_down_cooldown_ms", fs.ScaleDownCooldownMs)
 	if len(parts) == 0 {
 		return fs.Type
 	}
@@ -498,4 +516,33 @@ func decodeNoSyncScalerSettings(s *computepb.ComputeScaler, fs *formattedScalerD
 	fs.ScaleUpDispatchRateEpsilonConfirmMs = count("scale_up_dispatch_rate_epsilon_confirm_ms")
 	fs.SuppressScaleUpMs = count("suppress_scale_up_ms")
 	fs.SuppressPollIntervalMs = count("suppress_poll_interval_ms")
+}
+
+// The worker controller's rate-based scaler, which sizes a set of Workers, such
+// as a GCP Cloud Run worker pool.
+const rateBasedScalerType = "rate-based"
+
+func decodeRateBasedScalerSettings(s *computepb.ComputeScaler, fs *formattedScalerDescription) {
+	if s.GetType() != rateBasedScalerType || s.GetDetails() == nil {
+		return
+	}
+	var m map[string]any
+	if err := converter.GetDefaultDataConverter().FromPayload(s.GetDetails(), &m); err != nil {
+		return
+	}
+	count := func(key string) *int64 {
+		if v, ok := scalerCountFromMap(m, key); ok {
+			return &v
+		}
+		return nil
+	}
+	fs.MinInstances = count(scalerKeyMinCount)
+	fs.MaxInstances = count(scalerKeyMaxCount)
+	fs.InitialInstances = count(scalerKeyInitialCount)
+	if v, ok := scalerFloatFromMap(m, scalerKeyUtilizationTarget); ok {
+		fs.UtilizationTarget = &v
+	}
+	fs.ScaleDownStabilizationMs = count(scalerKeyNoSyncQuietMs)
+	fs.ScaleUpCooldownMs = count("scale_up_cooldown_ms")
+	fs.ScaleDownCooldownMs = count("scale_down_cooldown_ms")
 }

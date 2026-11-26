@@ -182,6 +182,28 @@ func (v *NoSyncScalerOptions) BuildFlags(f *pflag.FlagSet) {
 	f.IntVar(&v.SuppressPollIntervalMs, "suppress-poll-interval-ms", 0, "How often Task Queue metrics are checked while Worker starts are paused, in milliseconds. Only valid with --scale-up-dispatch-rate-epsilon. Defaults to 90000 when unset.")
 }
 
+type RateBasedScalerOptions struct {
+	MinInstances             int
+	MaxInstances             int
+	InitialInstances         int
+	UtilizationTarget        float32
+	ScaleDownStabilizationMs int
+	ScaleUpCooldownMs        int
+	ScaleDownCooldownMs      int
+	FlagSet                  *pflag.FlagSet
+}
+
+func (v *RateBasedScalerOptions) BuildFlags(f *pflag.FlagSet) {
+	v.FlagSet = f
+	f.IntVar(&v.MinInstances, "min-instances", 0, "Minimum number of Cloud Run worker pool instances the scaler will maintain. Must be passed with the other scaler flags. Defaults to 0 when unset.")
+	f.IntVar(&v.MaxInstances, "max-instances", 0, "Maximum number of Cloud Run worker pool instances the scaler may scale up to. Must be passed with the other scaler flags. Defaults to 30 when unset.")
+	f.IntVar(&v.InitialInstances, "initial-instances", 0, "Number of Cloud Run worker pool instances the scaler starts with. Must be passed with the other scaler flags, and this value must be between the min and max (inclusive). Defaults to 0 when unset.")
+	f.Float32Var(&v.UtilizationTarget, "utilization-target", 0, "Target average worker utilization the scaler aims for, as a fraction in the range (0, 1]. Must be passed with the other scaler flags. Lower values keep more spare capacity per worker. Defaults to 0.8 when unset.")
+	f.IntVar(&v.ScaleDownStabilizationMs, "scale-down-stabilization-ms", 0, "Duration the scaler waits after it last saw unmet task demand before it may scale the Cloud Run worker pool down, in milliseconds. Raise this to keep the pool from scaling down before long-running or bursty activities finish. Must be passed with the other scaler flags. A value of 0 disables the wait. Defaults to 90000 (90 seconds) when unset.")
+	f.IntVar(&v.ScaleUpCooldownMs, "scale-up-cooldown-ms", 0, "Minimum time between two scale-ups of the Cloud Run worker pool, in milliseconds. Must not exceed the scaler's metrics poll interval of 60000 (1 minute). Must be passed with the other scaler flags. A value of 0 disables the wait. Defaults to 2000 when unset.")
+	f.IntVar(&v.ScaleDownCooldownMs, "scale-down-cooldown-ms", 0, "Minimum time between two scale-downs of the Cloud Run worker pool, in milliseconds. Must not exceed the scaler's metrics poll interval of 60000 (1 minute). Must be passed with the other scaler flags. A value of 0 disables the wait. Defaults to 60000 (1 minute) when unset.")
+}
+
 type DeploymentVersionOrUnversionedOptions struct {
 	DeploymentName string
 	BuildId        string
@@ -4308,6 +4330,7 @@ func NewTemporalWorkerDeploymentVersionComputeConfigCommand(cctx *CommandContext
 	s.Command.Args = cobra.NoArgs
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigAwsLambdaCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigDescribeCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigModalFunctionCommand(cctx, &s).Command)
 	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigRemoveCommand(cctx, &s).Command)
 	return &s
@@ -4424,6 +4447,109 @@ func NewTemporalWorkerDeploymentVersionComputeConfigDescribeCommand(cctx *Comman
 	}
 	s.Command.Args = cobra.NoArgs
 	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigCommand
+	Command cobra.Command
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigCommand) *TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand
+	s.Parent = parent
+	s.Command.Use = "gcp-cloud-run"
+	s.Command.Short = "Create or update GCP Cloud Run compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "GCP Cloud Run commands set the compute configuration of a Worker\nDeployment Version for a GCP Cloud Run worker pool that spawns a Worker\nin the Worker Deployment:\n\n\x1b[1mtemporal worker deployment version compute-config gcp-cloud-run [command] [options]\x1b[0m\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "GCP Cloud Run commands set the compute configuration of a Worker\nDeployment Version for a GCP Cloud Run worker pool that spawns a Worker\nin the Worker Deployment:\n\n```\ntemporal worker deployment version compute-config gcp-cloud-run [command] [options]\n```\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCreateCommand(cctx, &s).Command)
+	s.Command.AddCommand(&NewTemporalWorkerDeploymentVersionComputeConfigGcpCloudRunUpdateCommand(cctx, &s).Command)
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCreateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	RateBasedScalerOptions
+	Project          string
+	WorkerPoolRegion string
+	WorkerPool       string
+	ServiceAccount   string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCreateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand) *TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCreateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCreateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "create [flags]"
+	s.Command.Short = "Create a Version with GCP Cloud Run compute configuration (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for a\nGCP Cloud Run worker pool that spawns a Worker in the Worker Deployment:\n\n\x1b[1mtemporal worker deployment version compute-config gcp-cloud-run create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --project YourGCPProject \\\n    --worker-pool-region us-central1 \\\n    --worker-pool YourWorkerPool \\\n    --service-account customer-sa@proj.iam.gserviceaccount.com\x1b[0m\n\nTo set how the worker pool is scaled, pass all of the scaler flags\n(--min-instances, --max-instances, --initial-instances,\n--utilization-target, --scale-down-stabilization-ms,\n--scale-up-cooldown-ms, and --scale-down-cooldown-ms) together. When\nnone are passed, the server defaults apply:\n\n\x1b[1mtemporal worker deployment version compute-config gcp-cloud-run create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --project YourGCPProject \\\n    --worker-pool-region us-central1 \\\n    --worker-pool YourWorkerPool \\\n    --service-account customer-sa@proj.iam.gserviceaccount.com \\\n    --min-instances 1 \\\n    --max-instances 3 \\\n    --initial-instances 1 \\\n    --utilization-target 0.75 \\\n    --scale-down-stabilization-ms 300000 \\\n    --scale-up-cooldown-ms 2000 \\\n    --scale-down-cooldown-ms 60000\x1b[0m\n\nThe Worker Deployment must already exist; create it with\n\x1b[1mtemporal worker deployment create\x1b[0m.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse \x1b[1mtemporal worker deployment version compute-config gcp-cloud-run update\x1b[0m.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Create a new Worker Deployment Version with compute configuration for a\nGCP Cloud Run worker pool that spawns a Worker in the Worker Deployment:\n\n```\ntemporal worker deployment version compute-config gcp-cloud-run create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --project YourGCPProject \\\n    --worker-pool-region us-central1 \\\n    --worker-pool YourWorkerPool \\\n    --service-account customer-sa@proj.iam.gserviceaccount.com\n```\n\nTo set how the worker pool is scaled, pass all of the scaler flags\n(--min-instances, --max-instances, --initial-instances,\n--utilization-target, --scale-down-stabilization-ms,\n--scale-up-cooldown-ms, and --scale-down-cooldown-ms) together. When\nnone are passed, the server defaults apply:\n\n```\ntemporal worker deployment version compute-config gcp-cloud-run create \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --project YourGCPProject \\\n    --worker-pool-region us-central1 \\\n    --worker-pool YourWorkerPool \\\n    --service-account customer-sa@proj.iam.gserviceaccount.com \\\n    --min-instances 1 \\\n    --max-instances 3 \\\n    --initial-instances 1 \\\n    --utilization-target 0.75 \\\n    --scale-down-stabilization-ms 300000 \\\n    --scale-up-cooldown-ms 2000 \\\n    --scale-down-cooldown-ms 60000\n```\n\nThe Worker Deployment must already exist; create it with\n`temporal worker deployment create`.\n\nIf a Worker Deployment Version with the supplied BuildID already exists,\nthis command will return an error. To update its compute configuration,\nuse `temporal worker deployment version compute-config gcp-cloud-run update`.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Project, "project", "", "GCP project ID hosting the Cloud Run worker pool. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "project")
+	s.Command.Flags().StringVar(&s.WorkerPoolRegion, "worker-pool-region", "", "Region of the Cloud Run worker pool. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "worker-pool-region")
+	s.Command.Flags().StringVar(&s.WorkerPool, "worker-pool", "", "GCP Cloud Run worker pool name to scale when there are no active pollers for task queue targets in the Worker Deployment. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "worker-pool")
+	s.Command.Flags().StringVar(&s.ServiceAccount, "service-account", "", "Customer GCP service account the Temporal server impersonates to manage the Cloud Run worker pool. Required.")
+	_ = cobra.MarkFlagRequired(s.Command.Flags(), "service-account")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.RateBasedScalerOptions.BuildFlags(s.Command.Flags())
+	s.Command.Run = func(c *cobra.Command, args []string) {
+		if err := s.run(cctx, args); err != nil {
+			cctx.Options.Fail(err)
+		}
+	}
+	return &s
+}
+
+type TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunUpdateCommand struct {
+	Parent  *TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand
+	Command cobra.Command
+	DeploymentVersionOptions
+	ScalingGroupOptions
+	RateBasedScalerOptions
+	Project          string
+	WorkerPoolRegion string
+	WorkerPool       string
+	ServiceAccount   string
+}
+
+func NewTemporalWorkerDeploymentVersionComputeConfigGcpCloudRunUpdateCommand(cctx *CommandContext, parent *TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunCommand) *TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunUpdateCommand {
+	var s TemporalWorkerDeploymentVersionComputeConfigGcpCloudRunUpdateCommand
+	s.Parent = parent
+	s.Command.DisableFlagsInUseLine = true
+	s.Command.Use = "update [flags]"
+	s.Command.Short = "Update GCP Cloud Run compute configuration for a Version (Experimental)"
+	if hasHighlighting {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version, for a GCP Cloud Run worker pool that spawns a Worker\nin the Worker Deployment. Only the scaling group named by\n--scaling-group (\"default\" when unset) changes; other scaling groups are\nnot affected.\n\nTo update the GCP Cloud Run worker pool associated with an existing\nWorker Deployment Version:\n\n\x1b[1mtemporal worker deployment version compute-config gcp-cloud-run update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --project YourGCPProject \\\n    --worker-pool-region us-central1 \\\n    --worker-pool YourWorkerPool \\\n    --service-account customer-sa@proj.iam.gserviceaccount.com\x1b[0m\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags:\n\n\x1b[1mtemporal worker deployment version compute-config gcp-cloud-run update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --min-instances 1 \\\n    --max-instances 5 \\\n    --initial-instances 1 \\\n    --utilization-target 0.75 \\\n    --scale-down-stabilization-ms 300000 \\\n    --scale-up-cooldown-ms 2000 \\\n    --scale-down-cooldown-ms 60000\x1b[0m\n\nThe provider flags are --project, --worker-pool-region, --worker-pool,\nand --service-account. The scaler flags are --min-instances,\n--max-instances, --initial-instances, --utilization-target,\n--scale-down-stabilization-ms, --scale-up-cooldown-ms, and\n--scale-down-cooldown-ms. The provider flags are only needed when\nchanging the compute provider, and they must all be passed together.\nThe scaler flags must also all be passed together. Changing the\nprovider keeps the scaler settings, unless the scaler flags are\npassed with it to replace them.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n\x1b[1mtemporal worker deployment version compute-config gcp-cloud-run create\x1b[0m.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	} else {
+		s.Command.Long = "Update a scaling group in the compute configuration of a Worker\nDeployment Version, for a GCP Cloud Run worker pool that spawns a Worker\nin the Worker Deployment. Only the scaling group named by\n--scaling-group (\"default\" when unset) changes; other scaling groups are\nnot affected.\n\nTo update the GCP Cloud Run worker pool associated with an existing\nWorker Deployment Version:\n\n```\ntemporal worker deployment version compute-config gcp-cloud-run update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --project YourGCPProject \\\n    --worker-pool-region us-central1 \\\n    --worker-pool YourWorkerPool \\\n    --service-account customer-sa@proj.iam.gserviceaccount.com\n```\n\nTo update only the scaler of an existing scaling group, supply the\nscaler flags without the provider flags:\n\n```\ntemporal worker deployment version compute-config gcp-cloud-run update \\\n    --deployment-name YourDeploymentName \\\n    --build-id YourBuildID \\\n    --min-instances 1 \\\n    --max-instances 5 \\\n    --initial-instances 1 \\\n    --utilization-target 0.75 \\\n    --scale-down-stabilization-ms 300000 \\\n    --scale-up-cooldown-ms 2000 \\\n    --scale-down-cooldown-ms 60000\n```\n\nThe provider flags are --project, --worker-pool-region, --worker-pool,\nand --service-account. The scaler flags are --min-instances,\n--max-instances, --initial-instances, --utilization-target,\n--scale-down-stabilization-ms, --scale-up-cooldown-ms, and\n--scale-down-cooldown-ms. The provider flags are only needed when\nchanging the compute provider, and they must all be passed together.\nThe scaler flags must also all be passed together. Changing the\nprovider keeps the scaler settings, unless the scaler flags are\npassed with it to replace them.\n\nIf a Worker Deployment Version with the supplied BuildID does not exist,\nthis command will return an error. To create it, use\n`temporal worker deployment version compute-config gcp-cloud-run create`.\n\nReturns an error if all compute configuration fields are empty.\n\nNote: This is an experimental feature and may change in the future."
+	}
+	s.Command.Args = cobra.NoArgs
+	s.Command.Flags().StringVar(&s.Project, "project", "", "GCP project ID hosting the Cloud Run worker pool. Required when changing the compute provider.")
+	s.Command.Flags().StringVar(&s.WorkerPoolRegion, "worker-pool-region", "", "Region of the Cloud Run worker pool. Required when changing the compute provider.")
+	s.Command.Flags().StringVar(&s.WorkerPool, "worker-pool", "", "GCP Cloud Run worker pool name to scale when there are no active pollers for task queue targets in the Worker Deployment. Required when changing the compute provider.")
+	s.Command.Flags().StringVar(&s.ServiceAccount, "service-account", "", "Customer GCP service account the Temporal server impersonates to manage the Cloud Run worker pool. Required when changing the compute provider.")
+	s.DeploymentVersionOptions.BuildFlags(s.Command.Flags())
+	s.ScalingGroupOptions.BuildFlags(s.Command.Flags())
+	s.RateBasedScalerOptions.BuildFlags(s.Command.Flags())
 	s.Command.Run = func(c *cobra.Command, args []string) {
 		if err := s.run(cctx, args); err != nil {
 			cctx.Options.Fail(err)
