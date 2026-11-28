@@ -329,7 +329,7 @@ func (s *SharedServerSuite) testWorkflowShowFollow(detailed bool) {
 		s.Contains(output, "input[0]: ignored")
 		s.Contains(output, "signalName: my-signal")
 	} else {
-		s.Contains(output, "WorkflowExecutionSignaled")
+		s.ContainsOnSameLine(output, "WorkflowExecutionSignaled", "my-signal")
 	}
 }
 

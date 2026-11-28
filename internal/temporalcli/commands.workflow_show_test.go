@@ -2,11 +2,35 @@ package temporalcli
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
+	updatepb "go.temporal.io/api/update/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
+
+func TestCompactHistoryDetails(t *testing.T) {
+	timer := &historypb.TimerStartedEventAttributes{StartToFireTimeout: durationpb.New(90 * time.Second)}
+	event := &historypb.HistoryEvent{Attributes: &historypb.HistoryEvent_TimerStartedEventAttributes{
+		TimerStartedEventAttributes: timer,
+	}}
+	require.Equal(t, "1m30s", compactHistoryDetails(event))
+	timer.StartToFireTimeout = nil
+	require.Empty(t, compactHistoryDetails(event))
+
+	// Accepted updates need not carry the original request.
+	accepted := &historypb.WorkflowExecutionUpdateAcceptedEventAttributes{}
+	updateEvent := &historypb.HistoryEvent{
+		Attributes: &historypb.HistoryEvent_WorkflowExecutionUpdateAcceptedEventAttributes{
+			WorkflowExecutionUpdateAcceptedEventAttributes: accepted,
+		},
+	}
+	require.Empty(t, compactHistoryDetails(updateEvent))
+	accepted.AcceptedRequest = &updatepb.Request{Input: &updatepb.Input{Name: "change-address"}}
+	require.Equal(t, "change-address", compactHistoryDetails(updateEvent))
+}
 
 func TestSystemNexusOpDisplayName(t *testing.T) {
 	const op = "SignalWithStartWorkflowExecution" // present in the global systemNexusOps registry

@@ -849,10 +849,35 @@ type structuredHistoryEvent struct {
 	Time string `cli:",width=20"`
 	// We're going to set width to a semi-reasonable number for good header
 	// placement, but we expect it to extend past for larger
-	Type string `cli:",width=26"`
+	Type    string `cli:",width=26"`
+	Details string
 }
 
 var structuredHistoryEventType = reflect.TypeOf(structuredHistoryEvent{})
+
+func compactHistoryDetails(event *history.HistoryEvent) string {
+	switch a := event.Attributes.(type) {
+	case *history.HistoryEvent_WorkflowExecutionStartedEventAttributes:
+		return a.WorkflowExecutionStartedEventAttributes.GetWorkflowType().GetName()
+	case *history.HistoryEvent_WorkflowTaskScheduledEventAttributes:
+		return a.WorkflowTaskScheduledEventAttributes.GetTaskQueue().GetName()
+	case *history.HistoryEvent_ActivityTaskScheduledEventAttributes:
+		return a.ActivityTaskScheduledEventAttributes.GetActivityType().GetName()
+	case *history.HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes:
+		return a.StartChildWorkflowExecutionInitiatedEventAttributes.GetWorkflowType().GetName()
+	case *history.HistoryEvent_WorkflowExecutionSignaledEventAttributes:
+		return a.WorkflowExecutionSignaledEventAttributes.GetSignalName()
+	case *history.HistoryEvent_WorkflowExecutionUpdateAdmittedEventAttributes:
+		return a.WorkflowExecutionUpdateAdmittedEventAttributes.GetRequest().GetInput().GetName()
+	case *history.HistoryEvent_WorkflowExecutionUpdateAcceptedEventAttributes:
+		return a.WorkflowExecutionUpdateAcceptedEventAttributes.GetAcceptedRequest().GetInput().GetName()
+	case *history.HistoryEvent_TimerStartedEventAttributes:
+		if timeout := a.TimerStartedEventAttributes.GetStartToFireTimeout(); timeout != nil {
+			return timeout.AsDuration().String()
+		}
+	}
+	return ""
+}
 
 func (s *structuredHistoryIter) Next() (any, error) {
 	event, err := s.NextRawEvent()
@@ -868,9 +893,10 @@ func (s *structuredHistoryIter) Next() (any, error) {
 		typeName = coloredEventType(event.EventType)
 	}
 	data := structuredHistoryEvent{
-		ID:   event.EventId,
-		Time: event.EventTime.AsTime().Format(time.RFC3339),
-		Type: typeName,
+		ID:      event.EventId,
+		Time:    event.EventTime.AsTime().Format(time.RFC3339),
+		Type:    typeName,
+		Details: compactHistoryDetails(event),
 	}
 
 	// Follow continue as new (forward only; reverse traversal stays within the requested run)
