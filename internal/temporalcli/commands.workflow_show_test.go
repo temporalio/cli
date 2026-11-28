@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
+	updatepb "go.temporal.io/api/update/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -20,11 +21,15 @@ func TestCompactHistoryDetails(t *testing.T) {
 	require.Empty(t, compactHistoryDetails(event))
 
 	// Accepted updates need not carry the original request.
-	require.Empty(t, compactHistoryDetails(&historypb.HistoryEvent{
+	accepted := &historypb.WorkflowExecutionUpdateAcceptedEventAttributes{}
+	updateEvent := &historypb.HistoryEvent{
 		Attributes: &historypb.HistoryEvent_WorkflowExecutionUpdateAcceptedEventAttributes{
-			WorkflowExecutionUpdateAcceptedEventAttributes: &historypb.WorkflowExecutionUpdateAcceptedEventAttributes{},
+			WorkflowExecutionUpdateAcceptedEventAttributes: accepted,
 		},
-	}))
+	}
+	require.Empty(t, compactHistoryDetails(updateEvent))
+	accepted.AcceptedRequest = &updatepb.Request{Input: &updatepb.Input{Name: "change-address"}}
+	require.Equal(t, "change-address", compactHistoryDetails(updateEvent))
 }
 
 func TestSystemNexusOpDisplayName(t *testing.T) {
